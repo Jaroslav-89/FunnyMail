@@ -1,11 +1,14 @@
 package com.jaroapps.funnymail.features.auth.data
 
+import com.jaroapps.funnymail.core.auth.NativeSocialSignIn
 import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
 import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.auth.FirebaseUser
+import dev.gitlive.firebase.auth.GoogleAuthProvider
+import dev.gitlive.firebase.auth.OAuthProvider
 import dev.gitlive.firebase.auth.auth
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
@@ -72,6 +75,42 @@ class FirebaseAuthRepository(
         user.toUserProfile().copy(displayName = normalizedName)
     }
 
+    override suspend fun signInWithGoogle(): Result<UserProfile> = authResult {
+        val auth = authProvider()
+        val tokens = NativeSocialSignIn.acquireGoogleTokens()
+        val user = auth.signInWithCredential(
+            GoogleAuthProvider.credential(
+                idToken = tokens.idToken,
+                accessToken = null,
+            ),
+        ).user ?: error("Firebase returned no user after Google sign-in.")
+
+        user.toUserProfile()
+    }
+
+    override suspend fun signInWithApple(): Result<UserProfile> = authResult {
+        val auth = authProvider()
+        val tokens = NativeSocialSignIn.acquireAppleTokens()
+        require(!tokens.rawNonce.isNullOrBlank()) {
+            "Apple sign-in did not return the original nonce."
+        }
+        val user = auth.signInWithCredential(
+            OAuthProvider.credential(
+                providerId = APPLE_PROVIDER_ID,
+                idToken = tokens.idToken,
+                rawNonce = tokens.rawNonce,
+            ),
+        ).user ?: error("Firebase returned no user after Apple sign-in.")
+
+        val displayName = tokens.displayName?.trim()?.takeIf { it.isNotEmpty() }
+        if (displayName != null) {
+            // Apple usually supplies the person's name only on the first authorization.
+            user.updateProfile(displayName = displayName)
+        }
+        val profile = user.toUserProfile()
+        if (displayName == null) profile else profile.copy(displayName = displayName)
+    }
+
     override suspend fun signOut(): Result<Unit> = authResult {
         authProvider().signOut()
     }
@@ -95,5 +134,6 @@ class FirebaseAuthRepository(
 
     private companion object {
         const val MIN_PASSWORD_LENGTH = 6
+        const val APPLE_PROVIDER_ID = "apple.com"
     }
 }
