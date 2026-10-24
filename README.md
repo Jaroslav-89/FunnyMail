@@ -39,8 +39,9 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [ ] Firestore adapters for chats, invites and letters
 - [ ] Room KMP database and local-first repositories
 - [x] Shared drawing canvas with color palette, adjustable brush, eraser, undo and clear controls
-- [x] Drawing JSON validation and in-session draft preview
-- [ ] Persistent draft storage and sending letters to chats
+- [x] Drawing JSON validation and draft preview
+- [x] Local draft persistence on Android (SharedPreferences) and iOS (NSUserDefaults)
+- [ ] Firestore letter adapters and sending letters to chats
 - [ ] Offline synchronization
 - [ ] Security Rules, server-controlled expiry and TTL
 - [ ] End-to-end platform verification
