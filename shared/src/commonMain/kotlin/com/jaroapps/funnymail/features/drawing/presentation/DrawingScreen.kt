@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.weight
@@ -35,7 +34,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -59,7 +57,7 @@ private val DrawingPalette = listOf(
 @Composable
 fun DrawingScreen(
     onBack: () -> Unit,
-    onPrepared: (DrawingDocument, String) -> Unit,
+    onPrepared: (String) -> Unit,
 ) {
     var strokes by remember { mutableStateOf<List<DrawingStroke>>(emptyList()) }
     var activePoints by remember { mutableStateOf<List<List<Double>>>(emptyList()) }
@@ -305,7 +303,7 @@ fun DrawingScreen(
                     )
                     DrawingCodec().encode(document).fold(
                         onSuccess = { json ->
-                            onPrepared(document, json)
+                            onPrepared(json)
                         },
                         onFailure = { error ->
                             statusMessage = error.message ?: "Не удалось подготовить рисунок."
