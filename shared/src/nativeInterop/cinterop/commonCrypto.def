@@ -1,0 +1,2 @@
+headers = CommonCrypto/CommonDigest.h
+package = com.jaroapps.funnymail.commoncrypto
