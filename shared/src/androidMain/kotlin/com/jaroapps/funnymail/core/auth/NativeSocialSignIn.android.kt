@@ -13,6 +13,8 @@ import java.lang.ref.WeakReference
 actual object NativeSocialSignIn {
     private var activityReference: WeakReference<Activity>? = null
 
+    actual val supportsGoogleSignIn: Boolean = true
+
     actual val supportsAppleSignIn: Boolean = false
 
     actual fun attachPlatformContext(context: Any?) {
