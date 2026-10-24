@@ -195,40 +195,9 @@ fun DrawingScreen(
                 },
         ) {
             Canvas(Modifier.fillMaxSize().padding(1.dp)) {
-                fun drawDrawingStroke(stroke: DrawingStroke) {
-                    val color = stroke.color.toDrawingColor()
-                    val lineWidth = (stroke.width * size.minDimension / 1000f)
-                        .coerceAtLeast(1f)
-                    if (stroke.points.size == 1) {
-                        val point = stroke.points.first()
-                        drawCircle(
-                            color = color,
-                            radius = lineWidth / 2f,
-                            center = androidx.compose.ui.geometry.Offset(
-                                x = (point[0] * size.width).toFloat(),
-                                y = (point[1] * size.height).toFloat(),
-                            ),
-                        )
-                    } else {
-                        val path = Path()
-                        stroke.points.forEachIndexed { index, point ->
-                            val x = (point[0] * size.width).toFloat()
-                            val y = (point[1] * size.height).toFloat()
-                            if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
-                        }
-                        drawPath(
-                            path = path,
-                            color = color,
-                            style = Stroke(
-                                width = lineWidth,
-                                cap = StrokeCap.Round,
-                                join = StrokeJoin.Round,
-                            ),
-                        )
-                    }
-                }
 
-                strokes.forEach(::drawDrawingStroke)
+
+                strokes.forEach { stroke -> drawDrawingStroke(stroke) }
                 if (activePoints.isNotEmpty()) {
                     drawDrawingStroke(
                         DrawingStroke(
@@ -315,6 +284,39 @@ fun DrawingScreen(
         ) {
             Text("Подготовить черновик")
         }
+    }
+}
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawDrawingStroke(stroke: DrawingStroke) {
+    val color = stroke.color.toDrawingColor()
+    val lineWidth = (stroke.width * size.minDimension / 1000f)
+        .coerceAtLeast(1f)
+    if (stroke.points.size == 1) {
+        val point = stroke.points.first()
+        drawCircle(
+            color = color,
+            radius = lineWidth / 2f,
+            center = androidx.compose.ui.geometry.Offset(
+                x = (point[0] * size.width).toFloat(),
+                y = (point[1] * size.height).toFloat(),
+            ),
+        )
+    } else {
+        val path = Path()
+        stroke.points.forEachIndexed { index, point ->
+            val x = (point[0] * size.width).toFloat()
+            val y = (point[1] * size.height).toFloat()
+            if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        drawPath(
+            path = path,
+            color = color,
+            style = Stroke(
+                width = lineWidth,
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round,
+            ),
+        )
     }
 }
 
