@@ -80,7 +80,7 @@ fun AuthScreen(
                                 "вход через провайдеры авторизации недоступен.",
                         )
                         FirebaseRuntimeStatus.initializationMessage?.let { details ->
-                            append("\\n\\n")
+                            append("\n\n")
                             append(details)
                         }
                     },
