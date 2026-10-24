@@ -30,8 +30,8 @@ class FirebaseAuthRepository(
 
     override val currentUser: Flow<UserProfile?> = flow {
         val auth = authProvider()
-        emit(auth.currentUser.toUserProfile())
-        emitAll(auth.authStateChanged.map { it.toUserProfile() })
+        emit(auth.currentUser?.toUserProfile())
+        emitAll(auth.authStateChanged.map { it?.toUserProfile() })
     }.catch {
         // An unconfigured local checkout should still render the signed-out screen.
         emit(null)
@@ -85,14 +85,13 @@ class FirebaseAuthRepository(
             Result.failure(error)
         }
 
-    private fun FirebaseUser?.toUserProfile(): UserProfile? = this?.let { user ->
+    private fun FirebaseUser.toUserProfile(): UserProfile =
         UserProfile(
-            id = user.uid,
-            displayName = user.displayName.orEmpty(),
-            email = user.email.orEmpty(),
-            avatarUrl = user.photoURL,
+            id = uid,
+            displayName = displayName.orEmpty(),
+            email = email.orEmpty(),
+            avatarUrl = photoURL,
         )
-    }
 
     private companion object {
         const val MIN_PASSWORD_LENGTH = 6
