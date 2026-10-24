@@ -13,7 +13,10 @@ data class SocialAuthTokens(
 )
 
 expect object NativeSocialSignIn {
-    /** Apple ID uses the native Sign in with Apple sheet on iOS in this app. */
+    /** Google sign-in is exposed on Android only. */
+    val supportsGoogleSignIn: Boolean
+
+    /** Apple ID uses the native Sign in with Apple sheet on iOS only. */
     val supportsAppleSignIn: Boolean
 
     /** Android stores the current Activity here to present Credential Manager UI. */
