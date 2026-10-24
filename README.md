@@ -1,24 +1,60 @@
-This is a Kotlin Multiplatform project targeting Android, iOS.
+# FunnyMail / DrawMail
 
-* [/iosApp](./iosApp/iosApp) contains an iOS application. Even if you’re sharing your UI with Compose Multiplatform,
-  you need this entry point for your iOS app. This is also where you should add SwiftUI code for your project.
+Cross-platform handwritten drawing letters for Android and iOS.
 
-* [/shared](./shared/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./shared/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./shared/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./shared/src/jvmMain/kotlin)
-    folder is the appropriate location.
+## Stack
 
-### Running the apps
+- Kotlin Multiplatform and Compose Multiplatform
+- Clean Architecture, feature-first organization, MVVM
+- Kotlin Coroutines and Flow
+- Kotlin Serialization
+- Firebase Authentication and Cloud Firestore (integration pending)
+- Room KMP for local-first letter storage (integration pending)
+- Koin for dependency injection (planned)
 
-Use the run configurations provided by the run widget in your IDE's toolbar. You can also use these commands and options:
+**Storage rule:** drawing data is structured JSON stored directly in Cloud Firestore. Firebase Cloud Storage and PNG-based letter storage are not used.
 
-- Android app: `./gradlew :androidApp:assembleDebug`
-- iOS app: open the [/iosApp](./iosApp) directory in Xcode and run it from there.
+## Project structure
 
----
+- `androidApp/` — Android application entry point
+- `iosApp/` — iOS application entry point
+- `shared/` — shared Compose UI and multiplatform code
+- `shared/src/commonMain/kotlin/com/jaroapps/funnymail/features/` — feature-first shared implementation
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+## Current implementation
+
+- [x] KMP Android and iOS targets
+- [x] Versioned drawing domain model
+- [x] JSON codec with validation for format version, normalized coordinates, colors, stroke width, canvas dimensions, stroke/point counts and a 256 KiB default JSON limit
+- [x] Unit tests for drawing serialization and validation
+- [ ] Authentication and profile
+- [ ] Room KMP database
+- [ ] Chats and invite links/codes
+- [ ] Drawing canvas UI
+- [ ] Firestore letters and synchronization
+- [ ] Security Rules, server-controlled expiry and TTL
+- [ ] End-to-end platform verification
+
+## Build and test
+
+Android:
+
+```bash
+./gradlew :androidApp:assembleDebug
+```
+
+Shared unit tests:
+
+```bash
+./gradlew :shared:allTests
+```
+
+For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run on an iOS simulator or device.
+
+Firebase configuration and provider credentials must be supplied separately for each platform. Never commit service-account credentials or private OAuth secrets.
+
+## Implementation notes
+
+- UI should read local data through repositories/Flow; Firebase SDK calls belong in the data layer.
+- Server letter documents should use trusted `createdAt` and `expiresAt` timestamps, with a seven-day retention policy and Firestore TTL.
+- Client-side validation is not a substitute for Firestore Security Rules and server-side authorization.
