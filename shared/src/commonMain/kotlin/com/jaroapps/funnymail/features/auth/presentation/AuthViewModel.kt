@@ -154,6 +154,15 @@ class AuthViewModel(
     private fun Throwable.toAuthMessage(): String {
         val text = message.orEmpty().lowercase()
         return when {
+            "google_no_credential" in text ->
+                "Не удалось получить Google-аккаунт. Проверьте, что на устройстве добавлен " +
+                    "аккаунт Google и обновлены Сервисы Google Play."
+            "google_provider_configuration" in text || "google_credential_error" in text ->
+                "Не удалось запустить вход Google. Проверьте Web Client ID, SHA-1/SHA-256 " +
+                    "подписи Android-приложения и настройки Google в Firebase."
+            "google_sign_in_cancelled" in text ->
+                "Вход через Google отменён. Если ошибка появляется после выбора аккаунта, " +
+                    "проверьте SHA-1/SHA-256 подписи и OAuth-клиенты в Firebase."
             "cancel" in text || "cancelled" in text || "canceled" in text ->
                 "Вход отменён."
             "firebase is not configured" in text ->
