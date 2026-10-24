@@ -56,7 +56,16 @@ Platform sign-in options are intentionally separate: Android offers email/passwo
 
 ### iOS Swift Package Manager integration
 
-The current GitLive Firebase Kotlin SDK alpha may require Kotlin SwiftPM linkage integration as documented by its SDK/toolchain; follow the Firebase SDK setup instructions for your exact Kotlin/Xcode versions.
+The GitLive Firebase Kotlin SDK `3.0.0-alpha02` brings the native `firebase-ios-sdk` through Swift Package Manager (SwiftPM) metadata. For this dependency, use Kotlin Multiplatform **direct Xcode integration**; Swift Export integration (`embedSwiftExport`) is not supported for this SDK setup. The Xcode build phase must call `:shared:embedAndSignAppleFrameworkForXcode`.
+
+Run this one-time setup from the repository root on macOS if the linkage package has not yet been generated, or after changing native SwiftPM dependencies:
+
+```bash
+XCODEPROJ_PATH="$PWD/iosApp/iosApp.xcodeproj" \
+  ./gradlew :shared:integrateEmbedAndSign :shared:integrateLinkagePackage
+```
+
+The command updates `iosApp/iosApp.xcodeproj/project.pbxproj` and generates `iosApp/KotlinMultiplatformLinkedPackage/`. Commit those generated files and any generated `.swiftpm-locks/**/Package.resolved` files. Then in Xcode select **File → Packages → Resolve Package Versions**, run **Product → Clean Build Folder**, and rebuild. If Xcode still reports `embedSwiftExport`, verify that the active build phase is the direct-integration script and that you opened this branch's `iosApp/iosApp.xcodeproj`.
 
 The Firebase config files are intentionally ignored by Git. Never commit service-account credentials or private OAuth keys. Android Google Sign-In uses the Web client ID generated from `google-services.json`.
 
