@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,6 +39,7 @@ import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
 fun LettersScreen(
     draftJson: String?,
     onBack: () -> Unit,
+    onClearDraft: () -> Unit,
 ) {
     val draft = remember(draftJson) {
         draftJson?.let { DrawingCodec().decode(it).getOrNull() }
@@ -106,12 +108,18 @@ fun LettersScreen(
                 ),
             ) {
                 Text(
-                    text = "Черновик доступен только в текущем сеансе приложения. Он ещё не " +
-                        "отправлен и будет потерян после закрытия приложения.",
+                    text = "Черновик сохранён локально на этом устройстве. Он ещё не отправлен " +
+                        "и не появится у других пользователей, пока не подключим чаты и Firestore.",
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
+            }
+            OutlinedButton(
+                onClick = onClearDraft,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Удалить черновик")
             }
         }
     }
