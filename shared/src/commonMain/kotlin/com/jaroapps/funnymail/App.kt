@@ -16,6 +16,7 @@ import com.jaroapps.funnymail.core.navigation.AppDestination
 import com.jaroapps.funnymail.features.auth.presentation.AuthScreen
 import com.jaroapps.funnymail.features.drawing.presentation.DrawingScreen
 import com.jaroapps.funnymail.features.home.presentation.HomeScreen
+import com.jaroapps.funnymail.features.letter.presentation.LettersScreen
 import com.jaroapps.funnymail.features.placeholder.presentation.PlaceholderScreen
 import org.koin.compose.KoinApplication
 import org.koin.dsl.koinConfiguration
@@ -31,6 +32,7 @@ fun App() {
         FunnyMailContent(
             firebaseConfigured = firebaseConfigured,
             hasDraft = lastDraftJson != null,
+            draftJson = lastDraftJson,
             onDraftPrepared = { json -> lastDraftJson = json },
         )
     }
@@ -40,6 +42,7 @@ fun App() {
 private fun FunnyMailContent(
     firebaseConfigured: Boolean,
     hasDraft: Boolean,
+    draftJson: String?,
     onDraftPrepared: (String) -> Unit,
 ) {
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
@@ -65,9 +68,8 @@ private fun FunnyMailContent(
                         destination = AppDestination.Home
                     },
                 )
-                AppDestination.Letters -> PlaceholderScreen(
-                    title = "Мои письма",
-                    description = "Здесь будут храниться ваши письма.",
+                AppDestination.Letters -> LettersScreen(
+                    draftJson = draftJson,
                     onBack = { destination = AppDestination.Home },
                 )
                 AppDestination.Chats -> PlaceholderScreen(
