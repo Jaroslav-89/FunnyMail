@@ -25,6 +25,7 @@ fun HomeScreen(
     onOpenLetters: () -> Unit,
     onOpenChats: () -> Unit,
     onOpenAccount: () -> Unit,
+    hasDraft: Boolean = false,
 ) {
     Column(
         modifier = Modifier
@@ -69,9 +70,17 @@ fun HomeScreen(
                 modifier = Modifier.padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("Ваше пространство", style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "Пока здесь нет писем. Начните с нового рисунка — список появится после подключения хранилища.",
+                    if (hasDraft) "Черновик подготовлен" else "Ваше пространство",
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(
+                    if (hasDraft) {
+                        "Рисунок проверен и подготовлен. Пока черновик хранится в памяти приложения " +
+                            "до его закрытия; постоянное хранение и отправка ещё не подключены."
+                    } else {
+                        "Пока здесь нет писем. Начните с нового рисунка — список появится после подключения хранилища."
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                 )
