@@ -51,7 +51,6 @@ private val DrawingPalette = listOf(
     "#188038",
     "#1A73E8",
     "#A142F4",
-    "#E52592",
 )
 
 @Composable
@@ -96,14 +95,14 @@ fun DrawingScreen(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             DrawingPalette.forEach { colorHex ->
                 val chosen = !eraserEnabled && selectedColor == colorHex
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
+                        .size(28.dp)
                         .shadow(if (chosen) 2.dp else 0.dp, CircleShape)
                         .clip(CircleShape)
                         .background(colorHex.toDrawingColor())
