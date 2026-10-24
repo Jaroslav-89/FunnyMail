@@ -95,7 +95,7 @@ actual object NativeSocialSignIn {
                 requestedScopes = listOf(ASAuthorizationScopeEmail, ASAuthorizationScopeFullName)
                 nonce = sha256(rawNonce)
             }
-            val controller = ASAuthorizationController(listOf(request))
+            val controller = ASAuthorizationController(authorizationRequests = listOf(request))
             val delegate = AppleAuthorizationDelegate(rawNonce) { result ->
                 appleController = null
                 appleDelegate = null
@@ -126,7 +126,7 @@ actual object NativeSocialSignIn {
 
     private fun secureRandomNonce(): String {
         val alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._"
-        val bytes = UByteArray(32)
+        val bytes = ByteArray(32)
         bytes.usePinned { buffer ->
             val status = SecRandomCopyBytes(
                 kSecRandomDefault,
@@ -136,13 +136,13 @@ actual object NativeSocialSignIn {
             check(status == 0) { "Не удалось создать защищённый Apple nonce." }
         }
         return bytes.joinToString("") { byte ->
-            alphabet[byte.toInt() % alphabet.length].toString()
+            alphabet[(byte.toInt() and 0xff) % alphabet.length].toString()
         }
     }
 
     private fun sha256(value: String): String {
         val input = value.encodeToByteArray()
-        val digest = UByteArray(32)
+        val digest = ByteArray(32)
         input.usePinned { inputBuffer ->
             digest.usePinned { digestBuffer ->
                 CC_SHA256(
@@ -152,7 +152,7 @@ actual object NativeSocialSignIn {
                 )
             }
         }
-        return digest.joinToString("") { it.toString(16).padStart(2, '0') }
+        return digest.joinToString("") { (it.toInt() and 0xff).toString(16).padStart(2, '0') }
     }
 }
 
