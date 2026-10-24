@@ -31,7 +31,7 @@ fun App() {
         FunnyMailContent(
             firebaseConfigured = firebaseConfigured,
             hasDraft = lastDraftJson != null,
-            onDraftPrepared = { _, json -> lastDraftJson = json },
+            onDraftPrepared = { json -> lastDraftJson = json },
         )
     }
 }
@@ -40,7 +40,7 @@ fun App() {
 private fun FunnyMailContent(
     firebaseConfigured: Boolean,
     hasDraft: Boolean,
-    onDraftPrepared: (com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument, String) -> Unit,
+    onDraftPrepared: (String) -> Unit,
 ) {
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
 
@@ -60,8 +60,8 @@ private fun FunnyMailContent(
                 )
                 AppDestination.Drawing -> DrawingScreen(
                     onBack = { destination = AppDestination.Home },
-                    onPrepared = { drawing, json ->
-                        onDraftPrepared(drawing, json)
+                    onPrepared = { json ->
+                        onDraftPrepared(json)
                         destination = AppDestination.Home
                     },
                 )
