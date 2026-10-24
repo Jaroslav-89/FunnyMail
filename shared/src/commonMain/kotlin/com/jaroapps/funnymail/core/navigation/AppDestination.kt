@@ -7,6 +7,7 @@ package com.jaroapps.funnymail.core.navigation
  */
 enum class AppDestination {
     Home,
+    Auth,
     Drawing,
     Letters,
     Chats,
