@@ -170,12 +170,14 @@ fun AuthScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp),
             )
-            OutlinedButton(
-                onClick = viewModel::signInWithGoogle,
-                enabled = !state.isSubmitting && firebaseConfigured,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text("Продолжить с Google")
+            if (NativeSocialSignIn.supportsGoogleSignIn) {
+                OutlinedButton(
+                    onClick = viewModel::signInWithGoogle,
+                    enabled = !state.isSubmitting && firebaseConfigured,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Продолжить с Google")
+                }
             }
             if (NativeSocialSignIn.supportsAppleSignIn) {
                 OutlinedButton(
