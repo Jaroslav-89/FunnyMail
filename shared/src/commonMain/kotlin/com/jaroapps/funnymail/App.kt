@@ -13,6 +13,8 @@ import androidx.compose.ui.Modifier
 import com.jaroapps.funnymail.core.di.appModule
 import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import com.jaroapps.funnymail.core.navigation.AppDestination
+import com.jaroapps.funnymail.core.storage.DrawingDraftStorage
+import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.auth.presentation.AuthScreen
 import com.jaroapps.funnymail.features.drawing.presentation.DrawingScreen
 import com.jaroapps.funnymail.features.home.presentation.HomeScreen
@@ -24,7 +26,17 @@ import org.koin.dsl.koinConfiguration
 @Composable
 fun App() {
     val firebaseConfigured = remember { FirebaseRuntimeStatus.initialize() }
-    var lastDraftJson by remember { mutableStateOf<String?>(null) }
+    var lastDraftJson by remember {
+        mutableStateOf(
+            DrawingDraftStorage.load()?.let { saved ->
+                if (DrawingCodec().decode(saved).isSuccess) saved
+                else {
+                    DrawingDraftStorage.clear()
+                    null
+                }
+            },
+        )
+    }
 
     KoinApplication(
         configuration = koinConfiguration { modules(appModule) },
@@ -33,7 +45,14 @@ fun App() {
             firebaseConfigured = firebaseConfigured,
             hasDraft = lastDraftJson != null,
             draftJson = lastDraftJson,
-            onDraftPrepared = { json -> lastDraftJson = json },
+            onDraftPrepared = { json ->
+                DrawingDraftStorage.save(json)
+                lastDraftJson = json
+            },
+            onClearDraft = {
+                DrawingDraftStorage.clear()
+                lastDraftJson = null
+            },
         )
     }
 }
@@ -44,6 +63,7 @@ private fun FunnyMailContent(
     hasDraft: Boolean,
     draftJson: String?,
     onDraftPrepared: (String) -> Unit,
+    onClearDraft: () -> Unit,
 ) {
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
 
@@ -71,6 +91,7 @@ private fun FunnyMailContent(
                 AppDestination.Letters -> LettersScreen(
                     draftJson = draftJson,
                     onBack = { destination = AppDestination.Home },
+                    onClearDraft = onClearDraft,
                 )
                 AppDestination.Chats -> PlaceholderScreen(
                     title = "Чаты",
