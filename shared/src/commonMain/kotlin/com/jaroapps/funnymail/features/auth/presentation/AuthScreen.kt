@@ -29,14 +29,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun AuthScreen(
     firebaseConfigured: Boolean,
     onBack: () -> Unit,
 ) {
-    val viewModel: AuthViewModel = koinInject()
+    val viewModel: AuthViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
 
     var displayName by rememberSaveable { mutableStateOf("") }
