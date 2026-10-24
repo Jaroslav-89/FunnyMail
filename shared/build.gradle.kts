@@ -13,6 +13,14 @@ kotlin {
         iosArm64(),
         iosSimulatorArm64()
     ).forEach { iosTarget ->
+        iosTarget.compilations.getByName("main") {
+            cinterops {
+                val commonCrypto by creating {
+                    defFile(project.file("src/nativeInterop/cinterop/commonCrypto.def"))
+                }
+            }
+        }
+
         iosTarget.binaries.framework {
             baseName = "Shared"
             isStatic = true
