@@ -1,0 +1,56 @@
+name: Bootstrap iOS SwiftPM linkage
+
+on:
+  push:
+    branches:
+      - feature/app-foundation
+    paths:
+      - .github/workflows/bootstrap-ios-swiftpm-linkage.yml
+
+permissions:
+  contents: write
+
+jobs:
+  generate-linkage:
+    runs-on: macos-26
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/app-foundation
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Generate Kotlin direct integration and SwiftPM linkage package
+        env:
+          XCODEPROJ_PATH: ${{ github.workspace }}/iosApp/iosApp.xcodeproj
+        run: ./gradlew :shared:integrateEmbedAndSign :shared:integrateLinkagePackage --no-daemon
+
+      - name: Verify generated integration
+        run: |
+          test -f iosApp/KotlinMultiplatformLinkedPackage/Package.swift
+          grep -q 'embedAndSignAppleFrameworkForXcode' iosApp/iosApp.xcodeproj/project.pbxproj
+          if grep -q 'embedSwiftExportForXcode' iosApp/iosApp.xcodeproj/project.pbxproj; then
+            echo "Swift Export integration is still configured; refusing to commit."
+            exit 1
+          fi
+          git status --short
+
+      - name: Commit generated linkage files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add iosApp/iosApp.xcodeproj/project.pbxproj iosApp/KotlinMultiplatformLinkedPackage
+          while IFS= read -r file; do
+            [ -n "$file" ] && git add "$file"
+          done < <(find .swiftpm-locks -type f -name Package.resolved -print 2>/dev/null || true)
+          if git diff --cached --quiet; then
+            echo "No generated linkage changes to commit."
+          else
+            git commit -m "Fix iOS SwiftPM linkage integration"
+            git push origin HEAD:feature/app-foundation
+          fi
