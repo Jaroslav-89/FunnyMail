@@ -32,7 +32,7 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [x] Koin initialization from the shared Compose root
 - [x] Koin module test for drawing services
 - [x] Shared email/password sign-in, registration, sign-out and auth-state observation
-- [x] Google Sign-In on Android (Credential Manager) and iOS (GoogleSignIn SDK)
+- [x] Google Sign-In on Android (Credential Manager)
 - [x] Native Sign in with Apple on iOS with nonce validation
 - [x] Firebase config checks that keep an unconfigured checkout launchable
 - [x] Auth, chat, invite and letter domain models/repository contracts
@@ -43,29 +43,22 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [ ] Security Rules, server-controlled expiry and TTL
 - [ ] End-to-end platform verification
 
-Apple ID sign-in is currently exposed on iOS only. Google sign-in is available on Android and iOS.
+Platform sign-in options are intentionally separate: Android offers email/password and Google; iOS offers email/password and Apple ID.
 
 ## Firebase and identity-provider setup
 
 1. Register the Android app with application ID `com.jaroapps.funnymail` and the iOS app with bundle ID `com.jaroapps.funnymail.FunnyMail` in the Firebase project.
-2. In Firebase Console, enable **Authentication → Sign-in method → Email/Password** and **Google**.
+2. In Firebase Console, enable **Authentication → Sign-in method → Email/Password** for both platforms, **Google** for Android, and **Apple** for iOS.
 3. Download the latest Android config to `androidApp/google-services.json`. The Google Services plugin generates `default_web_client_id`, which Android Credential Manager uses as the server client ID.
 4. Download the iOS config to `iosApp/iosApp/GoogleService-Info.plist`.
-5. For Google Sign-In on iOS, copy the `REVERSED_CLIENT_ID` value from `GoogleService-Info.plist` into `GOOGLE_REVERSED_CLIENT_ID` in `iosApp/Configuration/Config.xcconfig`. The iOS app routes OAuth callback URLs through `GIDSignIn`.
 6. In Firebase Console, enable **Apple** as an Authentication provider. Configure the required Apple Team ID, Service ID, key ID and private key as requested by Firebase. In the Apple Developer portal, enable **Sign in with Apple** for the same App ID.
 7. In Xcode, check the app's signing team and bundle identifier and ensure the **Sign in with Apple** capability is enabled for the target. The repository contains an entitlements file, but Apple Developer signing/provisioning must authorize that entitlement.
 
 ### iOS Swift Package Manager integration
 
-The shared module now declares GoogleSignIn as a SwiftPM dependency. The current GitLive Firebase Kotlin SDK also uses Kotlin's SwiftPM integration. On a Mac with Kotlin 2.4+ and Xcode 26.2+, run this once after syncing Gradle so the generated linkage package is integrated into the Xcode project:
+The current GitLive Firebase Kotlin SDK alpha may require Kotlin SwiftPM linkage integration as documented by its SDK/toolchain; follow the Firebase SDK setup instructions for your exact Kotlin/Xcode versions.
 
-```bash
-XCODEPROJ_PATH="$PWD/iosApp/iosApp.xcodeproj" ./gradlew :shared:integrateLinkagePackage
-```
-
-Then build from Xcode. Keep the shared framework static. This SwiftPM import feature is still alpha in Kotlin's toolchain; test it with your exact Xcode version before shipping.
-
-The Firebase config files are intentionally ignored by Git. Never commit service-account credentials or private OAuth keys. Google OAuth client IDs and the reversed callback scheme are app configuration values, not service-account secrets.
+The Firebase config files are intentionally ignored by Git. Never commit service-account credentials or private OAuth keys. Android Google Sign-In uses the Web client ID generated from `google-services.json`.
 
 ## Build and test
 
