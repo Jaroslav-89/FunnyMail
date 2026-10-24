@@ -1,7 +1,5 @@
 package com.jaroapps.funnymail.core.auth
 
-import GoogleSignIn.GIDConfiguration
-import GoogleSignIn.GIDSignIn
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
@@ -15,10 +13,8 @@ import platform.AuthenticationServices.ASAuthorizationControllerPresentationCont
 import platform.AuthenticationServices.ASAuthorizationScopeEmail
 import platform.AuthenticationServices.ASAuthorizationScopeFullName
 import platform.AuthenticationServices.ASPresentationAnchor
-import platform.Foundation.NSBundle
 import platform.Foundation.NSData
 import platform.Foundation.NSError
-import platform.Foundation.NSDictionary
 import platform.Foundation.NSString
 import platform.Foundation.NSUTF8StringEncoding
 import platform.Security.SecRandomCopyBytes
@@ -35,58 +31,14 @@ actual object NativeSocialSignIn {
     private var appleController: ASAuthorizationController? = null
     private var appleDelegate: AppleAuthorizationDelegate? = null
 
+    actual val supportsGoogleSignIn: Boolean = false
+
     actual val supportsAppleSignIn: Boolean = true
 
     actual fun attachPlatformContext(context: Any?) = Unit
 
-    actual suspend fun acquireGoogleTokens(): SocialAuthTokens {
-        val rootViewController = UIApplication.sharedApplication.keyWindow?.rootViewController
-            ?: error("Не удалось открыть Google Sign-In: окно приложения недоступно.")
-
-        val plistPath = NSBundle.mainBundle.pathForResource("GoogleService-Info", "plist")
-            ?: error("Не найден GoogleService-Info.plist в приложении.")
-        val plist = NSDictionary.dictionaryWithContentsOfFile(plistPath)
-            ?: error("Не удалось прочитать GoogleService-Info.plist.")
-        val clientId = plist.objectForKey("CLIENT_ID") as? String
-            ?: error("В GoogleService-Info.plist отсутствует CLIENT_ID.")
-
-        return suspendCancellableCoroutine { continuation ->
-            val googleSignIn = GIDSignIn.sharedInstance
-            googleSignIn.configuration = GIDConfiguration(clientID = clientId)
-
-            // Google Sign-In 10.x exposes an async configuration step before login.
-            googleSignIn.configureWithCompletion { configurationError ->
-                if (configurationError != null) {
-                    if (continuation.isActive) {
-                        continuation.resumeWithException(
-                            IllegalStateException(configurationError.localizedDescription),
-                        )
-                    }
-                } else {
-                    googleSignIn.signInWithPresentingViewController(rootViewController) { result, error ->
-                        if (error != null) {
-                            if (continuation.isActive) {
-                                continuation.resumeWithException(
-                                    IllegalStateException(error.localizedDescription),
-                                )
-                            }
-                        } else {
-                            val token = result?.user?.idToken?.tokenString
-                            if (token.isNullOrBlank()) {
-                                if (continuation.isActive) {
-                                    continuation.resumeWithException(
-                                        IllegalStateException("Google Sign-In не вернул ID token."),
-                                    )
-                                }
-                            } else if (continuation.isActive) {
-                                continuation.resume(SocialAuthTokens(idToken = token))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
+    actual suspend fun acquireGoogleTokens(): SocialAuthTokens =
+        error("Вход через Google доступен в Android-версии приложения.")
 
     actual suspend fun acquireAppleTokens(): SocialAuthTokens =
         suspendCancellableCoroutine { continuation ->
