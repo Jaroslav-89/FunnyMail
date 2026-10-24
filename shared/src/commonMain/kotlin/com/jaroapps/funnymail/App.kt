@@ -6,11 +6,14 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.jaroapps.funnymail.core.di.appModule
+import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import com.jaroapps.funnymail.core.navigation.AppDestination
+import com.jaroapps.funnymail.features.auth.presentation.AuthScreen
 import com.jaroapps.funnymail.features.home.presentation.HomeScreen
 import com.jaroapps.funnymail.features.placeholder.presentation.PlaceholderScreen
 import org.koin.compose.KoinApplication
@@ -18,15 +21,17 @@ import org.koin.dsl.koinConfiguration
 
 @Composable
 fun App() {
+    val firebaseConfigured = remember { FirebaseRuntimeStatus.initialize() }
+
     KoinApplication(
         configuration = koinConfiguration { modules(appModule) },
     ) {
-        FunnyMailContent()
+        FunnyMailContent(firebaseConfigured)
     }
 }
 
 @Composable
-private fun FunnyMailContent() {
+private fun FunnyMailContent(firebaseConfigured: Boolean) {
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
 
     MaterialTheme {
@@ -36,6 +41,11 @@ private fun FunnyMailContent() {
                     onCreateLetter = { destination = AppDestination.Drawing },
                     onOpenLetters = { destination = AppDestination.Letters },
                     onOpenChats = { destination = AppDestination.Chats },
+                    onOpenAccount = { destination = AppDestination.Auth },
+                )
+                AppDestination.Auth -> AuthScreen(
+                    firebaseConfigured = firebaseConfigured,
+                    onBack = { destination = AppDestination.Home },
                 )
                 AppDestination.Drawing -> PlaceholderScreen(
                     title = "Новое письмо",
