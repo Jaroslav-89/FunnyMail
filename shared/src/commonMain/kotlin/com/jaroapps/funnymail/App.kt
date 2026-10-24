@@ -14,6 +14,7 @@ import com.jaroapps.funnymail.core.di.appModule
 import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import com.jaroapps.funnymail.core.navigation.AppDestination
 import com.jaroapps.funnymail.features.auth.presentation.AuthScreen
+import com.jaroapps.funnymail.features.drawing.presentation.DrawingScreen
 import com.jaroapps.funnymail.features.home.presentation.HomeScreen
 import com.jaroapps.funnymail.features.placeholder.presentation.PlaceholderScreen
 import org.koin.compose.KoinApplication
@@ -22,16 +23,25 @@ import org.koin.dsl.koinConfiguration
 @Composable
 fun App() {
     val firebaseConfigured = remember { FirebaseRuntimeStatus.initialize() }
+    var lastDraftJson by remember { mutableStateOf<String?>(null) }
 
     KoinApplication(
         configuration = koinConfiguration { modules(appModule) },
     ) {
-        FunnyMailContent(firebaseConfigured)
+        FunnyMailContent(
+            firebaseConfigured = firebaseConfigured,
+            hasDraft = lastDraftJson != null,
+            onDraftPrepared = { _, json -> lastDraftJson = json },
+        )
     }
 }
 
 @Composable
-private fun FunnyMailContent(firebaseConfigured: Boolean) {
+private fun FunnyMailContent(
+    firebaseConfigured: Boolean,
+    hasDraft: Boolean,
+    onDraftPrepared: (com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument, String) -> Unit,
+) {
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
 
     MaterialTheme {
@@ -42,15 +52,18 @@ private fun FunnyMailContent(firebaseConfigured: Boolean) {
                     onOpenLetters = { destination = AppDestination.Letters },
                     onOpenChats = { destination = AppDestination.Chats },
                     onOpenAccount = { destination = AppDestination.Auth },
+                    hasDraft = hasDraft,
                 )
                 AppDestination.Auth -> AuthScreen(
                     firebaseConfigured = firebaseConfigured,
                     onBack = { destination = AppDestination.Home },
                 )
-                AppDestination.Drawing -> PlaceholderScreen(
-                    title = "Новое письмо",
-                    description = "Здесь появится холст для рисования.",
+                AppDestination.Drawing -> DrawingScreen(
                     onBack = { destination = AppDestination.Home },
+                    onPrepared = { drawing, json ->
+                        onDraftPrepared(drawing, json)
+                        destination = AppDestination.Home
+                    },
                 )
                 AppDestination.Letters -> PlaceholderScreen(
                     title = "Мои письма",
