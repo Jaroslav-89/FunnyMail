@@ -55,6 +55,14 @@ class AuthViewModel(
         submit { authRepository.signInWithEmail(email.trim(), password) }
     }
 
+    fun signInWithGoogle() {
+        submit { authRepository.signInWithGoogle() }
+    }
+
+    fun signInWithApple() {
+        submit { authRepository.signInWithApple() }
+    }
+
     fun register(displayName: String, email: String, password: String) {
         if (displayName.isBlank()) {
             showError("Введите имя для профиля.")
@@ -146,6 +154,8 @@ class AuthViewModel(
     private fun Throwable.toAuthMessage(): String {
         val text = message.orEmpty().lowercase()
         return when {
+            "cancel" in text || "cancelled" in text || "canceled" in text ->
+                "Вход отменён."
             "firebase is not configured" in text ->
                 "Firebase не настроен. Добавьте google-services.json для Android и " +
                     "GoogleService-Info.plist для iOS."
