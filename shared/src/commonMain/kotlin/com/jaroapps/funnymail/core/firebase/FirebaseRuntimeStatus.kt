@@ -8,8 +8,18 @@ object FirebaseRuntimeStatus {
     var isConfigured: Boolean = false
         private set
 
+    var initializationMessage: String? = null
+        private set
+
     fun initialize(): Boolean {
-        isConfigured = runCatching { initializeFirebasePlatform() }.getOrDefault(false)
+        val result = runCatching { initializeFirebasePlatform() }
+        isConfigured = result.getOrDefault(false)
+        initializationMessage = when {
+            isConfigured -> null
+            result.exceptionOrNull()?.message?.isNotBlank() == true ->
+                result.exceptionOrNull()?.message
+            else -> "Firebase не прошёл проверку конфигурации. Проверьте настройки платформы."
+        }
         return isConfigured
     }
 }
