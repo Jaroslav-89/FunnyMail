@@ -24,6 +24,7 @@ fun HomeScreen(
     onCreateLetter: () -> Unit,
     onOpenLetters: () -> Unit,
     onOpenChats: () -> Unit,
+    onOpenAccount: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -77,6 +78,12 @@ fun HomeScreen(
             }
         }
 
+        OutlinedButton(
+            onClick = onOpenAccount,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("Войти / профиль")
+        }
         OutlinedButton(
             onClick = onOpenLetters,
             modifier = Modifier.fillMaxWidth(),
