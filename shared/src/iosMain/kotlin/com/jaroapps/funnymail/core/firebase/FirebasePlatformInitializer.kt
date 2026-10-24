@@ -7,18 +7,31 @@ import dev.gitlive.firebase.initialize
 import platform.Foundation.NSBundle
 
 /**
- * Firebase's iOS SDK requires GoogleService-Info.plist to be bundled with the app.
- * Check for the file first so an unconfigured checkout still opens instead of
- * attempting to initialize Firebase without its required options.
+ * Firebase's iOS SDK reads the default app configuration from GoogleService-Info.plist.
+ * Throw a specific, user-visible diagnostic when the file is not bundled or initialization fails.
  */
 internal actual fun initializeFirebasePlatform(): Boolean {
     val plistPath = NSBundle.mainBundle.pathForResource("GoogleService-Info", "plist")
-        ?: return false
+    check(!plistPath.isNullOrBlank()) {
+        "В собранном iOS-приложении отсутствует GoogleService-Info.plist. " +
+            "Скачайте файл для bundle ID com.jaroapps.funnymail.FunnyMail из Firebase Console " +
+            "и добавьте его в iosApp/iosApp/GoogleService-Info.plist с Target Membership = iosApp."
+    }
 
-    return runCatching {
-        if (Firebase.apps().isEmpty()) {
+    if (Firebase.apps().isEmpty()) {
+        try {
             Firebase.initialize()
+        } catch (error: Throwable) {
+            throw IllegalStateException(
+                "Firebase не смог прочитать GoogleService-Info.plist или создать приложение: " +
+                    (error.message ?: error::class.simpleName.orEmpty()),
+                error,
+            )
         }
-        Firebase.app.name.isNotBlank() && plistPath.isNotBlank()
-    }.getOrDefault(false)
+    }
+
+    check(Firebase.app.name.isNotBlank()) {
+        "Firebase SDK не создал приложение по умолчанию. Проверьте GoogleService-Info.plist."
+    }
+    return true
 }
