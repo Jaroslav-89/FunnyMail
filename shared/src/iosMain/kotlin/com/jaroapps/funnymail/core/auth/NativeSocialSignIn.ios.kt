@@ -20,13 +20,13 @@ import platform.Foundation.NSData
 import platform.Foundation.NSError
 import platform.Foundation.NSDictionary
 import platform.Foundation.NSString
-import platform.Foundation.NSUUID
 import platform.Foundation.NSUTF8StringEncoding
+import platform.Security.SecRandomCopyBytes
+import platform.Security.kSecRandomDefault
 import platform.UIKit.UIApplication
 import platform.darwin.NSObject
 import platform.CommonCrypto.CC_SHA256
 import kotlinx.cinterop.convert
-import kotlinx.coroutines.CancellationException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -124,8 +124,21 @@ actual object NativeSocialSignIn {
             controller.performRequests()
         }
 
-    private fun secureRandomNonce(): String =
-        NSUUID().UUIDString.replace("-", "")
+    private fun secureRandomNonce(): String {
+        val alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._"
+        val bytes = UByteArray(32)
+        bytes.usePinned { buffer ->
+            val status = SecRandomCopyBytes(
+                kSecRandomDefault,
+                bytes.size.convert(),
+                buffer.addressOf(0),
+            )
+            check(status == 0) { "Не удалось создать защищённый Apple nonce." }
+        }
+        return bytes.joinToString("") { byte ->
+            alphabet[byte.toInt() % alphabet.length].toString()
+        }
+    }
 
     private fun sha256(value: String): String {
         val input = value.encodeToByteArray()
