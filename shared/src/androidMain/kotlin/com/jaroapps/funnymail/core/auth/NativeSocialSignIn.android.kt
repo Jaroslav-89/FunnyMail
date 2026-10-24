@@ -16,7 +16,7 @@ actual object NativeSocialSignIn {
     actual val supportsAppleSignIn: Boolean = false
 
     actual fun attachPlatformContext(context: Any?) {
-        activityReference = (context as? Activity)?.let(::WeakReference)
+        activityReference = (context as? Activity)?.let { WeakReference(it) }
     }
 
     actual suspend fun acquireGoogleTokens(): SocialAuthTokens = withContext(Dispatchers.Main.immediate) {
