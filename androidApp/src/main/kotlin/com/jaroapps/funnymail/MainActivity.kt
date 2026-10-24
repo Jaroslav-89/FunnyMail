@@ -6,15 +6,22 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import com.jaroapps.funnymail.core.auth.NativeSocialSignIn
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        NativeSocialSignIn.attachPlatformContext(this)
 
         setContent {
             App()
         }
+    }
+
+    override fun onDestroy() {
+        NativeSocialSignIn.attachPlatformContext(null)
+        super.onDestroy()
     }
 }
 
