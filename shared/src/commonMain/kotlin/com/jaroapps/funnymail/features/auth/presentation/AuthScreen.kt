@@ -31,6 +31,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.core.auth.NativeSocialSignIn
+import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -73,9 +74,16 @@ fun AuthScreen(
                 ),
             ) {
                 Text(
-                    text = "Firebase пока не настроен. Добавьте конфигурацию приложения " +
-                        "в Firebase Console и поместите локальные файлы в проект. Само приложение " +
-                        "при этом продолжает запускаться.",
+                    text = buildString {
+                        append(
+                            "Firebase пока не настроен. Пока конфигурация не обнаружена, " +
+                                "вход через провайдеры авторизации недоступен.",
+                        )
+                        FirebaseRuntimeStatus.initializationMessage?.let { details ->
+                            append("\\n\\n")
+                            append(details)
+                        }
+                    },
                     modifier = Modifier.padding(16.dp),
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     style = MaterialTheme.typography.bodyMedium,
