@@ -32,6 +32,8 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [x] Koin initialization from the shared Compose root
 - [x] Koin module test for drawing services
 - [x] Shared email/password sign-in, registration, sign-out and auth-state observation
+- [x] Google Sign-In on Android (Credential Manager) and iOS (GoogleSignIn SDK)
+- [x] Native Sign in with Apple on iOS with nonce validation
 - [x] Firebase config checks that keep an unconfigured checkout launchable
 - [x] Auth, chat, invite and letter domain models/repository contracts
 - [ ] Firestore adapters for chats, invites and letters
@@ -41,16 +43,29 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [ ] Security Rules, server-controlled expiry and TTL
 - [ ] End-to-end platform verification
 
-## Firebase setup
+Apple ID sign-in is currently exposed on iOS only. Google sign-in is available on Android and iOS.
 
-1. Create or select a project in Firebase Console and register the Android app with application ID `com.jaroapps.funnymail`.
-2. Enable **Authentication → Sign-in method → Email/Password**.
-3. Download the Android config file to `androidApp/google-services.json`.
-4. Register the iOS app using the bundle identifier configured in Xcode, then download `GoogleService-Info.plist` to `iosApp/iosApp/GoogleService-Info.plist`.
-5. Sync/rebuild the project. The Android Google Services plugin is applied only when its JSON file exists, so an unconfigured checkout can still build and launch; authentication needs the real Firebase project config.
-6. For iOS, this project uses the Kotlin 2.4 SwiftPM integration path required by the current GitLive Firebase SDK alpha. Build with Kotlin 2.4+ and Xcode 26.2+; keep the shared framework static.
+## Firebase and identity-provider setup
 
-The two Firebase config files are intentionally ignored by Git in this repository. They identify the Firebase project but are specific to each app; never commit service-account credentials or private OAuth secrets. You must also enable Email/Password in Firebase Console for authentication to work.
+1. Register the Android app with application ID `com.jaroapps.funnymail` and the iOS app with bundle ID `com.jaroapps.funnymail.FunnyMail` in the Firebase project.
+2. In Firebase Console, enable **Authentication → Sign-in method → Email/Password** and **Google**.
+3. Download the latest Android config to `androidApp/google-services.json`. The Google Services plugin generates `default_web_client_id`, which Android Credential Manager uses as the server client ID.
+4. Download the iOS config to `iosApp/iosApp/GoogleService-Info.plist`.
+5. For Google Sign-In on iOS, copy the `REVERSED_CLIENT_ID` value from `GoogleService-Info.plist` into `GOOGLE_REVERSED_CLIENT_ID` in `iosApp/Configuration/Config.xcconfig`. The iOS app routes OAuth callback URLs through `GIDSignIn`.
+6. In Firebase Console, enable **Apple** as an Authentication provider. Configure the required Apple Team ID, Service ID, key ID and private key as requested by Firebase. In the Apple Developer portal, enable **Sign in with Apple** for the same App ID.
+7. In Xcode, check the app's signing team and bundle identifier and ensure the **Sign in with Apple** capability is enabled for the target. The repository contains an entitlements file, but Apple Developer signing/provisioning must authorize that entitlement.
+
+### iOS Swift Package Manager integration
+
+The shared module now declares GoogleSignIn as a SwiftPM dependency. The current GitLive Firebase Kotlin SDK also uses Kotlin's SwiftPM integration. On a Mac with Kotlin 2.4+ and Xcode 26.2+, run this once after syncing Gradle so the generated linkage package is integrated into the Xcode project:
+
+```bash
+XCODEPROJ_PATH="$PWD/iosApp/iosApp.xcodeproj" ./gradlew :shared:integrateLinkagePackage
+```
+
+Then build from Xcode. Keep the shared framework static. This SwiftPM import feature is still alpha in Kotlin's toolchain; test it with your exact Xcode version before shipping.
+
+The Firebase config files are intentionally ignored by Git. Never commit service-account credentials or private OAuth keys. Google OAuth client IDs and the reversed callback scheme are app configuration values, not service-account secrets.
 
 ## Build and test
 
@@ -66,7 +81,7 @@ Shared unit tests:
 ./gradlew :shared:allTests
 ```
 
-For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run on an iOS simulator or device. The generated Xcode build phase invokes `:shared:embedAndSignAppleFrameworkForXcode` for direct framework integration.
+For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run on an iOS simulator or device. The Xcode build phase invokes `:shared:embedAndSignAppleFrameworkForXcode` for direct framework integration.
 
 ## Implementation notes
 
