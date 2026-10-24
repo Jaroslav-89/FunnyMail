@@ -36,7 +36,7 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [x] Native Sign in with Apple on iOS with nonce validation
 - [x] Firebase config checks that keep an unconfigured checkout launchable
 - [x] Auth, chat, invite and letter domain models/repository contracts
-- [ ] Firestore adapters for chats, invites and letters
+- [ ] Firestore adapters for chats and invites
 - [ ] Room KMP database and local-first repositories
 - [x] Shared drawing canvas with color palette, adjustable brush, eraser, undo and clear controls
 - [x] Drawing JSON validation and draft preview
