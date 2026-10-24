@@ -174,9 +174,11 @@ fun DrawingScreen(
                         },
                         onDrag = { change, _ ->
                             change.consume()
-                            activePoints = activePoints + normalizedPoint(
-                                change.position.x,
-                                change.position.y,
+                            activePoints = activePoints + listOf(
+                                normalizedPoint(
+                                    change.position.x,
+                                    change.position.y,
+                                ),
                             )
                         },
                         onDragEnd = {
