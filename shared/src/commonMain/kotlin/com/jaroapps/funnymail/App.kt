@@ -9,12 +9,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.jaroapps.funnymail.core.di.appModule
 import com.jaroapps.funnymail.core.navigation.AppDestination
 import com.jaroapps.funnymail.features.home.presentation.HomeScreen
 import com.jaroapps.funnymail.features.placeholder.presentation.PlaceholderScreen
+import org.koin.compose.KoinApplication
+import org.koin.dsl.koinConfiguration
 
 @Composable
 fun App() {
+    KoinApplication(
+        configuration = koinConfiguration { modules(appModule) },
+    ) {
+        FunnyMailContent()
+    }
+}
+
+@Composable
+private fun FunnyMailContent() {
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
 
     MaterialTheme {
