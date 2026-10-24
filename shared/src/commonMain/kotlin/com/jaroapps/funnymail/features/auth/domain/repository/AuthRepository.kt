@@ -21,5 +21,9 @@ interface AuthRepository {
         displayName: String,
     ): Result<UserProfile>
 
+    suspend fun signInWithGoogle(): Result<UserProfile>
+
+    suspend fun signInWithApple(): Result<UserProfile>
+
     suspend fun signOut(): Result<Unit>
 }
