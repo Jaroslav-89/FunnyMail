@@ -1,9 +1,10 @@
 package com.jaroapps.funnymail.core.auth
 
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.UByteVar
 import kotlinx.cinterop.addressOf
-import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.reinterpret
+import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.suspendCancellableCoroutine
 import platform.AuthenticationServices.ASAuthorization
 import platform.AuthenticationServices.ASAuthorizationAppleIDCredential
@@ -101,7 +102,7 @@ actual object NativeSocialSignIn {
                 CC_SHA256(
                     inputBuffer.addressOf(0),
                     input.size.convert(),
-                    digestBuffer.addressOf(0).reinterpret(),
+                    digestBuffer.addressOf(0).reinterpret<UByteVar>(),
                 )
             }
         }
