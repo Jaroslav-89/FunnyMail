@@ -1,10 +1,12 @@
 package com.jaroapps.funnymail.core.auth
 
 import android.app.Activity
+import android.util.Log
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import androidx.credentials.exceptions.GetCredentialException
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,18 +43,37 @@ actual object NativeSocialSignIn {
             "Google Web Client ID пуст. Проверьте конфигурацию Firebase."
         }
 
-        val googleOption = GetGoogleIdOption.Builder()
-            .setFilterByAuthorizedAccounts(false)
-            .setServerClientId(serverClientId)
-            .build()
+        // This method is called from the explicit "Continue with Google" button.
+        // Google recommends GetSignInWithGoogleOption for this button flow, including
+        // devices where no account is already authorized or the account needs re-authentication.
+        val googleOption = GetSignInWithGoogleOption.Builder(serverClientId).build()
         val request = GetCredentialRequest.Builder()
             .addCredentialOption(googleOption)
             .build()
 
-        val result = CredentialManager.create(activity).getCredential(
-            context = activity,
-            request = request,
-        )
+        val result = try {
+            CredentialManager.create(activity).getCredential(
+                context = activity,
+                request = request,
+            )
+        } catch (exception: GetCredentialException) {
+            val exceptionName = exception.javaClass.simpleName
+            Log.e(
+                LOG_TAG,
+                "Google Credential Manager failed: $exceptionName: ${exception.message}",
+                exception,
+            )
+            val reason = when (exceptionName) {
+                "NoCredentialException" -> "GOOGLE_NO_CREDENTIAL"
+                "GetCredentialCancellationException" -> "GOOGLE_SIGN_IN_CANCELLED"
+                "GetCredentialProviderConfigurationException" -> "GOOGLE_PROVIDER_CONFIGURATION"
+                else -> "GOOGLE_CREDENTIAL_ERROR"
+            }
+            throw IllegalStateException(
+                "$reason: ${exception.message.orEmpty()}",
+                exception,
+            )
+        }
         val credential = result.credential as? CustomCredential
             ?: error("Google Sign-In вернул неподдерживаемые учётные данные.")
         check(credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
@@ -66,4 +87,6 @@ actual object NativeSocialSignIn {
 
     actual suspend fun acquireAppleTokens(): SocialAuthTokens =
         error("Вход через Apple ID доступен в iOS-версии приложения.")
+
+    private const val LOG_TAG = "FunnyMailGoogleAuth"
 }
