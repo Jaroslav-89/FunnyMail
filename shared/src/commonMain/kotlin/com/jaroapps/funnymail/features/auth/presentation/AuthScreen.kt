@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.jaroapps.funnymail.core.auth.NativeSocialSignIn
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -161,6 +162,29 @@ fun AuthScreen(
                     if (state.isRegistration) "У меня уже есть аккаунт"
                     else "Зарегистрироваться",
                 )
+            }
+
+            Text(
+                text = "Или продолжить через",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+            OutlinedButton(
+                onClick = viewModel::signInWithGoogle,
+                enabled = !state.isSubmitting && firebaseConfigured,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Продолжить с Google")
+            }
+            if (NativeSocialSignIn.supportsAppleSignIn) {
+                OutlinedButton(
+                    onClick = viewModel::signInWithApple,
+                    enabled = !state.isSubmitting && firebaseConfigured,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Продолжить с Apple")
+                }
             }
         }
 
