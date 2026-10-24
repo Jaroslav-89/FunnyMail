@@ -5,6 +5,12 @@ plugins {
     alias(libs.plugins.composeCompiler)
 }
 
+// The app remains buildable before Firebase is configured. Add google-services.json
+// locally to activate the Google Services plugin and Android Firebase initialization.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 kotlin {
     compilerOptions {
         jvmTarget = JvmTarget.JVM_11
