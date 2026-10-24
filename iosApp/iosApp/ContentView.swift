@@ -1,6 +1,7 @@
 import UIKit
 import SwiftUI
 import Shared
+import GoogleSignIn
 
 struct ComposeView: UIViewControllerRepresentable {
     func makeUIViewController(context: Self.Context) -> UIViewController {
@@ -14,5 +15,8 @@ struct ContentView: View {
     var body: some View {
         ComposeView()
             .ignoresSafeArea()
+            .onOpenURL { url in
+                _ = GIDSignIn.sharedInstance.handle(url)
+            }
     }
 }
