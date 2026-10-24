@@ -49,8 +49,9 @@ Platform sign-in options are intentionally separate: Android offers email/passwo
 
 1. Register the Android app with application ID `com.jaroapps.funnymail` and the iOS app with bundle ID `com.jaroapps.funnymail.FunnyMail` in the Firebase project.
 2. In Firebase Console, enable **Authentication → Sign-in method → Email/Password** for both platforms, **Google** for Android, and **Apple** for iOS.
-3. Download the latest Android config to `androidApp/google-services.json`. The Google Services plugin generates `default_web_client_id`, which Android Credential Manager uses as the server client ID.
-4. Download the iOS config to `iosApp/iosApp/GoogleService-Info.plist`.
+3. For Android Google Sign-In, open **Firebase Console → Project settings → Your apps → Android app** and add the SHA-1 and SHA-256 certificate fingerprints for the signing key used to install the app (include debug and release/Play App Signing fingerprints as applicable). The Android package name must exactly match `com.jaroapps.funnymail`.
+4. After enabling Google and adding the fingerprints, download a fresh `google-services.json` to `androidApp/google-services.json`. Confirm it includes a Web OAuth client (`oauth_client` with `client_type: 3`); the Google Services plugin generates `default_web_client_id` from this file, and Credential Manager uses that Web client ID, not the Android client ID.
+5. Download the iOS config to `iosApp/iosApp/GoogleService-Info.plist`.
 6. In Firebase Console, enable **Apple** as an Authentication provider. Configure the required Apple Team ID, Service ID, key ID and private key as requested by Firebase. In the Apple Developer portal, enable **Sign in with Apple** for the same App ID.
 7. In Xcode, check the app's signing team and bundle identifier and ensure the **Sign in with Apple** capability is enabled for the target. The repository contains an entitlements file, but Apple Developer signing/provisioning must authorize that entitlement.
 
