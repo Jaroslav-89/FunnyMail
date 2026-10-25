@@ -33,15 +33,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.core.ui.TrashCanIcon
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
+import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingStrokes
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
-import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
 import com.jaroapps.funnymail.features.drawing.domain.model.SavedDrawing
 import com.jaroapps.funnymail.features.drawing.domain.repository.LocalDrawingRepository
 import kotlinx.coroutines.launch
@@ -286,52 +282,10 @@ fun DrawingPreview(
             .background(Color.White)
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape),
     ) {
-        drawing.strokes.forEach { stroke ->
-            drawPreviewStroke(stroke)
-        }
-    }
-}
-
-private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPreviewStroke(
-    stroke: DrawingStroke,
-) {
-    if (stroke.points.isEmpty()) return
-
-    val lineColor = stroke.color.toPreviewColor()
-    val lineWidth = (stroke.width * size.minDimension / 1000f).coerceAtLeast(1f)
-
-    if (stroke.points.size == 1) {
-        val point = stroke.points.first()
-        drawCircle(
-            color = lineColor,
-            radius = lineWidth / 2f,
-            center = androidx.compose.ui.geometry.Offset(
-                x = (point[0] * size.width).toFloat(),
-                y = (point[1] * size.height).toFloat(),
-            ),
+        drawDrawingStrokes(
+            strokes = drawing.strokes,
+            canvasWidth = drawing.canvas.width,
+            canvasHeight = drawing.canvas.height,
         )
-        return
     }
-
-    val path = Path()
-    stroke.points.forEachIndexed { index, point ->
-        val x = (point[0] * size.width).toFloat()
-        val y = (point[1] * size.height).toFloat()
-        if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
-    }
-    drawPath(
-        path = path,
-        color = lineColor,
-        style = Stroke(width = lineWidth, cap = StrokeCap.Round, join = StrokeJoin.Round),
-    )
-}
-
-private fun String.toPreviewColor(): Color {
-    val rgb = removePrefix("#").toLongOrNull(16) ?: 0x202124L
-    return Color(
-        red = ((rgb shr 16) and 0xFF).toFloat() / 255f,
-        green = ((rgb shr 8) and 0xFF).toFloat() / 255f,
-        blue = (rgb and 0xFF).toFloat() / 255f,
-        alpha = 1f,
-    )
 }
