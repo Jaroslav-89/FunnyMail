@@ -172,7 +172,7 @@ class ChatViewModel(
     private fun Throwable.toChatMessage(): String {
         val details = message.orEmpty().lowercase()
         return when {
-            "permission-denied" in details || "permission denied" in details ->
+            "permission-denied" in details || "permission_denied" in details || "permission denied" in details ->
                 "Firestore отклонил операцию. Проверьте, что опубликованы правила из firestore.rules."
             "firebase не настроен" in details || "firebase is not configured" in details ->
                 "Firebase не настроен. Добавьте конфигурационные файлы платформы."
