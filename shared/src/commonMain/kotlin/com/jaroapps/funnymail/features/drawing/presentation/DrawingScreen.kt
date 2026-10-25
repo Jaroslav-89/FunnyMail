@@ -1,5 +1,9 @@
 package com.jaroapps.funnymail.features.drawing.presentation
 
+import org.jetbrains.compose.resources.stringResource
+
+import com.jaroapps.funnymail.resources.Res
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -344,7 +348,7 @@ fun DrawingScreen(
 
         if (strokes.isEmpty() && activePoints.isEmpty()) {
             Text(
-                text = "Начни рисовать здесь",
+                text = stringResource(Res.string.start_drawing_here),
                 modifier = Modifier.align(Alignment.Center),
                 color = Color(0xFF9AA0A6),
                 style = MaterialTheme.typography.bodyLarge,
@@ -566,7 +570,7 @@ fun DrawingScreen(
     if (showLineColorDialog) {
         AlertDialog(
             onDismissRequest = { showLineColorDialog = false },
-            title = { Text("Цвет линии") },
+            title = { Text(stringResource(Res.string.line_color)) },
             containerColor = Color.White,
             titleContentColor = Color(0xFF202124),
             textContentColor = Color(0xFF202124),
@@ -581,7 +585,7 @@ fun DrawingScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { showLineColorDialog = false }) { Text("Готово", color = Color(0xFF202124)) }
+                TextButton(onClick = { showLineColorDialog = false }) { Text(stringResource(Res.string.done), color = Color(0xFF202124)) }
             },
         )
     }
@@ -589,7 +593,7 @@ fun DrawingScreen(
     if (showBackgroundDialog) {
         AlertDialog(
             onDismissRequest = { showBackgroundDialog = false },
-            title = { Text("Фон рисунка") },
+            title = { Text(stringResource(Res.string.drawing_background)) },
             containerColor = Color.White,
             titleContentColor = Color(0xFF202124),
             textContentColor = Color(0xFF202124),
@@ -724,10 +728,10 @@ fun DrawingScreen(
                         showBackgroundDialog = false
                         statusMessage = null
                     },
-                ) { Text("Готово", color = Color(0xFF202124)) }
+                ) { Text(stringResource(Res.string.done), color = Color(0xFF202124)) }
             },
             dismissButton = {
-                TextButton(onClick = { showBackgroundDialog = false }) { Text("Отмена", color = Color(0xFF202124)) }
+                TextButton(onClick = { showBackgroundDialog = false }) { Text(stringResource(Res.string.cancel), color = Color(0xFF202124)) }
             },
         )
     }
@@ -735,11 +739,11 @@ fun DrawingScreen(
     if (showFinishDialog) {
         AlertDialog(
             onDismissRequest = { showFinishDialog = false },
-            title = { Text("Готово с рисунком") },
+            title = { Text(stringResource(Res.string.finish_drawing)) },
             containerColor = Color.White,
             titleContentColor = Color(0xFF202124),
             textContentColor = Color(0xFF202124),
-            text = { Text("Сохрани рисунок в локальную галерею или отправь его в этот чат.") },
+            text = { Text(stringResource(Res.string.finish_drawing_hint)) },
             confirmButton = {
                 Column(
                     horizontalAlignment = Alignment.End,
@@ -769,13 +773,13 @@ fun DrawingScreen(
                         },
                         enabled = !isSending,
                     ) {
-                        Text(if (isSending) "Отправляем…" else "Отправить в чат")
+                        Text(if (isSending) stringResource(Res.string.sending) else stringResource(Res.string.send_to_chat))
                     }
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showFinishDialog = false }) {
-                    Text("Продолжить рисовать")
+                    Text(stringResource(Res.string.continue_drawing))
                 }
             },
         )
@@ -825,7 +829,7 @@ private fun ColorToolButton(
         contentAlignment = Alignment.Center,
     ) {
         if (eraserEnabled) {
-            Text("Ластик", color = Color(0xFF202124), fontSize = 12.sp)
+            Text(stringResource(Res.string.eraser), color = Color(0xFF202124), fontSize = 12.sp)
         }
     }
 }
