@@ -42,7 +42,9 @@ class FirebaseLetterRepository(
         // Query only unexpired documents. Security Rules independently compare expiresAt to
         // the server's request.time so clients cannot read an expired letter by changing local time.
         val nowMillis = Clock.System.now().toEpochMilliseconds()
-        val nowTimestamp = nowMillis.toFirestoreTimestamp()
+        // Firestore Rules use server request.time. Query slightly ahead of the device clock
+        // so the query's expiry constraint is safely stricter than the server-side read rule.
+        val queryLowerBoundTimestamp = (nowMillis + QUERY_CLOCK_SAFETY_MILLIS).toFirestoreTimestamp()
 
         return flow {
             emitAll(
@@ -50,7 +52,7 @@ class FirebaseLetterRepository(
                     .collection(CHATS_COLLECTION)
                     .document(chatId)
                     .collection(LETTERS_COLLECTION)
-                    .where("expiresAt", greaterThan = nowTimestamp)
+                    .where("expiresAt", greaterThan = queryLowerBoundTimestamp)
                     .snapshots
                     .map { snapshot ->
                         snapshot.documents
@@ -148,6 +150,7 @@ class FirebaseLetterRepository(
         const val CHATS_COLLECTION = "chats"
         const val LETTERS_COLLECTION = "letters"
         const val LETTER_TTL_MILLIS = 7L * 24L * 60L * 60L * 1_000L
+        const val QUERY_CLOCK_SAFETY_MILLIS = 5L * 60L * 1_000L
         const val MAX_DRAWING_JSON_BYTES = 256 * 1_024
     }
 }
