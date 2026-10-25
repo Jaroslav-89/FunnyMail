@@ -135,146 +135,146 @@ fun LettersScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 12.dp, top = 0.dp, end = 12.dp, bottom = 72.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                if (drawings.isEmpty() && !draftNeedsImport) {
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(18.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                        ) {
-                            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(stringResource(Res.string.empty_drawings_title), style = MaterialTheme.typography.titleMedium)
-                                Text(
-                                    stringResource(Res.string.empty_drawings_hint),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                )
-                            }
-                        }
-                    }
-                }
-
-                if (draftNeedsImport && draft != null && draftJson != null) {
-                    item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(18.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                        ) {
-                            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Text(stringResource(Res.string.draft_not_in_gallery), style = MaterialTheme.typography.titleMedium)
-                                DrawingPreview(draft, Modifier.fillMaxWidth().height(180.dp))
-                                Text(
-                                    stringResource(Res.string.draft_add_hint),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                )
-                                OutlinedButton(
-                                    onClick = {
-                                        coroutineScope.launch {
-                                            try {
-                                                repository.saveDrawing(draftJson)
-                                                statusMessage = draftAddedGalleryText
-                                            } catch (error: Exception) {
-                                                statusMessage = draftAddFailedText
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth(),
-                                ) { Text(stringResource(Res.string.save_to_gallery)) }
-                            }
-                        }
-                    }
-                }
-
-                items(drawings, key = { it.id }) { savedDrawing ->
-                    val document = remember(savedDrawing.drawingJson) {
-                        drawingCodec.decode(savedDrawing.drawingJson).getOrNull()
-                    }
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 12.dp, top = 0.dp, end = 12.dp, bottom = 72.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (drawings.isEmpty() && !draftNeedsImport) {
+                item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(18.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
                     ) {
-                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text(
-                                    stringResource(Res.string.drawing_number, savedDrawing.id),
-                                    modifier = Modifier.weight(1f),
-                                    style = MaterialTheme.typography.titleMedium,
-                                )
-                                IconButton(
-                                    onClick = {
-                                        onEditDrawing(savedDrawing.id, savedDrawing.drawingJson)
-                                    },
-                                    modifier = Modifier.size(40.dp),
-                                ) {
-                                    EditPencilIcon(color = MaterialTheme.colorScheme.onSurface)
-                                }
-                                IconButton(
-                                    onClick = { deleteDrawing(savedDrawing) },
-                                    modifier = Modifier.size(40.dp),
-                                ) {
-                                    TrashCanIcon(color = MaterialTheme.colorScheme.error)
-                                }
-                            }
-                            if (document != null) {
-                                Text(
-                                    stringResource(Res.string.stroke_point_count, document.strokes.size, document.strokes.sumOf { it.points.size }),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(180.dp),
-                                ) {
-                                    DrawingPreview(
-                                        drawing = document,
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .clickable { onViewDrawing(document) },
-                                    )
-                                    FloatingActionButton(
-                                        onClick = { sendDrawing(savedDrawing) },
-                                        modifier = Modifier
-                                            .align(Alignment.BottomEnd)
-                                            .padding(8.dp)
-                                            .size(48.dp),
-                                        shape = CircleShape,
-                                        containerColor = Color(0xFFF5A800),
-                                        contentColor = if (darkThemeEnabled) Color(0xFF202124) else Color.White,
-                                    ) {
-                                        if (sendingDrawingId == savedDrawing.id) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(20.dp),
-                                                color = if (darkThemeEnabled) Color(0xFF202124) else Color.White,
-                                                strokeWidth = 2.dp,
-                                            )
-                                        } else {
-                                            Icon(
-                                                imageVector = Icons.Rounded.PlayArrow,
-                                                contentDescription = stringResource(Res.string.send_to_chat),
-                                                modifier = Modifier.size(26.dp),
-                                                tint = if (darkThemeEnabled) Color(0xFF202124) else Color.White,
-                                            )
-                                        }
-                                    }
-                                }
-                            } else {
-                                Text(stringResource(Res.string.reading_drawing_failed), color = MaterialTheme.colorScheme.error)
-                            }
+                        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(stringResource(Res.string.empty_drawings_title), style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                stringResource(Res.string.empty_drawings_hint),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
                         }
                     }
                 }
             }
+
+            if (draftNeedsImport && draft != null && draftJson != null) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    ) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(stringResource(Res.string.draft_not_in_gallery), style = MaterialTheme.typography.titleMedium)
+                            DrawingPreview(draft, Modifier.fillMaxWidth().height(180.dp))
+                            Text(
+                                stringResource(Res.string.draft_add_hint),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
+                            OutlinedButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        try {
+                                            repository.saveDrawing(draftJson)
+                                            statusMessage = draftAddedGalleryText
+                                        } catch (error: Exception) {
+                                            statusMessage = draftAddFailedText
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text(stringResource(Res.string.save_to_gallery)) }
+                        }
+                    }
+                }
+            }
+
+            items(drawings, key = { it.id }) { savedDrawing ->
+                val document = remember(savedDrawing.drawingJson) {
+                    drawingCodec.decode(savedDrawing.drawingJson).getOrNull()
+                }
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                ) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                stringResource(Res.string.drawing_number, savedDrawing.id),
+                                modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                            IconButton(
+                                onClick = {
+                                    onEditDrawing(savedDrawing.id, savedDrawing.drawingJson)
+                                },
+                                modifier = Modifier.size(40.dp),
+                            ) {
+                                EditPencilIcon(color = MaterialTheme.colorScheme.onSurface)
+                            }
+                            IconButton(
+                                onClick = { deleteDrawing(savedDrawing) },
+                                modifier = Modifier.size(40.dp),
+                            ) {
+                                TrashCanIcon(color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                        if (document != null) {
+                            Text(
+                                stringResource(Res.string.stroke_point_count, document.strokes.size, document.strokes.sumOf { it.points.size }),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp),
+                            ) {
+                                DrawingPreview(
+                                    drawing = document,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clickable { onViewDrawing(document) },
+                                )
+                                FloatingActionButton(
+                                    onClick = { sendDrawing(savedDrawing) },
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .padding(8.dp)
+                                        .size(48.dp),
+                                    shape = CircleShape,
+                                    containerColor = Color(0xFFF5A800),
+                                    contentColor = if (darkThemeEnabled) Color(0xFF202124) else Color.White,
+                                ) {
+                                    if (sendingDrawingId == savedDrawing.id) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(20.dp),
+                                            color = if (darkThemeEnabled) Color(0xFF202124) else Color.White,
+                                            strokeWidth = 2.dp,
+                                        )
+                                    } else {
+                                        Icon(
+                                            imageVector = Icons.Rounded.PlayArrow,
+                                            contentDescription = stringResource(Res.string.send_to_chat),
+                                            modifier = Modifier.size(26.dp),
+                                            tint = if (darkThemeEnabled) Color(0xFF202124) else Color.White,
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            Text(stringResource(Res.string.reading_drawing_failed), color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            }
+        }
 
         Row(
             modifier = Modifier
