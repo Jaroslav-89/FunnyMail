@@ -81,6 +81,7 @@ import com.jaroapps.funnymail.features.letter.domain.model.Letter
 import com.jaroapps.funnymail.features.letter.domain.repository.LetterRepository
 import com.jaroapps.funnymail.features.letter.presentation.DrawingPreview
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -114,11 +115,23 @@ fun ChatDetailsScreen(
     var isAddingUser by remember { mutableStateOf(false) }
     var authorNames by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var drawingActionMessage by remember(chat.id) { mutableStateOf<String?>(null) }
-    var cleanupRequested by remember(chat.id) { mutableStateOf(false) }
+    var activeChat by remember(chat.id) { mutableStateOf(chat) }
+    var cleanupAttemptedIds by remember(chat.id, chat.maxLettersCount) {
+        mutableStateOf<Set<String>>(emptySet())
+    }
 
     DisposableEffect(chat.id) {
         viewModel.observeLetters(chat.id)
         onDispose { viewModel.stopObserving(chat.id) }
+    }
+
+    // Watch chat metadata too, so limit changes made by the creator take effect
+    // immediately on every connected member's device.
+    LaunchedEffect(chat.id, state.currentUser?.id) {
+        val userId = state.currentUser?.id ?: return@LaunchedEffect
+        chatRepository.observeChats(userId).collect { chats ->
+            chats.firstOrNull { it.id == chat.id }?.let { activeChat = it }
+        }
     }
 
     LaunchedEffect(chat.id, state.letters.lastOrNull()?.id, state.isLoading) {
@@ -133,14 +146,46 @@ fun ChatDetailsScreen(
         }
     }
 
-    LaunchedEffect(chat.id, chat.maxLettersCount, state.letters.size, state.isLoading, state.currentUser?.id) {
-        val limit = chat.maxLettersCount
-        val userId = state.currentUser?.id
-        if (!cleanupRequested && !state.isLoading && limit != null && limit > 0 &&
-            state.letters.size > limit && userId != null
-        ) {
-            cleanupRequested = true
-            chatRepository.requestAutomaticCleanup(chat.id, userId)
+    // Client-side retention avoids Cloud Functions and runs after each Firestore
+    // snapshot. Members prune their own excess drawings; the creator can prune any
+    // excess drawing. Firestore Rules continue to enforce this permission boundary.
+    LaunchedEffect(
+        chat.id,
+        activeChat.maxLettersCount,
+        activeChat.creatorUserId,
+        activeChat.memberIds,
+        state.letters,
+        state.isLoading,
+        state.currentUser?.id,
+    ) {
+        val limit = activeChat.maxLettersCount ?: return@LaunchedEffect
+        val userId = state.currentUser?.id ?: return@LaunchedEffect
+        if (state.isLoading || limit < 1 || state.letters.size <= limit) return@LaunchedEffect
+
+        val existingIds = state.letters.map { it.id }.toSet()
+        val stillPresentAttempts = cleanupAttemptedIds.intersect(existingIds)
+        if (stillPresentAttempts != cleanupAttemptedIds) {
+            cleanupAttemptedIds = stillPresentAttempts
+        }
+
+        val creatorId = activeChat.creatorUserId.ifBlank {
+            activeChat.memberIds.firstOrNull().orEmpty()
+        }
+        val isCreator = userId == creatorId
+        val excessCount = (state.letters.size - limit).coerceAtLeast(0)
+        val excessLetters = state.letters.take(excessCount).filter { letter ->
+            (isCreator || letter.authorUserId == userId) && letter.id !in cleanupAttemptedIds
+        }
+        if (excessLetters.isEmpty()) return@LaunchedEffect
+
+        cleanupAttemptedIds = cleanupAttemptedIds + excessLetters.map { it.id }
+        coroutineScope.launch {
+            excessLetters.forEach { letter ->
+                letterRepository.deleteLetter(chat.id, letter.id, userId).onFailure { error ->
+                    drawingActionMessage = error.message
+                        ?: "Не удалось автоматически удалить старый рисунок."
+                }
+            }
         }
     }
 
@@ -236,7 +281,7 @@ fun ChatDetailsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = chat.title,
+                        text = activeChat.title,
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
@@ -244,7 +289,7 @@ fun ChatDetailsScreen(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = chat.memberIds.size.toString(),
+                        text = activeChat.memberIds.size.toString(),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
