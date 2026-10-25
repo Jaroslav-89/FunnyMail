@@ -1,5 +1,6 @@
 package com.jaroapps.funnymail.features.chat.presentation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -72,6 +74,7 @@ fun ChatEditScreen(
     val isCreator = currentUserId != null && currentUserId == creatorId
 
     var title by rememberSaveable(chat.id) { mutableStateOf(chat.title) }
+    var description by rememberSaveable(chat.id) { mutableStateOf(chat.description) }
     var busy by remember { mutableStateOf(false) }
     var creatingInvite by remember { mutableStateOf(false) }
     var invite by remember { mutableStateOf<ChatInvite?>(null) }
@@ -87,7 +90,12 @@ fun ChatEditScreen(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = onBack) { Text("← Назад") }
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+            ) {
+                Text("←", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Spacer(Modifier.width(12.dp))
             Text("Настройки чата", style = MaterialTheme.typography.titleLarge, maxLines = 1,
                 overflow = TextOverflow.Ellipsis)
@@ -137,6 +145,52 @@ fun ChatEditScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = isCreator && !busy && title.trim().isNotEmpty() && title.trim() != chat.title,
             ) { Text(if (busy) "Сохраняем…" else "Сохранить название") }
+
+            Text("Описание чата", style = MaterialTheme.typography.titleMedium)
+            OutlinedTextField(
+                value = description,
+                onValueChange = { description = it.take(120) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !busy,
+                readOnly = !isCreator,
+                singleLine = false,
+                minLines = 3,
+                maxLines = 6,
+                label = { Text("Описание") },
+                supportingText = {
+                    Text(if (isCreator) "${description.length}/120 символов" else "Изменять описание может только создатель")
+                },
+            )
+            if (isCreator) {
+                Button(
+                    onClick = {
+                        val userId = currentUserId
+                        val normalized = description.trim()
+                        if (userId != null && !busy && normalized.length <= 120 && normalized != chat.description) {
+                            busy = true
+                            message = null
+                            scope.launch {
+                                repository.updateChatDescription(chat.id, normalized, userId).fold(
+                                    onSuccess = { updatedChat ->
+                                        busy = false
+                                        description = updatedChat.description
+                                        onChatUpdated(updatedChat)
+                                        message = "Описание чата сохранено."
+                                        messageIsError = false
+                                    },
+                                    onFailure = { error ->
+                                        busy = false
+                                        message = error.message ?: "Не удалось изменить описание чата."
+                                        messageIsError = true
+                                    },
+                                )
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !busy && description.trim().length <= 120 && description.trim() != chat.description,
+                ) { Text(if (busy) "Сохраняем…" else "Сохранить описание") }
+            }
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
