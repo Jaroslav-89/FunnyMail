@@ -122,7 +122,7 @@ class FirebaseChatRepository(
         // target chat, is still valid according to request.time, and was created by a member.
         chatReference.update(
             "memberIds" to FieldValue.arrayUnion(userId),
-            "updatedAt" to Timestamp.ServerTimestamp,
+            "updatedAt" to FieldValue.serverTimestamp,
             "lastInviteCode" to normalizedCode,
         )
 
