@@ -44,7 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.core.ui.AccountPersonIcon
-import com.jaroapps.funnymail.core.ui.BackArrowGlyph
+import com.jaroapps.funnymail.core.ui.AppBackButton
 import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
 import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
 import com.jaroapps.funnymail.core.ui.PersonPlusIcon
@@ -414,14 +414,7 @@ fun ChatEditScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.size(48.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
-            ) {
-                BackArrowGlyph(color = MaterialTheme.colorScheme.onSurface)
-            }
+            AppBackButton(onClick = onBack)
             Surface(
                 modifier = Modifier.weight(1f).height(48.dp),
                 shape = RoundedCornerShape(24.dp),
