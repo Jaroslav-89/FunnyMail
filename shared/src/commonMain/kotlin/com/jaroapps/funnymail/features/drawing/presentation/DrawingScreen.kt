@@ -102,6 +102,12 @@ fun DrawingScreen(
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
     val drawingCodec = remember { DrawingCodec() }
+    val paintColor = if (eraserEnabled) "#FFFFFF" else selectedColor
+    val canvasHeight = if (canvasSize.width > 0 && canvasSize.height > 0) {
+        (1000f * canvasSize.height / canvasSize.width).roundToInt().coerceIn(1, 4096)
+    } else {
+        1000
+    }
     val currentDrawingJson = remember(strokes, canvasHeight) {
         if (strokes.isEmpty()) {
             null
@@ -119,12 +125,6 @@ fun DrawingScreen(
         }
     }
     val isCurrentDrawingSaved = currentDrawingJson != null && currentDrawingJson == savedDrawingJson
-    val paintColor = if (eraserEnabled) "#FFFFFF" else selectedColor
-    val canvasHeight = if (canvasSize.width > 0 && canvasSize.height > 0) {
-        (1000f * canvasSize.height / canvasSize.width).roundToInt().coerceIn(1, 4096)
-    } else {
-        1000
-    }
 
     val saveDrawingAction: () -> Unit = {
         val json = currentDrawingJson
