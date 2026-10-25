@@ -315,121 +315,74 @@ fun DrawingScreen(
             }
         }
 
-        Column(
+        Row(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .fillMaxWidth()
                 .padding(bottom = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(9.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.Bottom,
         ) {
-            AnimatedVisibility(
-                visible = activePopup == DrawingPopup.Colors,
-                enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
-                exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom),
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(9.dp),
             ) {
-                Row(
-                    modifier = Modifier
-                        .shadow(5.dp, RoundedCornerShape(28.dp))
-                        .clip(RoundedCornerShape(28.dp))
-                        .background(Color.White)
-                        .border(1.dp, Color(0xFFE8EAED), RoundedCornerShape(28.dp))
-                        .padding(horizontal = 10.dp, vertical = 9.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                AnimatedVisibility(
+                    visible = activePopup == DrawingPopup.Colors,
+                    enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
+                    exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom),
                 ) {
-                    DrawingPalette.forEach { colorHex ->
-                        val selected = !eraserEnabled && selectedColor == colorHex
-                        Box(
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(CircleShape)
-                                .background(colorHex.toDrawingColor())
-                                .border(
-                                    width = if (selected) 3.dp else 1.dp,
-                                    color = if (selected) Color(0xFF202124) else Color(0xFFDADCE0),
-                                    shape = CircleShape,
-                                )
-                                .clickable {
-                                    selectedColor = colorHex
-                                    eraserEnabled = false
-                                    activePopup = null
-                                    statusMessage = null
-                                },
-                        )
-                    }
-
-                    TextButton(
-                        onClick = {
-                            eraserEnabled = true
-                            activePopup = null
-                            statusMessage = null
-                        },
+                    Row(
                         modifier = Modifier
-                            .height(38.dp)
-                            .clip(CircleShape)
+                            .shadow(5.dp, RoundedCornerShape(28.dp))
+                            .clip(RoundedCornerShape(28.dp))
                             .background(Color.White)
-                            .border(
-                                width = if (eraserEnabled) 2.dp else 1.dp,
-                                color = if (eraserEnabled) Color(0xFF202124) else Color(0xFFDADCE0),
-                                shape = CircleShape,
-                            ),
+                            .border(1.dp, Color(0xFFE8EAED), RoundedCornerShape(28.dp))
+                            .padding(horizontal = 8.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
                     ) {
-                        Text("Ластик", color = Color(0xFF202124), fontSize = 12.sp)
-                    }
-                }
-            }
-
-            AnimatedVisibility(
-                visible = activePopup == DrawingPopup.Width,
-                enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
-                exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .shadow(5.dp, RoundedCornerShape(28.dp))
-                        .clip(RoundedCornerShape(28.dp))
-                        .background(Color.White)
-                        .border(1.dp, Color(0xFFE8EAED), RoundedCornerShape(28.dp))
-                        .padding(horizontal = 9.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    BrushWidths.forEachIndexed { index, width ->
-                        val selected = brushWidth == width
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .clickable {
-                                    brushWidth = width
-                                    activePopup = null
-                                    statusMessage = null
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (selected) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(BrushDotSizes[index] + 8.dp)
-                                        .border(2.dp, Color(0xFF1A73E8), CircleShape),
-                                )
-                            }
+                        DrawingPalette.forEach { colorHex ->
+                            val selected = !eraserEnabled && selectedColor == colorHex
                             Box(
                                 modifier = Modifier
-                                    .size(BrushDotSizes[index])
+                                    .size(26.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFF202124)),
+                                    .background(colorHex.toDrawingColor())
+                                    .border(
+                                        width = if (selected) 3.dp else 1.dp,
+                                        color = if (selected) Color(0xFF202124) else Color(0xFFDADCE0),
+                                        shape = CircleShape,
+                                    )
+                                    .clickable {
+                                        selectedColor = colorHex
+                                        eraserEnabled = false
+                                        activePopup = null
+                                        statusMessage = null
+                                    },
                             )
+                        }
+
+                        TextButton(
+                            onClick = {
+                                eraserEnabled = true
+                                activePopup = null
+                                statusMessage = null
+                            },
+                            modifier = Modifier
+                                .height(36.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                                .border(
+                                    width = if (eraserEnabled) 2.dp else 1.dp,
+                                    color = if (eraserEnabled) Color(0xFF202124) else Color(0xFFDADCE0),
+                                    shape = CircleShape,
+                                ),
+                        ) {
+                            Text("Ластик", color = Color(0xFF202124), fontSize = 11.sp)
                         }
                     }
                 }
-            }
 
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
                 ColorToolButton(
                     selectedColor = selectedColor,
                     eraserEnabled = eraserEnabled,
@@ -437,6 +390,57 @@ fun DrawingScreen(
                         activePopup = if (activePopup == DrawingPopup.Colors) null else DrawingPopup.Colors
                     },
                 )
+            }
+
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(9.dp),
+            ) {
+                AnimatedVisibility(
+                    visible = activePopup == DrawingPopup.Width,
+                    enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
+                    exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .shadow(5.dp, RoundedCornerShape(28.dp))
+                            .clip(RoundedCornerShape(28.dp))
+                            .background(Color.White)
+                            .border(1.dp, Color(0xFFE8EAED), RoundedCornerShape(28.dp))
+                            .padding(horizontal = 9.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        BrushWidths.forEachIndexed { index, width ->
+                            val selected = brushWidth == width
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .clickable {
+                                        brushWidth = width
+                                        activePopup = null
+                                        statusMessage = null
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (selected) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(BrushDotSizes[index] + 8.dp)
+                                            .border(2.dp, Color(0xFF1A73E8), CircleShape),
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .size(BrushDotSizes[index])
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF202124)),
+                                )
+                            }
+                        }
+                    }
+                }
 
                 RoundToolButton(
                     onClick = {
