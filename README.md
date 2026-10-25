@@ -76,10 +76,10 @@ Run this one-time setup from the repository root on macOS if the linkage package
 ```bash
 ./gradlew --stop
 
-export GRADLE_PROJECT_PATH=":shared"
-export XCODEPROJ_PATH="$PWD/iosApp/iosApp.xcodeproj"
-
-./gradlew --no-configuration-cache -p "$PWD" :shared:integrateEmbedAndSign :shared:integrateLinkagePackage
+GRADLE_PROJECT_PATH=":shared" \
+XCODEPROJ_PATH="$PWD/iosApp/iosApp.xcodeproj" \
+./gradlew -p "$PWD" --no-configuration-cache \
+  :shared:integrateEmbedAndSign :shared:integrateLinkagePackage
 ```
 
 
