@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">FunnyMail</string>
+    <string name="default_notification_channel_id">new_chat_messages</string>
 </resources>
