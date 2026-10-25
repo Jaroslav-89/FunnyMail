@@ -51,7 +51,13 @@ class FirebaseChatRepository(
                         // Backfill sort order in memory for chats created before lastMessageAt
                         // was introduced. Once a new letter is sent, the server timestamp is
                         // persisted on the chat document and no extra query is required.
-                        val lastLetterAt = runCatching { findLatestLetterTimestamp(chat.id) }.getOrNull()
+                        val lastLetterAt = try {
+                            findLatestLetterTimestamp(chat.id)
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
+                            null
+                        }
                         chat.copy(lastMessageAtEpochMillis = lastLetterAt)
                     }
                 }.sortedByDescending { it.lastMessageAtEpochMillis ?: it.updatedAtEpochMillis }
