@@ -208,4 +208,5 @@
     <string name="letter_permission_error">Firestore отклонил операцию. Проверьте, что опубликованы обновлённые правила из firestore.rules и вы состоите в этом чате.</string>
     <string name="letter_too_large">Рисунок слишком большой для отправки. Уменьшите число штрихов или точек.</string>
     <string name="letter_generic_error">Не удалось загрузить или отправить письма. Проверьте настройки Firebase.</string>
+    <string name="chat_enter_title">Введите название чата.</string>
 </resources>
