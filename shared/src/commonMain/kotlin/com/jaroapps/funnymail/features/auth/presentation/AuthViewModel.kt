@@ -36,7 +36,19 @@ class AuthViewModel(
             authRepository.currentUser
                 .catch { emit(null) }
                 .collect { user ->
-                    _state.update { current -> current.copy(currentUser = user) }
+                    _state.update { current ->
+                        if (current.currentUser?.id != user?.id) {
+                            current.copy(
+                                currentUser = user,
+                                isCheckingUsername = false,
+                                isSavingProfile = false,
+                                usernameAvailability = null,
+                                usernameCheckQuery = null,
+                            )
+                        } else {
+                            current.copy(currentUser = user)
+                        }
+                    }
                 }
         }
     }
