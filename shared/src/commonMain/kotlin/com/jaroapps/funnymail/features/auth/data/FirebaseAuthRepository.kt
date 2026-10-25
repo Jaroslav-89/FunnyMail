@@ -49,7 +49,6 @@ class FirebaseAuthRepository(
 ) : AuthRepository {
     private val userDirectoryMutex = Mutex()
 
-
     @OptIn(ExperimentalCoroutinesApi::class)
     override val currentUser: Flow<UserProfile?> = flow {
         val auth = authProvider()
@@ -328,67 +327,67 @@ class FirebaseAuthRepository(
             val emailLower = user.email.orEmpty().trim().lowercase()
             val emailRef = emailLower.takeIf { it.isNotBlank() }?.let {
                 firestore.collection(EMAIL_LOOKUP_COLLECTION).document(it)
-        }
-        val resolvedProviderName = providerDisplayName?.takeIf { it.isNotBlank() }
-            ?: user.socialProviderDisplayName().orEmpty()
-
-        val directory = firestore.runTransaction {
-            val userSnapshot = get(userRef)
-            val current = if (userSnapshot.exists) {
-                userSnapshot.data<FirestoreUserDirectory>()
-            } else {
-                null
             }
-            var profile = current ?: FirestoreUserDirectory(
-                uid = user.uid,
-                email = user.email.orEmpty(),
-                emailLower = emailLower,
-                customName = initialCustomName.trim(),
-                providerDisplayName = resolvedProviderName,
-                generatedName = generatedName(),
-                avatarUrl = user.photoURL.orEmpty(),
-            )
+            val resolvedProviderName = providerDisplayName?.takeIf { it.isNotBlank() }
+                ?: user.socialProviderDisplayName().orEmpty()
 
-            if (current != null) {
-                profile = profile.copy(
-                    customName = profile.customName.ifBlank { initialCustomName.trim() },
-                    username = normalizeUsername(profile.username),
-                    usernameLower = normalizeUsername(profile.username),
-                    providerDisplayName = profile.providerDisplayName.ifBlank { resolvedProviderName },
-                    generatedName = profile.generatedName.ifBlank { generatedName() },
+            val directory = firestore.runTransaction {
+                val userSnapshot = get(userRef)
+                val current = if (userSnapshot.exists) {
+                    userSnapshot.data<FirestoreUserDirectory>()
+                } else {
+                    null
+                }
+                var profile = current ?: FirestoreUserDirectory(
+                    uid = user.uid,
                     email = user.email.orEmpty(),
                     emailLower = emailLower,
-                    avatarUrl = user.photoURL.orEmpty().ifBlank { profile.avatarUrl },
+                    customName = initialCustomName.trim(),
+                    providerDisplayName = resolvedProviderName,
+                    generatedName = generatedName(),
+                    avatarUrl = user.photoURL.orEmpty(),
                 )
-            }
 
-            val emailSnapshot = emailRef?.let { get(it) }
-            val usernameRef = profile.usernameLower.takeIf { it.isNotBlank() }?.let {
-                firestore.collection(USERNAMES_COLLECTION).document(it)
-            }
-            val usernameSnapshot = usernameRef?.let { get(it) }
-
-            if (usernameSnapshot?.exists == true) {
-                require(usernameSnapshot.data<LookupRecord>().userId == user.uid) {
-                    USERNAME_TAKEN
+                if (current != null) {
+                    profile = profile.copy(
+                        customName = profile.customName.ifBlank { initialCustomName.trim() },
+                        username = normalizeUsername(profile.username),
+                        usernameLower = normalizeUsername(profile.username),
+                        providerDisplayName = profile.providerDisplayName.ifBlank { resolvedProviderName },
+                        generatedName = profile.generatedName.ifBlank { generatedName() },
+                        email = user.email.orEmpty(),
+                        emailLower = emailLower,
+                        avatarUrl = user.photoURL.orEmpty().ifBlank { profile.avatarUrl },
+                    )
                 }
-            }
-            if (emailSnapshot?.exists == true) {
-                require(emailSnapshot.data<LookupRecord>().userId == user.uid) {
-                    "Этот email уже связан с другим профилем."
-                }
-            }
 
-            if (!userSnapshot.exists || current != profile) set(userRef, profile)
-            set(publicRef, profile.toPublicDirectory())
-            if (usernameRef != null && usernameSnapshot?.exists != true) {
-                set(usernameRef, LookupRecord(userId = user.uid))
+                val emailSnapshot = emailRef?.let { get(it) }
+                val usernameRef = profile.usernameLower.takeIf { it.isNotBlank() }?.let {
+                    firestore.collection(USERNAMES_COLLECTION).document(it)
+                }
+                val usernameSnapshot = usernameRef?.let { get(it) }
+
+                if (usernameSnapshot?.exists == true) {
+                    require(usernameSnapshot.data<LookupRecord>().userId == user.uid) {
+                        USERNAME_TAKEN
+                    }
+                }
+                if (emailSnapshot?.exists == true) {
+                    require(emailSnapshot.data<LookupRecord>().userId == user.uid) {
+                        "Этот email уже связан с другим профилем."
+                    }
+                }
+
+                if (!userSnapshot.exists || current != profile) set(userRef, profile)
+                set(publicRef, profile.toPublicDirectory())
+                if (usernameRef != null && usernameSnapshot?.exists != true) {
+                    set(usernameRef, LookupRecord(userId = user.uid))
+                }
+                if (emailRef != null && emailSnapshot?.exists != true) {
+                    set(emailRef, LookupRecord(userId = user.uid))
+                }
+                profile
             }
-            if (emailRef != null && emailSnapshot?.exists != true) {
-                set(emailRef, LookupRecord(userId = user.uid))
-            }
-            profile
-        }
 
             user.withDirectory(directory)
         }
