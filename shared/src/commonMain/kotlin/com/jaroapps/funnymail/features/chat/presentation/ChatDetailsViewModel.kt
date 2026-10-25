@@ -3,6 +3,9 @@ package com.jaroapps.funnymail.features.chat.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
+import com.jaroapps.funnymail.resources.Res
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.getString
 import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.letter.domain.model.Letter
@@ -89,12 +92,12 @@ class ChatDetailsViewModel(
 
     fun sendDraft(chatId: String, drawing: DrawingDocument) {
         val userId = _state.value.currentUser?.id ?: run {
-            showError("Сначала войдите в аккаунт.")
+            showError(Res.string.letter_login_required)
             return
         }
         if (_state.value.isSending) return
         if (drawing.strokes.isEmpty()) {
-            showError("Сначала нарисуйте письмо.")
+            showError(Res.string.letter_draw_something)
             return
         }
 
@@ -116,7 +119,7 @@ class ChatDetailsViewModel(
                         it.copy(
                             isSending = false,
                             lastSentLetterId = letter.id,
-                            message = "Письмо отправлено в чат.",
+                            message = getString(Res.string.letter_sent),
                             messageIsError = false,
                         )
                     }
@@ -135,23 +138,26 @@ class ChatDetailsViewModel(
         }
     }
 
-    private fun showError(message: String) {
-        _state.update { it.copy(message = message, messageIsError = true) }
+    private fun showError(resource: StringResource) {
+        viewModelScope.launch {
+            val message = getString(resource)
+            _state.update { it.copy(message = message, messageIsError = true) }
+        }
     }
 
-    private fun Throwable.toLetterMessage(): String {
+    private suspend fun Throwable.toLetterMessage(): String {
         val details = message.orEmpty().lowercase()
         return when {
             "permission-denied" in details || "permission_denied" in details || "permission denied" in details ->
-                "Firestore отклонил операцию. Проверьте, что опубликованы обновлённые правила из firestore.rules и вы состоите в этом чате."
+                getString(Res.string.letter_permission_error)
             "firebase не настроен" in details || "firebase is not configured" in details ->
-                "Firebase не настроен. Добавьте конфигурационные файлы платформы."
+                getString(Res.string.firebase_not_configured)
             "рисунок слишком большой" in details || "too large" in details ->
-                "Рисунок слишком большой для отправки. Уменьшите число штрихов или точек."
+                getString(Res.string.letter_too_large)
             "network" in details || "unavailable" in details ->
-                "Не удалось подключиться к серверу. Проверьте интернет."
+                getString(Res.string.network_connection_failed)
             else -> message?.takeIf { it.isNotBlank() }
-                ?: "Не удалось загрузить или отправить письма. Проверьте настройки Firebase."
+                ?: getString(Res.string.letter_generic_error)
         }
     }
 }
