@@ -4,6 +4,8 @@ import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.letter.domain.model.Letter
+import com.jaroapps.funnymail.resources.Res
+import org.jetbrains.compose.resources.getString
 import com.jaroapps.funnymail.features.letter.domain.repository.LetterRepository
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.BaseTimestamp
@@ -39,7 +41,7 @@ class FirebaseLetterRepository(
 ) : LetterRepository {
 
     override fun observeLetters(chatId: String): Flow<List<Letter>> {
-        require(chatId.isNotBlank()) { "Не выбран чат." }
+        require(chatId.isNotBlank()) { getString(Res.string.letter_chat_not_selected) }
 
         // Query only unexpired documents. Security Rules independently compare expiresAt to
         // the server's request.time so clients cannot read an expired letter by changing local time.
@@ -78,13 +80,13 @@ class FirebaseLetterRepository(
         authorUserId: String,
         drawing: DrawingDocument,
     ): Result<Letter> = asResult {
-        require(chatId.isNotBlank()) { "Не выбран чат." }
-        require(authorUserId.isNotBlank()) { "Для отправки письма нужно войти в аккаунт." }
-        require(drawing.strokes.isNotEmpty()) { "Сначала нарисуйте письмо." }
+        require(chatId.isNotBlank()) { getString(Res.string.letter_chat_not_selected) }
+        require(authorUserId.isNotBlank()) { getString(Res.string.letter_login_required) }
+        require(drawing.strokes.isNotEmpty()) { getString(Res.string.letter_draw_something) }
 
         val drawingJson = drawingCodec.encode(drawing).getOrThrow()
         require(drawingJson.encodeToByteArray().size <= MAX_DRAWING_JSON_BYTES) {
-            "Рисунок слишком большой для отправки."
+            getString(Res.string.letter_size_too_big)
         }
 
         val expiresAtMillis = Clock.System.now().toEpochMilliseconds() + LETTER_TTL_MILLIS
@@ -127,8 +129,8 @@ class FirebaseLetterRepository(
         requestingUserId: String,
     ): Result<Unit> = asResult {
         require(chatId.isNotBlank()) { "Не выбран чат." }
-        require(letterId.isNotBlank()) { "Не выбран рисунок." }
-        require(requestingUserId.isNotBlank()) { "Для удаления рисунка нужно войти в аккаунт." }
+        require(letterId.isNotBlank()) { getString(Res.string.letter_delete_drawing_not_selected) }
+        require(requestingUserId.isNotBlank()) { getString(Res.string.letter_delete_login_required) }
 
         val reference = firestoreProvider()
             .collection(CHATS_COLLECTION)
@@ -145,7 +147,7 @@ class FirebaseLetterRepository(
             .data<FirestoreLetterChatAccess>()
         val creatorId = chat.creatorUserId.ifBlank { chat.memberIds.firstOrNull().orEmpty() }
         require(letter.authorUserId == requestingUserId || creatorId == requestingUserId) {
-            "Удалить рисунок может его автор или создатель чата."
+            getString(Res.string.letter_delete_author_only)
         }
         reference.delete()
     }
