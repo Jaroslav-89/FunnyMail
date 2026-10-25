@@ -13,6 +13,9 @@ interface LocalDrawingDao {
     @Insert
     suspend fun insert(drawing: LocalDrawingEntity): Long
 
+    @Query("UPDATE local_drawings SET drawingJson = :drawingJson WHERE id = :id")
+    suspend fun updateDrawingById(id: Long, drawingJson: String): Int
+
     @Query("DELETE FROM local_drawings WHERE id = :id")
     suspend fun deleteById(id: Long): Int
 }

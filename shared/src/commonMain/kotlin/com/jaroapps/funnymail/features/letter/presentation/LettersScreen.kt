@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.jaroapps.funnymail.core.ui.EditPencilIcon
 import com.jaroapps.funnymail.core.ui.TrashCanIcon
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingStrokes
@@ -48,6 +49,7 @@ fun LettersScreen(
     draftJson: String?,
     onBack: () -> Unit,
     onClearDraft: () -> Unit,
+    onEditDrawing: (Long, String) -> Unit,
     onSendDrawing: (String, (String?) -> Unit) -> Unit,
 ) {
     val repository = koinInject<LocalDrawingRepository>()
@@ -123,6 +125,14 @@ fun LettersScreen(
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.headlineSmall,
                 )
+                IconButton(
+                    onClick = {
+                        onEditDrawing(selectedDrawing.id, selectedDrawing.drawingJson)
+                    },
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    EditPencilIcon(color = MaterialTheme.colorScheme.primary)
+                }
                 IconButton(
                     onClick = { deleteDrawing(selectedDrawing) },
                     modifier = Modifier.size(40.dp),
@@ -225,6 +235,14 @@ fun LettersScreen(
                                     modifier = Modifier.weight(1f),
                                     style = MaterialTheme.typography.titleMedium,
                                 )
+                                IconButton(
+                                    onClick = {
+                                        onEditDrawing(savedDrawing.id, savedDrawing.drawingJson)
+                                    },
+                                    modifier = Modifier.size(40.dp),
+                                ) {
+                                    EditPencilIcon(color = MaterialTheme.colorScheme.primary)
+                                }
                                 IconButton(
                                     onClick = { deleteDrawing(savedDrawing) },
                                     modifier = Modifier.size(40.dp),

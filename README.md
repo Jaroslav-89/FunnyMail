@@ -40,7 +40,7 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [x] Room KMP database and repository for the local drawing library
 - [x] Shared drawing canvas with color palette, adjustable brush, eraser, undo and clear controls
 - [x] Save each prepared drawing to a local Room/SQLite database on Android and iOS
-- [x] Local drawing gallery with previews, full-size viewing and delete actions
+- [x] Local drawing gallery with previews, full-size viewing, editing saved drawings in place, and delete actions
 - [x] Chat floating-action menu for creating drawings or opening the local gallery; send drawings to the active chat
 - [x] Authentication-aware home screen with a profile shortcut, chat creation/join dialogs, and cards sorted by latest letter
 - [x] Chat header invite dialog with a shareable invite code

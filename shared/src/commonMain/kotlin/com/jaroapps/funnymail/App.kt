@@ -77,6 +77,9 @@ private fun FunnyMailContent(
 ) {
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
     var selectedChat by remember { mutableStateOf<Chat?>(null) }
+    var editingDrawingId by remember { mutableStateOf<Long?>(null) }
+    var editingDrawingJson by remember { mutableStateOf<String?>(null) }
+    var drawingReturnDestination by remember { mutableStateOf(AppDestination.ChatDetail) }
     val localDrawingRepository = koinInject<LocalDrawingRepository>()
     val authRepository = koinInject<AuthRepository>()
     val signedInUser by authRepository.currentUser.collectAsState(initial = null)
@@ -91,12 +94,20 @@ private fun FunnyMailContent(
     val letterRepository = koinInject<LetterRepository>()
     val coroutineScope = rememberCoroutineScope()
 
+    val closeDrawing: () -> Unit = {
+        destination = drawingReturnDestination
+        editingDrawingId = null
+        editingDrawingJson = null
+        drawingReturnDestination = AppDestination.ChatDetail
+    }
+
     PlatformBackHandler(enabled = destination != AppDestination.Home) {
-        destination = when (destination) {
-            AppDestination.Home, AppDestination.Auth, AppDestination.ChatDetail ->
-                AppDestination.Home
-            AppDestination.Drawing, AppDestination.Letters ->
-                AppDestination.ChatDetail
+        when (destination) {
+            AppDestination.Home -> Unit
+            AppDestination.Auth,
+            AppDestination.ChatDetail -> destination = AppDestination.Home
+            AppDestination.Drawing -> closeDrawing()
+            AppDestination.Letters -> destination = AppDestination.ChatDetail
         }
     }
 
@@ -146,6 +157,9 @@ private fun FunnyMailContent(
                                 reportResult(null)
                                 if (destination == AppDestination.Drawing) {
                                     destination = AppDestination.ChatDetail
+                                    editingDrawingId = null
+                                    editingDrawingJson = null
+                                    drawingReturnDestination = AppDestination.ChatDetail
                                 }
                             },
                             onFailure = { error ->
@@ -189,11 +203,17 @@ private fun FunnyMailContent(
                         onBack = { destination = AppDestination.Home },
                     )
                     AppDestination.Drawing -> DrawingScreen(
-                        onBack = { destination = AppDestination.ChatDetail },
+                        initialDrawingJson = editingDrawingJson,
+                        onBack = closeDrawing,
                         onSaveDrawing = { json, reportSaveResult ->
                             coroutineScope.launch {
                                 try {
-                                    localDrawingRepository.saveDrawing(json)
+                                    val drawingId = editingDrawingId
+                                    if (drawingId != null) {
+                                        localDrawingRepository.updateDrawing(drawingId, json)
+                                    } else {
+                                        localDrawingRepository.saveDrawing(json)
+                                    }
                                     reportSaveResult(null)
                                 } catch (error: Exception) {
                                     reportSaveResult(
@@ -208,6 +228,12 @@ private fun FunnyMailContent(
                         draftJson = draftJson,
                         onBack = { destination = AppDestination.ChatDetail },
                         onClearDraft = onClearDraft,
+                        onEditDrawing = { drawingId, drawingJson ->
+                            editingDrawingId = drawingId
+                            editingDrawingJson = drawingJson
+                            drawingReturnDestination = AppDestination.Letters
+                            destination = AppDestination.Drawing
+                        },
                         onSendDrawing = sendDrawingToChat,
                     )
                     AppDestination.ChatDetail -> {
@@ -224,8 +250,17 @@ private fun FunnyMailContent(
                                 draftJson = draftJson,
                                 onBack = { destination = AppDestination.Home },
                                 onDraftSent = onClearDraft,
-                                onCreateDrawing = { destination = AppDestination.Drawing },
-                                onOpenDrawings = { destination = AppDestination.Letters },
+                                onCreateDrawing = {
+                                    editingDrawingId = null
+                                    editingDrawingJson = null
+                                    drawingReturnDestination = AppDestination.ChatDetail
+                                    destination = AppDestination.Drawing
+                                },
+                                onOpenDrawings = {
+                                    editingDrawingId = null
+                                    editingDrawingJson = null
+                                    destination = AppDestination.Letters
+                                },
                                 onCreateInvite = createInviteForChat,
                             )
                         }
