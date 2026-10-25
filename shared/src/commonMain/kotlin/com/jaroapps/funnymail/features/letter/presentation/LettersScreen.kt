@@ -162,7 +162,7 @@ fun LettersScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 12.dp, top = 84.dp, end = 12.dp, bottom = 72.dp),
+                contentPadding = PaddingValues(start = 12.dp, top = 0.dp, end = 12.dp, bottom = 72.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (drawings.isEmpty() && !draftNeedsImport) {
