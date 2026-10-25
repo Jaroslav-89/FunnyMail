@@ -273,6 +273,7 @@ private fun FunnyMailContent(
                                     viewingDrawing = drawing
                                     destination = AppDestination.DrawingViewer
                                 },
+                                onChatUpdated = { updatedChat -> selectedChat = updatedChat },
                                 onCreateInvite = createInviteForChat,
                             )
                         }
