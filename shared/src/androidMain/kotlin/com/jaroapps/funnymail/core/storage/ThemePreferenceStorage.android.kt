@@ -28,9 +28,11 @@ actual object ThemePreferenceStorage {
             ?.apply()
     }
 
-    actual fun updateSystemBars(darkThemeEnabled: Boolean) {
+    actual fun updateSystemBars(darkThemeEnabled: Boolean, transparentStatusBar: Boolean) {
         val window = hostActivity?.window ?: return
-        window.statusBarColor = if (darkThemeEnabled) {
+        window.statusBarColor = if (transparentStatusBar) {
+            AndroidColor.TRANSPARENT
+        } else if (darkThemeEnabled) {
             AndroidColor.rgb(16, 17, 20)
         } else {
             AndroidColor.rgb(245, 168, 0)
