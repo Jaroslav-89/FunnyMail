@@ -15,7 +15,8 @@ service cloud.firestore {
     }
 
     function isChatMember(chatId) {
-      return exists(chatPath(chatId))
+      return signedIn()
+        && exists(chatPath(chatId))
         && request.auth.uid in get(chatPath(chatId)).data.memberIds;
     }
 
