@@ -81,9 +81,15 @@ service cloud.firestore {
         && request.resource.data.expiresAt
           <= request.time + duration.value(7, 'd') + duration.value(5, 'm');
 
-      allow read: if isChatMember(chatId)
+      // A single-document read is checked against the server clock.
+      allow get: if isChatMember(chatId)
         && resource.data.expiresAt is timestamp
         && request.time < resource.data.expiresAt;
+
+      // Queries cannot reliably prove a server-time comparison against each result.
+      // Restrict list access to chat members; the app's query filters expiresAt,
+      // and the configured Firestore TTL policy removes expired letters asynchronously.
+      allow list: if isChatMember(chatId);
       allow update, delete: if false;
     }
 
