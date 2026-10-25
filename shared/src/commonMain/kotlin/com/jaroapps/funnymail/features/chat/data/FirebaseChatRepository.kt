@@ -429,7 +429,7 @@ class FirebaseChatRepository(
 
     private fun BaseTimestamp.requireEpochMillis(field: String): Long =
         (this as? Timestamp)?.toMilliseconds()?.toLong()
-            ?: error(getString(Res.string.firestore_server_time_missing, field))
+            ?: error("Firestore did not return a server timestamp for field $field.")
 
     private suspend fun <T> asResult(block: suspend () -> T): Result<T> =
         try {
