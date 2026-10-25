@@ -10,6 +10,5 @@ enum class AppDestination {
     Auth,
     Drawing,
     Letters,
-    Chats,
     ChatDetail,
 }
