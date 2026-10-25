@@ -69,6 +69,7 @@ fun AuthScreen(
 ) {
     val viewModel: AuthViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
+    val firebaseUnconfiguredMessage = stringResource(Res.string.firebase_unconfigured_message)
 
     var registrationName by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
@@ -141,7 +142,7 @@ fun AuthScreen(
             ) {
                 Text(
                     text = buildString {
-                        append(stringResource(Res.string.firebase_unconfigured_message))
+                        append(firebaseUnconfiguredMessage)
                         FirebaseRuntimeStatus.initializationMessage?.let { details ->
                             append("\n\n")
                             append(details)
