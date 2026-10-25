@@ -2,14 +2,11 @@ package com.jaroapps.funnymail.features.home.presentation
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -21,8 +18,6 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun HomeScreen(
-    onCreateLetter: () -> Unit,
-    onOpenLetters: () -> Unit,
     onOpenChats: () -> Unit,
     onOpenAccount: () -> Unit,
     hasDraft: Boolean = false,
@@ -43,21 +38,12 @@ fun HomeScreen(
             style = MaterialTheme.typography.titleMedium,
         )
         Text(
-            text = "Создавайте рисунки и сохраняйте их в локальной галерее на этом устройстве. Из чатов можно отправлять рисунки друзьям.",
+            text = "Откройте чат, чтобы создать новое письмо или выбрать рисунок из локальной галереи.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
         Spacer(Modifier.height(4.dp))
-
-        Button(
-            onClick = onCreateLetter,
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(vertical = 16.dp),
-            shape = RoundedCornerShape(16.dp),
-        ) {
-            Text("Нарисовать рисунок")
-        }
 
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -76,10 +62,9 @@ fun HomeScreen(
                 )
                 Text(
                     if (hasDraft) {
-                        "Рисунок проверен и сохранён на этом устройстве. Он ещё не отправлен — " +
-                            "для отправки писем нужно подключить чаты и Firestore."
+                        "Черновик сохранён на этом устройстве. Откройте чат, чтобы отправить его."
                     } else {
-                        "Создавайте рисунки — они будут храниться в локальной галерее на этом устройстве."
+                        "Рисунки можно создавать и выбирать прямо внутри чата."
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -92,12 +77,6 @@ fun HomeScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Войти / профиль")
-        }
-        OutlinedButton(
-            onClick = onOpenLetters,
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Мои рисунки")
         }
         OutlinedButton(
             onClick = onOpenChats,
