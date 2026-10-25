@@ -609,7 +609,7 @@ fun DrawingScreen(
                                     .clip(RoundedCornerShape(18.dp))
                                     .background(
                                         if (backgroundPickerTab == tab) Color(0xFFF5A800)
-                                        else MaterialTheme.colorScheme.surfaceVariant,
+                                        else Color(0xFFF5F5F5),
                                     )
                                     .clickable { backgroundPickerTab = tab }
                                     .padding(horizontal = 8.dp, vertical = 10.dp),
@@ -618,7 +618,7 @@ fun DrawingScreen(
                                 Text(
                                     label,
                                     color = if (backgroundPickerTab == tab) Color(0xFF202124)
-                                    else MaterialTheme.colorScheme.onSurface,
+                                    else Color(0xFF202124),
                                     style = MaterialTheme.typography.labelLarge,
                                 )
                             }
@@ -648,12 +648,12 @@ fun DrawingScreen(
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(
                                             if (pendingGradientDirection == direction) Color(0xFFF5A800)
-                                            else MaterialTheme.colorScheme.surfaceVariant,
+                                            else Color(0xFFF5F5F5),
                                         )
                                         .border(
                                             1.dp,
                                             if (pendingGradientDirection == direction) Color(0xFFF5A800)
-                                            else MaterialTheme.colorScheme.outlineVariant,
+                                            else Color(0xFFDADCE0),
                                             RoundedCornerShape(8.dp),
                                         )
                                         .clickable { pendingGradientDirection = direction },
@@ -663,7 +663,7 @@ fun DrawingScreen(
                                         glyph,
                                         style = MaterialTheme.typography.titleMedium,
                                         color = if (pendingGradientDirection == direction) Color(0xFF202124)
-                                        else MaterialTheme.colorScheme.onSurface,
+                                        else Color(0xFF202124),
                                     )
                                 }
                             }
@@ -680,7 +680,7 @@ fun DrawingScreen(
                                     .border(
                                         if (pendingGradientEndpoint == 0) 3.dp else 1.dp,
                                         if (pendingGradientEndpoint == 0) Color(0xFF202124)
-                                        else MaterialTheme.colorScheme.outlineVariant,
+                                        else Color(0xFFDADCE0),
                                         RoundedCornerShape(8.dp),
                                     )
                                     .clickable { pendingGradientEndpoint = 0 },
@@ -693,7 +693,7 @@ fun DrawingScreen(
                                     .border(
                                         if (pendingGradientEndpoint == 1) 3.dp else 1.dp,
                                         if (pendingGradientEndpoint == 1) Color(0xFF202124)
-                                        else MaterialTheme.colorScheme.outlineVariant,
+                                        else Color(0xFFDADCE0),
                                         RoundedCornerShape(8.dp),
                                     )
                                     .clickable { pendingGradientEndpoint = 1 },
