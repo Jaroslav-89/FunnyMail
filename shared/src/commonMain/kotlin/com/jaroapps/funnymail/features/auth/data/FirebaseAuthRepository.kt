@@ -14,6 +14,7 @@ import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import dev.gitlive.firebase.firestore.firestore
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChangedBy
@@ -45,6 +46,7 @@ class FirebaseAuthRepository(
     },
 ) : AuthRepository {
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override val currentUser: Flow<UserProfile?> = flow {
         val auth = authProvider()
         val initial = auth.currentUser
