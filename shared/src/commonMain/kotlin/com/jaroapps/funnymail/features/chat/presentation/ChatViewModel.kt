@@ -140,7 +140,7 @@ class ChatViewModel(
 
     fun joinWithInvite(code: String) {
         val userId = _state.value.currentUser?.id ?: run {
-            showError("Сначала войдите в аккаунт.")
+            showError(Res.string.letter_login_required)
             return
         }
         if (_state.value.isSubmitting) return
