@@ -142,7 +142,7 @@
     <string name="draft_add_failed">Не удалось добавить черновик.</string>
     <string name="reading_drawing_failed">Не удалось прочитать рисунок. Его можно удалить.</string>
     <string name="invite_login_required">Войдите в аккаунт, чтобы приглашать друзей.</string>
-    <string name="invite_create_failed">Не удалось создать приглашение.</string>
+    <string name="invite_creation_failure_message">Не удалось создать приглашение.</string>
     <string name="send_drawing_open_chat_first">Сначала откройте чат, в который нужно отправить рисунок.</string>
     <string name="send_drawing_login_required">Войдите в аккаунт, чтобы отправлять рисунки.</string>
     <string name="reading_drawing_failed_short">Не удалось прочитать рисунок.</string>
