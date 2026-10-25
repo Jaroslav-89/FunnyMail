@@ -358,7 +358,7 @@ fun DrawingScreen(
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppBackButton(onClick = onBack)
+            AppBackButton(onClick = onBack, keepLightAppearance = true)
 
             Spacer(Modifier.weight(1f))
 
