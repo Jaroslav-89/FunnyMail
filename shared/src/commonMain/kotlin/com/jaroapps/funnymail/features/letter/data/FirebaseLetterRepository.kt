@@ -14,6 +14,8 @@ import dev.gitlive.firebase.firestore.toMilliseconds
 import dev.gitlive.firebase.firestore.where
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlin.time.Clock
@@ -44,25 +46,29 @@ class FirebaseLetterRepository(
             nanoseconds = ((oldestAllowedMillis % 1_000L) * 1_000_000L).toInt(),
         )
 
-        return firestoreProvider()
-            .collection(CHATS_COLLECTION)
-            .document(chatId)
-            .collection(LETTERS_COLLECTION)
-            .where("createdAt", greaterThan = oldestAllowedTimestamp)
-            .snapshots
-            .map { snapshot ->
-                snapshot.documents
-                    .mapNotNull { document ->
-                        // A local pending write can briefly expose an unresolved server timestamp.
-                        // Skip it until Firestore supplies the authoritative timestamp.
-                        runCatching {
-                            document.data<FirestoreLetterDocument>()
-                                .toDomain(documentId = document.id, chatId = chatId)
-                        }.getOrNull()
-                    }
-                    .filter { it.expiresAtEpochMillis > Clock.System.now().toEpochMilliseconds() }
-                    .sortedByDescending { it.createdAtEpochMillis }
-            }
+        return flow {
+            emitAll(
+                firestoreProvider()
+                    .collection(CHATS_COLLECTION)
+                    .document(chatId)
+                    .collection(LETTERS_COLLECTION)
+                    .where("createdAt", greaterThan = oldestAllowedTimestamp)
+                    .snapshots
+                    .map { snapshot ->
+                        snapshot.documents
+                            .mapNotNull { document ->
+                                // A local pending write can briefly expose an unresolved server timestamp.
+                                // Skip it until Firestore supplies the authoritative timestamp.
+                                runCatching {
+                                    document.data<FirestoreLetterDocument>()
+                                        .toDomain(documentId = document.id, chatId = chatId)
+                                }.getOrNull()
+                            }
+                            .filter { it.expiresAtEpochMillis > Clock.System.now().toEpochMilliseconds() }
+                            .sortedByDescending { it.createdAtEpochMillis }
+                    },
+            )
+        }
     }
 
     override suspend fun sendLetter(
