@@ -7,24 +7,31 @@ import com.jaroapps.funnymail.features.chat.data.FirebaseChatRepository
 import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import com.jaroapps.funnymail.features.chat.presentation.ChatViewModel
 import com.jaroapps.funnymail.features.chat.presentation.ChatDetailsViewModel
-import com.jaroapps.funnymail.features.letter.data.FirebaseLetterRepository
-import com.jaroapps.funnymail.features.letter.domain.repository.LetterRepository
+import com.jaroapps.funnymail.features.drawing.data.local.LocalDrawingDatabase
+import com.jaroapps.funnymail.features.drawing.data.local.RoomLocalDrawingRepository
+import com.jaroapps.funnymail.features.drawing.data.local.buildLocalDrawingDatabase
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
+import com.jaroapps.funnymail.features.drawing.domain.repository.LocalDrawingRepository
 import com.jaroapps.funnymail.features.drawing.domain.usecase.DecodeDrawingUseCase
 import com.jaroapps.funnymail.features.drawing.domain.usecase.EncodeDrawingUseCase
+import com.jaroapps.funnymail.features.letter.data.FirebaseLetterRepository
+import com.jaroapps.funnymail.features.letter.domain.repository.LetterRepository
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 
-/**
- * Shared dependency graph.
- *
- * Firebase repositories live behind domain interfaces; additional local storage adapters,
- * such as Room, can be registered here as they are introduced.
- */
+/** Shared dependency graph for local drawing storage and Firebase features. */
 val appModule = module {
     single { DrawingCodec() }
     factory { EncodeDrawingUseCase(get()) }
     factory { DecodeDrawingUseCase(get()) }
+
+    single<LocalDrawingDatabase> { buildLocalDrawingDatabase() }
+    single<LocalDrawingRepository> {
+        RoomLocalDrawingRepository(
+            dao = get<LocalDrawingDatabase>().localDrawingDao(),
+            drawingCodec = get(),
+        )
+    }
 
     single<AuthRepository> { FirebaseAuthRepository() }
     single<ChatRepository> { FirebaseChatRepository() }
