@@ -68,6 +68,10 @@ exports.notifyChatMembersOnNewLetter = onDocumentCreated(
             ttl: 60 * 60 * 1000,
           },
           apns: {
+            headers: {
+              "apns-push-type": "alert",
+              "apns-priority": "10",
+            },
             payload: {
               aps: {
                 alert: {
