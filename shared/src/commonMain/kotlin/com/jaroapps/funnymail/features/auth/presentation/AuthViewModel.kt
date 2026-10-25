@@ -292,11 +292,11 @@ class AuthViewModel(
             "google_provider_configuration" in text || "google_credential_error" in text ->
                 getString(Res.string.auth_google_configuration_error)
             "google_sign_in_cancelled" in text ->
-                getString(Res.string.auth_google_cancelled_hint)"
+                getString(Res.string.auth_google_cancelled_hint)
             "cancel" in text || "cancelled" in text || "canceled" in text ->
                 getString(Res.string.auth_signin_cancelled)
             "firebase is not configured" in text ->
-                getString(Res.string.auth_firebase_config_files)"
+                getString(Res.string.auth_firebase_config_files)
             "email-already-in-use" in text || "already in use" in text ->
                 getString(Res.string.auth_email_already_exists)
             "invalid-email" in text || "badly formatted" in text ->

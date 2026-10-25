@@ -286,7 +286,7 @@ fun AuthScreen(
                 if (state.isSubmitting) CircularProgressIndicator(
                     modifier = Modifier.height(20.dp),
                     strokeWidth = 2.dp,
-                ) else Text(if (state.isRegistration) stringResource(Res.string.create_account) else stringResource(Res.string.login)")
+                ) else Text(if (state.isRegistration) stringResource(Res.string.create_account) else stringResource(Res.string.login))
             }
 
             OutlinedButton(
