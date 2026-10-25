@@ -115,7 +115,7 @@ class ChatViewModel(
 
     fun createInvite(chatId: String) {
         val userId = _state.value.currentUser?.id ?: run {
-            showError("Сначала войдите в аккаунт.")
+            showError(Res.string.letter_login_required)
             return
         }
         if (_state.value.isSubmitting) return
