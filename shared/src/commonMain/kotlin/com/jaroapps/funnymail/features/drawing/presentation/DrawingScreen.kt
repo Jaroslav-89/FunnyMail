@@ -38,20 +38,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingCanvas
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
+import kotlin.math.min
+import kotlin.math.roundToInt
 
 private val DrawingPalette = listOf(
     "#202124",
@@ -96,9 +98,14 @@ fun DrawingScreen(
     var showFinishDialog by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var statusIsError by remember { mutableStateOf(false) }
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    var canvasHeight by remember { mutableStateOf(1000) }
+    var canvasAspectInitialized by remember { mutableStateOf(false) }
+    var isDrawingGestureActive by remember { mutableStateOf(false) }
 
     val drawingCodec = remember { DrawingCodec() }
-    val currentDrawingJson = remember(strokes) {
+    val paintColor = if (eraserEnabled) "#FFFFFF" else selectedColor
+    val currentDrawingJson = remember(strokes, canvasHeight) {
         if (strokes.isEmpty()) {
             null
         } else {
@@ -106,7 +113,7 @@ fun DrawingScreen(
                 DrawingDocument(
                     canvas = DrawingCanvas(
                         width = 1000,
-                        height = 1000,
+                        height = canvasHeight,
                         backgroundColor = "#FFFFFF",
                     ),
                     strokes = strokes,
@@ -115,7 +122,6 @@ fun DrawingScreen(
         }
     }
     val isCurrentDrawingSaved = currentDrawingJson != null && currentDrawingJson == savedDrawingJson
-    val paintColor = if (eraserEnabled) "#FFFFFF" else selectedColor
 
     val saveDrawingAction: () -> Unit = {
         val json = currentDrawingJson
@@ -166,29 +172,62 @@ fun DrawingScreen(
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(paintColor, brushWidth) {
-                    fun normalizedPoint(x: Float, y: Float): List<Double> {
-                        val canvasWidth = size.width.toFloat().coerceAtLeast(1f)
-                        val canvasHeight = size.height.toFloat().coerceAtLeast(1f)
-                        return listOf(
-                            (x / canvasWidth).coerceIn(0f, 1f).toDouble(),
-                            (y / canvasHeight).coerceIn(0f, 1f).toDouble(),
-                        )
+                .onSizeChanged { newSize ->
+                    canvasSize = newSize
+                    if (!canvasAspectInitialized && newSize.width > 0 && newSize.height > 0) {
+                        canvasHeight = (
+                            1000f * newSize.height / newSize.width
+                        ).roundToInt().coerceIn(1, 4096)
+                        canvasAspectInitialized = true
                     }
+                }
+                .pointerInput(
+                    paintColor,
+                    brushWidth,
+                    canvasSize.width,
+                    canvasSize.height,
+                    canvasHeight,
+                ) {
+                    val viewportScale = min(
+                        size.width.toFloat() / 1000f,
+                        size.height.toFloat() / canvasHeight.toFloat(),
+                    ).coerceAtLeast(0.0001f)
+                    val viewportWidth = 1000f * viewportScale
+                    val viewportHeight = canvasHeight.toFloat() * viewportScale
+                    val viewportLeft = (size.width.toFloat() - viewportWidth) / 2f
+                    val viewportTop = (size.height.toFloat() - viewportHeight) / 2f
+
+                    fun isInsideViewport(x: Float, y: Float): Boolean =
+                        x >= viewportLeft &&
+                            x <= viewportLeft + viewportWidth &&
+                            y >= viewportTop &&
+                            y <= viewportTop + viewportHeight
+
+                    fun normalizedPoint(x: Float, y: Float): List<Double> = listOf(
+                        ((x - viewportLeft) / viewportWidth).coerceIn(0f, 1f).toDouble(),
+                        ((y - viewportTop) / viewportHeight).coerceIn(0f, 1f).toDouble(),
+                    )
 
                     detectDragGestures(
                         onDragStart = { offset ->
                             statusMessage = null
-                            activePoints = listOf(normalizedPoint(offset.x, offset.y))
+                            isDrawingGestureActive = isInsideViewport(offset.x, offset.y)
+                            activePoints = if (isDrawingGestureActive) {
+                                listOf(normalizedPoint(offset.x, offset.y))
+                            } else {
+                                emptyList()
+                            }
                         },
                         onDrag = { change, _ ->
-                            change.consume()
-                            activePoints = activePoints + listOf(
-                                normalizedPoint(change.position.x, change.position.y),
-                            )
+                            if (isDrawingGestureActive) {
+                                change.consume()
+                                activePoints = activePoints + listOf(
+                                    normalizedPoint(change.position.x, change.position.y),
+                                )
+                            }
                         },
                         onDragEnd = {
-                            if (activePoints.isNotEmpty()) {
+                            if (isDrawingGestureActive && activePoints.isNotEmpty()) {
                                 strokes = strokes + DrawingStroke(
                                     color = paintColor,
                                     width = brushWidth,
@@ -196,22 +235,30 @@ fun DrawingScreen(
                                 )
                                 redoStrokes = emptyList()
                             }
+                            isDrawingGestureActive = false
                             activePoints = emptyList()
                         },
-                        onDragCancel = { activePoints = emptyList() },
+                        onDragCancel = {
+                            isDrawingGestureActive = false
+                            activePoints = emptyList()
+                        },
                     )
                 },
         ) {
-            strokes.forEach { stroke -> drawDrawingStroke(stroke) }
-            if (activePoints.isNotEmpty()) {
-                drawDrawingStroke(
-                    DrawingStroke(
-                        color = paintColor,
-                        width = brushWidth,
-                        points = activePoints,
-                    ),
+            val visibleStrokes = if (activePoints.isEmpty()) {
+                strokes
+            } else {
+                strokes + DrawingStroke(
+                    color = paintColor,
+                    width = brushWidth,
+                    points = activePoints,
                 )
             }
+            drawDrawingStrokes(
+                strokes = visibleStrokes,
+                canvasWidth = 1000,
+                canvasHeight = canvasHeight,
+            )
         }
 
         if (strokes.isEmpty() && activePoints.isEmpty()) {
@@ -613,39 +660,6 @@ private fun DrawingToolGlyph(
                 drawPath(check, color, style = stroke)
             }
         }
-    }
-}
-
-private fun DrawScope.drawDrawingStroke(stroke: DrawingStroke) {
-    val color = stroke.color.toDrawingColor()
-    val lineWidth = (stroke.width * size.minDimension / 1000f)
-        .coerceAtLeast(1f)
-    if (stroke.points.size == 1) {
-        val point = stroke.points.first()
-        drawCircle(
-            color = color,
-            radius = lineWidth / 2f,
-            center = Offset(
-                x = (point[0] * size.width).toFloat(),
-                y = (point[1] * size.height).toFloat(),
-            ),
-        )
-    } else {
-        val path = Path()
-        stroke.points.forEachIndexed { index, point ->
-            val x = (point[0] * size.width).toFloat()
-            val y = (point[1] * size.height).toFloat()
-            if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
-        }
-        drawPath(
-            path = path,
-            color = color,
-            style = Stroke(
-                width = lineWidth,
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round,
-            ),
-        )
     }
 }
 
