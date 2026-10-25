@@ -44,7 +44,7 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [x] Drawing JSON validation and draft preview
 - [x] Local draft persistence on Android (SharedPreferences) and iOS (NSUserDefaults)
 - [x] Firestore letter adapter, sending drawing drafts to chats, and live letter feed
-- [x] Firestore Rules enforce letter expiry at seven days (bounded to a five-minute client-clock tolerance)
+- [x] Firestore Rules validate the seven-day expiry timestamp on letter creation and deny direct document reads after expiry
 - [ ] Enable Firestore TTL policy for letters in the Firebase project (collection group `letters`, field `expiresAt`)
 - [ ] Offline synchronization
 - [x] Firestore Security Rules for chat and letter membership plus seven-day invite expiry (publish them to the Firebase project)
@@ -67,7 +67,7 @@ Platform sign-in options are intentionally separate: Android offers email/passwo
 1. Create a Cloud Firestore database in the same Firebase project used for Authentication.
 2. Publish the rules from `firestore.rules` in Firebase Console → Firestore Database → Rules. Until the rules are published, chat, invite, and letter writes will be rejected.
 3. The app creates `chats` and `chatInvites` documents and stores sent drawings as JSON strings in `chats/{chatId}/letters/{letterId}`. Invite validity lasts seven days from the server-assigned `createdAt` timestamp; the security rules use server `request.time`, not the device clock. Expired invites are denied but are not automatically deleted yet.
-4. Letter documents include an `expiresAt` timestamp. Firestore Security Rules deny reads after that timestamp and constrain new letters to expire around seven days after creation (five-minute client-clock tolerance). To enable automatic deletion, open **Google Cloud Console → Databases → your Firestore database → Time-to-live → Create Policy**. Set **Collection group** to `letters`, **Timestamp field** to `expiresAt`, keep the expiration offset at `0`, and create the policy. TTL deletion is asynchronous and may take up to 24 hours after expiry; the security rule denies reads as soon as the expiry time passes.
+4. Letter documents include an `expiresAt` timestamp. Firestore Security Rules constrain new letters to expire around seven days after creation (five-minute client-clock tolerance), deny direct document reads after expiry, and restrict collection queries to members of the chat. The app's live query filters by `expiresAt`; because Firestore Rules cannot reliably enforce a server-clock expiry comparison for every query result, a determined chat member could request expired letters until TTL removes them. To enable automatic deletion, open **Google Cloud Console → Databases → your Firestore database → Time-to-live → Create Policy**. Set **Collection group** to `letters`, **Timestamp field** to `expiresAt`, keep the expiration offset at `0`, and create the policy. TTL deletion is asynchronous and may take up to 24 hours after expiry; the security rule denies reads as soon as the expiry time passes.
 5. Firestore document access is limited to signed-in users. Chat and letter reads are limited to chat members, and joining requires a live invite created by a current member. Do not replace these rules with open read/write rules.
 6. Since Firestore adds a native iOS Firebase dependency, rerun the SwiftPM linkage generation commands below on macOS, commit generated linkage files if they change, and resolve package versions in Xcode before the iOS build.
 
@@ -116,5 +116,5 @@ For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run on an iOS simulator or 
 - The Firestore letter adapter encodes a drawing into the `drawingJson` string field under `chats/{chatId}/letters/{letterId}`; it must not upload images or use Firebase Storage.
 - The local drawing library stores validated drawing JSON in a Room/SQLite table (`local_drawings`) and keeps a creation timestamp for each saved drawing. Android stores the database in the app database directory; iOS stores it in Application Support.
 - Letter creation/expiry timestamps and invite validation must be controlled by trusted backend logic, not only by the client clock.
-- The target retention period for letters is seven days. Security Rules enforce expiry using `expiresAt`; a Firestore TTL policy on collection group `letters`, field `expiresAt` must be enabled in the Firebase project for automatic deletion.
+- The target retention period for letters is seven days. Rules validate `expiresAt` on creation and deny expired direct-document reads; the app filters query results and a Firestore TTL policy on collection group `letters`, field `expiresAt` must be enabled for automatic deletion. For strict server-side expiry on collection queries, add a trusted backend endpoint instead of relying only on client filters.
 - Client-side validation is not a substitute for Firestore Security Rules and server-side authorization.
