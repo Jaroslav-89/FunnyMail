@@ -45,7 +45,6 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [ ] Server-controlled letter expiry and automatic Firestore TTL cleanup
 - [ ] Offline synchronization
 - [x] Firestore Security Rules for chat membership and seven-day invite expiry (publish them to the Firebase project)
-- [ ] Firestore TTL cleanup and server-controlled expiry for letters
 - [ ] End-to-end platform verification
 
 Platform sign-in options are intentionally separate: Android offers email/password and Google; iOS offers email/password and Apple ID.
