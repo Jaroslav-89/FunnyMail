@@ -59,6 +59,25 @@ import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import com.jaroapps.funnymail.features.chat.presentation.ChatViewModel
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import com.jaroapps.funnymail.resources.account_label
+import com.jaroapps.funnymail.resources.app_name
+import com.jaroapps.funnymail.resources.cancel
+import com.jaroapps.funnymail.resources.chat_list_title
+import com.jaroapps.funnymail.resources.chat_member_count
+import com.jaroapps.funnymail.resources.chat_menu_close
+import com.jaroapps.funnymail.resources.chat_menu_open
+import com.jaroapps.funnymail.resources.chat_title
+import com.jaroapps.funnymail.resources.create
+import com.jaroapps.funnymail.resources.create_chat_prompt
+import com.jaroapps.funnymail.resources.enter_invite_code
+import com.jaroapps.funnymail.resources.invite_code
+import com.jaroapps.funnymail.resources.join
+import com.jaroapps.funnymail.resources.join_chat
+import com.jaroapps.funnymail.resources.max_title_length
+import com.jaroapps.funnymail.resources.new_chat
+import com.jaroapps.funnymail.resources.no_chats_hint
+import com.jaroapps.funnymail.resources.no_chats_title
+import com.jaroapps.funnymail.resources.sign_in
 import com.jaroapps.funnymail.resources.Res
 
 @Composable

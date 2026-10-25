@@ -1,5 +1,16 @@
 package com.jaroapps.funnymail.features.chat.presentation
 
+import com.jaroapps.funnymail.resources.chat_created
+import com.jaroapps.funnymail.resources.chat_enter_title
+import com.jaroapps.funnymail.resources.chat_generic_operation_failed
+import com.jaroapps.funnymail.resources.chat_joined
+import com.jaroapps.funnymail.resources.chat_or_invite_not_found
+import com.jaroapps.funnymail.resources.chat_permission_error
+import com.jaroapps.funnymail.resources.enter_invite_code
+import com.jaroapps.funnymail.resources.firebase_not_configured
+import com.jaroapps.funnymail.resources.invite_code_ready
+import com.jaroapps.funnymail.resources.letter_login_required
+import com.jaroapps.funnymail.resources.network_connection_failed
 import com.jaroapps.funnymail.resources.Res
 
 import androidx.lifecycle.ViewModel

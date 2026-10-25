@@ -69,6 +69,27 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
+import com.jaroapps.funnymail.resources.cancel
+import com.jaroapps.funnymail.resources.changes_saved
+import com.jaroapps.funnymail.resources.continue_drawing
+import com.jaroapps.funnymail.resources.done
+import com.jaroapps.funnymail.resources.draw_something
+import com.jaroapps.funnymail.resources.drawing_background
+import com.jaroapps.funnymail.resources.drawing_edits_saved
+import com.jaroapps.funnymail.resources.drawing_saved_locally
+import com.jaroapps.funnymail.resources.drawing_sent_chat
+import com.jaroapps.funnymail.resources.eraser
+import com.jaroapps.funnymail.resources.finish_drawing
+import com.jaroapps.funnymail.resources.finish_drawing_hint
+import com.jaroapps.funnymail.resources.gradient
+import com.jaroapps.funnymail.resources.line_color
+import com.jaroapps.funnymail.resources.save_changes
+import com.jaroapps.funnymail.resources.save_drawing_local
+import com.jaroapps.funnymail.resources.saving
+import com.jaroapps.funnymail.resources.send_to_chat
+import com.jaroapps.funnymail.resources.sending
+import com.jaroapps.funnymail.resources.solid
+import com.jaroapps.funnymail.resources.start_drawing_here
 import com.jaroapps.funnymail.resources.Res
 
 private val DrawingPalette = listOf(

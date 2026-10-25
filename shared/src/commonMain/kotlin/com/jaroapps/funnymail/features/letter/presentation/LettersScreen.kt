@@ -56,6 +56,25 @@ import com.jaroapps.funnymail.features.drawing.domain.model.SavedDrawing
 import com.jaroapps.funnymail.features.drawing.domain.repository.LocalDrawingRepository
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import com.jaroapps.funnymail.resources.back_to_gallery
+import com.jaroapps.funnymail.resources.delete_drawing_failed
+import com.jaroapps.funnymail.resources.draft_add_failed
+import com.jaroapps.funnymail.resources.draft_add_hint
+import com.jaroapps.funnymail.resources.draft_added_gallery
+import com.jaroapps.funnymail.resources.draft_not_in_gallery
+import com.jaroapps.funnymail.resources.drawing_number
+import com.jaroapps.funnymail.resources.drawing_removed_device
+import com.jaroapps.funnymail.resources.drawing_sent_current_chat
+import com.jaroapps.funnymail.resources.empty_drawings_hint
+import com.jaroapps.funnymail.resources.empty_drawings_title
+import com.jaroapps.funnymail.resources.open_my_drawings
+import com.jaroapps.funnymail.resources.reading_drawing_failed
+import com.jaroapps.funnymail.resources.reading_saved_drawing_failed
+import com.jaroapps.funnymail.resources.save_to_gallery
+import com.jaroapps.funnymail.resources.send_to_chat
+import com.jaroapps.funnymail.resources.sending
+import com.jaroapps.funnymail.resources.stroke_point_count
+import com.jaroapps.funnymail.resources.view
 import com.jaroapps.funnymail.resources.Res
 
 @Composable

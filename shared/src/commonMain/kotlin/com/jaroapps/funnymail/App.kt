@@ -50,6 +50,17 @@ import kotlinx.coroutines.flow.first
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
+import com.jaroapps.funnymail.resources.chat_not_selected
+import com.jaroapps.funnymail.resources.choose_chat_hint
+import com.jaroapps.funnymail.resources.drawing_unavailable
+import com.jaroapps.funnymail.resources.invite_creation_failure_message
+import com.jaroapps.funnymail.resources.invite_login_required
+import com.jaroapps.funnymail.resources.reading_drawing_failed_short
+import com.jaroapps.funnymail.resources.saving_drawing_failed
+import com.jaroapps.funnymail.resources.select_drawing_hint
+import com.jaroapps.funnymail.resources.send_drawing_login_required
+import com.jaroapps.funnymail.resources.send_drawing_open_chat_first
+import com.jaroapps.funnymail.resources.sending_drawing_failed
 import com.jaroapps.funnymail.resources.Res
 
 @Composable

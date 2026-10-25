@@ -33,6 +33,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import org.koin.compose.viewmodel.koinViewModel
+import com.jaroapps.funnymail.resources.back
+import com.jaroapps.funnymail.resources.chat_list_title
+import com.jaroapps.funnymail.resources.chat_title
+import com.jaroapps.funnymail.resources.chats_account_description
+import com.jaroapps.funnymail.resources.chats_account_required
+import com.jaroapps.funnymail.resources.chats_create_chat
+import com.jaroapps.funnymail.resources.chats_empty
+import com.jaroapps.funnymail.resources.chats_hide_code
+import com.jaroapps.funnymail.resources.chats_invite_friend
+import com.jaroapps.funnymail.resources.chats_invite_help
+import com.jaroapps.funnymail.resources.chats_join
+import com.jaroapps.funnymail.resources.chats_join_by_code
+import com.jaroapps.funnymail.resources.chats_member_and_code
+import com.jaroapps.funnymail.resources.chats_open_chat
+import com.jaroapps.funnymail.resources.chats_screen_description
+import com.jaroapps.funnymail.resources.chats_screen_tagline
+import com.jaroapps.funnymail.resources.chats_sign_in_register
+import com.jaroapps.funnymail.resources.chats_working
+import com.jaroapps.funnymail.resources.chats_your_chats
+import com.jaroapps.funnymail.resources.invite_code
+import com.jaroapps.funnymail.resources.max_title_length
+import com.jaroapps.funnymail.resources.new_chat
 import com.jaroapps.funnymail.resources.Res
 
 @Composable

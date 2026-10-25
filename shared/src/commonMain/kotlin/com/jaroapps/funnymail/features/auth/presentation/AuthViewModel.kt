@@ -1,5 +1,26 @@
 package com.jaroapps.funnymail.features.auth.presentation
 
+import com.jaroapps.funnymail.resources.auth_done
+import com.jaroapps.funnymail.resources.auth_email_already_exists
+import com.jaroapps.funnymail.resources.auth_enter_email
+import com.jaroapps.funnymail.resources.auth_enter_email_password
+import com.jaroapps.funnymail.resources.auth_enter_name
+import com.jaroapps.funnymail.resources.auth_firebase_config_files
+import com.jaroapps.funnymail.resources.auth_google_cancelled_hint
+import com.jaroapps.funnymail.resources.auth_google_configuration_error
+import com.jaroapps.funnymail.resources.auth_google_no_credential
+import com.jaroapps.funnymail.resources.auth_invalid_credentials
+import com.jaroapps.funnymail.resources.auth_invalid_email
+import com.jaroapps.funnymail.resources.auth_operation_failed
+import com.jaroapps.funnymail.resources.auth_password_min_length
+import com.jaroapps.funnymail.resources.auth_password_too_short
+import com.jaroapps.funnymail.resources.auth_profile_save_failed
+import com.jaroapps.funnymail.resources.auth_profile_saved
+import com.jaroapps.funnymail.resources.auth_signed_out
+import com.jaroapps.funnymail.resources.auth_signin_cancelled
+import com.jaroapps.funnymail.resources.auth_username_check_failed
+import com.jaroapps.funnymail.resources.auth_username_format_error
+import com.jaroapps.funnymail.resources.network_connection_failed
 import com.jaroapps.funnymail.resources.Res
 
 import androidx.lifecycle.ViewModel

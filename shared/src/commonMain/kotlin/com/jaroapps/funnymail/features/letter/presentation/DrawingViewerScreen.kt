@@ -27,6 +27,7 @@ import org.jetbrains.compose.resources.stringResource
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingStrokes
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingBackground
+import com.jaroapps.funnymail.resources.back_to_chat
 import com.jaroapps.funnymail.resources.Res
 
 /**

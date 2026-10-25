@@ -86,6 +86,37 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import com.jaroapps.funnymail.resources.add_to_chat
+import com.jaroapps.funnymail.resources.add_user_to_chat
+import com.jaroapps.funnymail.resources.already_in_chat
+import com.jaroapps.funnymail.resources.automatic_delete_failed
+import com.jaroapps.funnymail.resources.chat_drawing_delete_failed
+import com.jaroapps.funnymail.resources.chat_drawing_delete_success
+import com.jaroapps.funnymail.resources.delete_own_drawing
+import com.jaroapps.funnymail.resources.done
+import com.jaroapps.funnymail.resources.drawing_from_member
+import com.jaroapps.funnymail.resources.drawing_menu_close
+import com.jaroapps.funnymail.resources.drawing_menu_open
+import com.jaroapps.funnymail.resources.edit_chat
+import com.jaroapps.funnymail.resources.email_or_username
+import com.jaroapps.funnymail.resources.empty_chat_letters
+import com.jaroapps.funnymail.resources.find_user
+import com.jaroapps.funnymail.resources.find_user_hint
+import com.jaroapps.funnymail.resources.invite_code
+import com.jaroapps.funnymail.resources.invite_code_expires
+import com.jaroapps.funnymail.resources.invite_create_code
+import com.jaroapps.funnymail.resources.new_drawing
+import com.jaroapps.funnymail.resources.open_drawing_fullscreen
+import com.jaroapps.funnymail.resources.open_my_drawings
+import com.jaroapps.funnymail.resources.stroke_point_count
+import com.jaroapps.funnymail.resources.user_add_failed
+import com.jaroapps.funnymail.resources.user_added
+import com.jaroapps.funnymail.resources.user_already_member
+import com.jaroapps.funnymail.resources.user_not_found
+import com.jaroapps.funnymail.resources.user_search_failed
+import com.jaroapps.funnymail.resources.username_at
+import com.jaroapps.funnymail.resources.you_already_member
+import com.jaroapps.funnymail.resources.you_sent
 import com.jaroapps.funnymail.resources.Res
 
 @Composable
