@@ -43,7 +43,7 @@ class FirebaseChatRepository(
                     runCatching {
                         document.data<FirestoreChatDocument>().toDomain(document.id)
                     }.getOrNull()
-                }.sortedByDescending { it.updatedAtEpochMillis }
+                }.sortedByDescending { it.lastMessageAtEpochMillis ?: it.updatedAtEpochMillis }
             }
     }
 
@@ -135,6 +135,7 @@ class FirebaseChatRepository(
         memberIds = memberIds,
         createdAtEpochMillis = createdAt.requireEpochMillis("createdAt"),
         updatedAtEpochMillis = updatedAt.requireEpochMillis("updatedAt"),
+        lastMessageAtEpochMillis = lastMessageAt?.toMilliseconds()?.toLong(),
     )
 
     private fun BaseTimestamp.requireEpochMillis(field: String): Long =
@@ -157,6 +158,7 @@ class FirebaseChatRepository(
         val createdAt: BaseTimestamp = Timestamp.ServerTimestamp,
         val updatedAt: BaseTimestamp = Timestamp.ServerTimestamp,
         val lastInviteCode: String = "",
+        val lastMessageAt: BaseTimestamp? = null,
     )
 
     @Serializable
