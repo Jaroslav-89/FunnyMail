@@ -51,7 +51,8 @@ fun LettersScreen(
     onClearDraft: () -> Unit,
 ) {
     val repository = koinInject<LocalDrawingRepository>()
-    val drawings by repository.observeDrawings().collectAsState(initial = emptyList())
+    val drawingsFlow = remember(repository) { repository.observeDrawings() }
+    val drawings by drawingsFlow.collectAsState(initial = emptyList())
     val coroutineScope = rememberCoroutineScope()
     val drawingCodec = remember { DrawingCodec() }
     var selectedDrawingId by remember { mutableStateOf<Long?>(null) }
