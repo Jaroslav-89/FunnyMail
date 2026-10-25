@@ -589,7 +589,7 @@ private fun ChatLetterCard(
                 }
             }
             Text(
-                text = "${letter.drawing.strokes.size} штрихов · ${letter.drawing.strokes.sumOf { it.points.size }} точек",
+                text = stringResource(Res.string.stroke_point_count, letter.drawing.strokes.size, letter.drawing.strokes.sumOf { it.points.size }),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
