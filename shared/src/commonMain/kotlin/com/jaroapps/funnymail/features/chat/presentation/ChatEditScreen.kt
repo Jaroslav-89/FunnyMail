@@ -3,11 +3,13 @@ package com.jaroapps.funnymail.features.chat.presentation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -51,6 +53,7 @@ import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
 import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import com.jaroapps.funnymail.features.letter.domain.repository.LetterRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import org.koin.compose.koinInject
@@ -258,6 +261,8 @@ fun ChatEditScreen(
                                                         cleanupFailed = true
                                                     }
                                                 }
+                                            } catch (cancelled: CancellationException) {
+                                                throw cancelled
                                             } catch (_: Exception) {
                                                 cleanupFailed = true
                                             }
