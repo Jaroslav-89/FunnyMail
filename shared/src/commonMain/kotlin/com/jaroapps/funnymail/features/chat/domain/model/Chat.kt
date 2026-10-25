@@ -3,6 +3,7 @@ package com.jaroapps.funnymail.features.chat.domain.model
 data class Chat(
     val id: String,
     val title: String,
+    val description: String = "",
     val memberIds: List<String>,
     /** Unix epoch milliseconds, assigned by the persistence/backend layer. */
     val createdAtEpochMillis: Long,
