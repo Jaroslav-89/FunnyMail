@@ -244,7 +244,7 @@ class FirebaseAuthRepository(
                 set(newUsernameRef, LookupRecord(userId = userId))
             }
             set(userRef, profile)
-            set(publicRef, profile)
+            set(publicRef, profile.toPublicDirectory())
 
             if (oldUsernameRef != null && oldUsernameSnapshot?.exists == true &&
                 oldUsernameSnapshot.data<LookupRecord>().userId == userId
@@ -284,7 +284,15 @@ class FirebaseAuthRepository(
                 if (handleRecord.exists) handleRecord.data<LookupRecord>().userId else null
             }
         }
-        userId?.let { getPublicProfile(it).getOrThrow() }
+        userId?.let { id ->
+            getPublicProfile(id).getOrThrow()?.let { profile ->
+                if ('@' in normalizedQuery && !normalizedQuery.startsWith("@")) {
+                    profile.copy(email = normalizedQuery.lowercase())
+                } else {
+                    profile
+                }
+            }
+        }
     }
 
     override suspend fun getPublicProfile(userId: String): Result<UserProfile?> = authResult {
@@ -294,7 +302,7 @@ class FirebaseAuthRepository(
             .document(userId)
             .get()
         if (!snapshot.exists) return@authResult null
-        val directory = snapshot.data<FirestoreUserDirectory>()
+        val directory = snapshot.data<PublicUserDirectory>()
         directory.toUserProfile()
     }
 
@@ -343,7 +351,6 @@ class FirebaseAuthRepository(
                 )
             }
 
-            val publicSnapshot = get(publicRef)
             val emailSnapshot = emailRef?.let { get(it) }
             val usernameRef = profile.usernameLower.takeIf { it.isNotBlank() }?.let {
                 firestore.collection(USERNAMES_COLLECTION).document(it)
@@ -362,9 +369,7 @@ class FirebaseAuthRepository(
             }
 
             if (!userSnapshot.exists || current != profile) set(userRef, profile)
-            if (!publicSnapshot.exists || publicSnapshot.data<FirestoreUserDirectory>() != profile) {
-                set(publicRef, profile)
-            }
+            set(publicRef, profile.toPublicDirectory())
             if (usernameRef != null && usernameSnapshot?.exists != true) {
                 set(usernameRef, LookupRecord(userId = user.uid))
             }
@@ -408,6 +413,29 @@ class FirebaseAuthRepository(
             generatedName = generatedName,
         )
 
+    private fun FirestoreUserDirectory.toPublicDirectory(): PublicUserDirectory =
+        PublicUserDirectory(
+            uid = uid,
+            customName = customName,
+            username = username,
+            usernameLower = usernameLower,
+            providerDisplayName = providerDisplayName,
+            generatedName = generatedName,
+            avatarUrl = avatarUrl,
+        )
+
+    private fun PublicUserDirectory.toUserProfile(): UserProfile =
+        UserProfile(
+            id = uid,
+            displayName = providerDisplayName,
+            email = "",
+            avatarUrl = avatarUrl.takeIf { it.isNotBlank() },
+            customName = customName,
+            username = username,
+            providerDisplayName = providerDisplayName,
+            generatedName = generatedName,
+        )
+
     private fun normalizeUsername(value: String): String =
         value.trim().removePrefix("@").lowercase()
 
@@ -435,6 +463,17 @@ class FirebaseAuthRepository(
         val uid: String,
         val email: String = "",
         val emailLower: String = "",
+        val customName: String = "",
+        val username: String = "",
+        val usernameLower: String = "",
+        val providerDisplayName: String = "",
+        val generatedName: String = "",
+        val avatarUrl: String = "",
+    )
+
+    @Serializable
+    private data class PublicUserDirectory(
+        val uid: String,
         val customName: String = "",
         val username: String = "",
         val usernameLower: String = "",
