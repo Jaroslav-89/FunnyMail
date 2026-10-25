@@ -7,5 +7,6 @@ import kotlinx.coroutines.flow.Flow
 interface LocalDrawingRepository {
     fun observeDrawings(): Flow<List<SavedDrawing>>
     suspend fun saveDrawing(drawingJson: String): Long
+    suspend fun updateDrawing(id: Long, drawingJson: String)
     suspend fun deleteDrawing(id: Long)
 }
