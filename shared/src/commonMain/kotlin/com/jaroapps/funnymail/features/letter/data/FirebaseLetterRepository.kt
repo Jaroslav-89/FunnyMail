@@ -105,11 +105,18 @@ class FirebaseLetterRepository(
             .toDomain(documentId = reference.id, chatId = chatId)
 
         // Keep the chat list ordered by its newest letter. Rules only allow members to
-        // advance lastMessageAt using a server timestamp.
-        firestoreProvider()
-            .collection(CHATS_COLLECTION)
-            .document(chatId)
-            .update("lastMessageAt" to FieldValue.serverTimestamp)
+        // advance lastMessageAt using a server timestamp. The letter has already been saved,
+        // so a metadata-update failure must not report a failed send and invite duplicate retries.
+        try {
+            firestoreProvider()
+                .collection(CHATS_COLLECTION)
+                .document(chatId)
+                .update("lastMessageAt" to FieldValue.serverTimestamp)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            // The chat list can still derive the latest timestamp from its letter subcollection.
+        }
 
         savedLetter
     }
