@@ -19,6 +19,9 @@ data class AuthUiState(
     val isRegistration: Boolean = false,
     val message: String? = null,
     val messageIsError: Boolean = false,
+    val isCheckingUsername: Boolean = false,
+    val isSavingProfile: Boolean = false,
+    val usernameAvailability: Boolean? = null,
 )
 
 class AuthViewModel(
@@ -81,6 +84,83 @@ class AuthViewModel(
                 email = email.trim(),
                 password = password,
                 displayName = displayName.trim(),
+            )
+        }
+    }
+
+    fun resetUsernameCheck() {
+        _state.update { it.copy(usernameAvailability = null) }
+    }
+
+    fun checkUsername(username: String) {
+        val userId = _state.value.currentUser?.id ?: return
+        if (_state.value.isCheckingUsername || _state.value.isSavingProfile) return
+        if (!USERNAME_REGEX.matches(username)) {
+            _state.update {
+                it.copy(usernameAvailability = false, message = "Ник должен содержать 3–20 символов: латинские буквы, цифры или _.", messageIsError = true)
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            _state.update { it.copy(isCheckingUsername = true, usernameAvailability = null, message = null, messageIsError = false) }
+            authRepository.checkUsernameAvailability(username, userId).fold(
+                onSuccess = { available ->
+                    _state.update {
+                        it.copy(
+                            isCheckingUsername = false,
+                            usernameAvailability = available,
+                            message = if (available) null else "Этот ник уже занят, выберите другой ник.",
+                            messageIsError = !available,
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _state.update {
+                        it.copy(
+                            isCheckingUsername = false,
+                            usernameAvailability = null,
+                            message = error.message ?: "Не удалось проверить ник.",
+                            messageIsError = true,
+                        )
+                    }
+                },
+            )
+        }
+    }
+
+    fun saveUserProfile(customName: String, username: String) {
+        val userId = _state.value.currentUser?.id ?: return
+        if (_state.value.isSavingProfile || _state.value.isCheckingUsername) return
+        if (username.isNotBlank() && !USERNAME_REGEX.matches(username)) {
+            _state.update { it.copy(message = "Ник должен содержать 3–20 символов: латинские буквы, цифры или _.", messageIsError = true) }
+            return
+        }
+
+        viewModelScope.launch {
+            _state.update { it.copy(isSavingProfile = true, message = null, messageIsError = false) }
+            authRepository.updateUserProfile(userId, customName.trim(), username.trim().removePrefix("@").lowercase()).fold(
+                onSuccess = { user ->
+                    _state.update {
+                        it.copy(
+                            currentUser = user,
+                            isSavingProfile = false,
+                            usernameAvailability = true,
+                            message = "Профиль сохранён.",
+                            messageIsError = false,
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _state.update {
+                        it.copy(
+                            isSavingProfile = false,
+                            usernameAvailability = null,
+                            message = error.message ?: "Не удалось сохранить профиль.",
+                            messageIsError = true,
+                        )
+                    }
+                },
             )
         }
     }
@@ -187,5 +267,6 @@ class AuthViewModel(
 
     private companion object {
         const val MIN_PASSWORD_LENGTH = 6
+        val USERNAME_REGEX = Regex("^[a-zA-Z0-9_]{3,20}$")
     }
 }
