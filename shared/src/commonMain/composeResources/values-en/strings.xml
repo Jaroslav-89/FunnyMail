@@ -142,7 +142,7 @@
     <string name="draft_add_failed">Could not add the draft.</string>
     <string name="reading_drawing_failed">Could not read the drawing. You can delete it.</string>
     <string name="invite_login_required">Sign in to invite friends.</string>
-    <string name="invite_create_failed">Could not create the invitation.</string>
+    <string name="invite_creation_failure_message">Could not create the invitation.</string>
     <string name="send_drawing_open_chat_first">Open the chat you want to send the drawing to first.</string>
     <string name="send_drawing_login_required">Sign in to send drawings.</string>
     <string name="reading_drawing_failed_short">Could not read the drawing.</string>
