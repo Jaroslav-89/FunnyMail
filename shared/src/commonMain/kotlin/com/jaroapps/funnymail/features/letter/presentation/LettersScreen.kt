@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -102,36 +103,12 @@ fun LettersScreen(
         }
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
-            ) {
-                Text("←", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = Color.Transparent,
-                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp)),
-            ) {
-                Text(
-                    text = "Мои рисунки",
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-            Spacer(Modifier.weight(1f))
-        }
-
+    Box(modifier = Modifier.fillMaxSize()) {
         if (selectedDrawing != null) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(start = 12.dp, end = 12.dp, top = 80.dp, bottom = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -175,10 +152,11 @@ fun LettersScreen(
             ) {
                 Text("К галерее")
             }
+            }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 12.dp, top = 84.dp, end = 12.dp, bottom = 72.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (drawings.isEmpty() && !draftNeedsImport) {
@@ -299,8 +277,39 @@ fun LettersScreen(
             }
         }
 
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.size(48.dp).background(Color.Transparent, CircleShape)
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
+            ) {
+                Text("←", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = Color.Transparent,
+                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp)),
+            ) {
+                Text(
+                    text = "Мои рисунки",
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            Spacer(Modifier.weight(1f))
+        }
+
         statusMessage?.let { message ->
-            Text(message, modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            Text(
+                message,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(horizontal = 12.dp, vertical = 8.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
     }
 }
