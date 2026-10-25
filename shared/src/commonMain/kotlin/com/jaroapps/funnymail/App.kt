@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -76,6 +78,14 @@ private fun FunnyMailContent(
     var selectedChat by remember { mutableStateOf<Chat?>(null) }
     val localDrawingRepository = koinInject<LocalDrawingRepository>()
     val authRepository = koinInject<AuthRepository>()
+    val signedInUser by authRepository.currentUser.collectAsState(initial = null)
+    var returnHomeAfterSignIn by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(signedInUser?.id, destination, returnHomeAfterSignIn) {
+        if (returnHomeAfterSignIn && signedInUser != null && destination == AppDestination.Auth) {
+            returnHomeAfterSignIn = false
+            destination = AppDestination.Home
+        }
+    }
     val chatRepository = koinInject<ChatRepository>()
     val letterRepository = koinInject<LetterRepository>()
     val coroutineScope = rememberCoroutineScope()
@@ -151,8 +161,14 @@ private fun FunnyMailContent(
             ) {
                 when (destination) {
                     AppDestination.Home -> HomeScreen(
-                        onAuthorize = { destination = AppDestination.Auth },
-                        onOpenAccount = { destination = AppDestination.Auth },
+                        onAuthorize = {
+                            returnHomeAfterSignIn = true
+                            destination = AppDestination.Auth
+                        },
+                        onOpenAccount = {
+                            returnHomeAfterSignIn = false
+                            destination = AppDestination.Auth
+                        },
                         onOpenChat = { chat ->
                             selectedChat = chat
                             destination = AppDestination.ChatDetail
