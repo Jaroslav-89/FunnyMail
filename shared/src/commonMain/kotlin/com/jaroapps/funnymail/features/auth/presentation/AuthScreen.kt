@@ -141,10 +141,7 @@ fun AuthScreen(
             ) {
                 Text(
                     text = buildString {
-                        append(
-                            "Firebase пока не настроен. Пока конфигурация не обнаружена, " +
-                                "вход через провайдеры авторизации недоступен.",
-                        )
+                        append(stringResource(Res.string.firebase_unconfigured_message))
                         FirebaseRuntimeStatus.initializationMessage?.let { details ->
                             append("\n\n")
                             append(details)
