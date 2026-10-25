@@ -582,6 +582,7 @@ private fun ChatLetterCard(
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val openDrawingFullscreenDescription = stringResource(Res.string.open_drawing_fullscreen)
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -612,7 +613,7 @@ private fun ChatLetterCard(
                 drawing = letter.drawing,
                 modifier = Modifier.fillMaxWidth().height(220.dp)
                     .clickable(onClick = onClick)
-                    .semantics { contentDescription = stringResource(Res.string.open_drawing_fullscreen) },
+                    .semantics { contentDescription = openDrawingFullscreenDescription },
             )
         }
     }
