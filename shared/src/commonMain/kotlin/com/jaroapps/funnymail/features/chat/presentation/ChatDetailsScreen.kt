@@ -120,7 +120,7 @@ fun ChatDetailsScreen(
     var authorNames by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
     var drawingActionMessage by remember(chat.id) { mutableStateOf<String?>(null) }
     var activeChat by remember(chat.id) { mutableStateOf(chat) }
-    var cleanupAttemptedIds by remember(chat.id, chat.maxLettersCount) {
+    var cleanupAttemptedIds by remember(chat.id, activeChat.maxLettersCount) {
         mutableStateOf<Set<String>>(emptySet())
     }
 
