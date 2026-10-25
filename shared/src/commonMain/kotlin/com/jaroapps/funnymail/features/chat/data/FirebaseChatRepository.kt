@@ -207,6 +207,7 @@ class FirebaseChatRepository(
 
     private companion object {
         const val CHATS_COLLECTION = "chats"
+        const val LETTERS_COLLECTION = "letters"
         const val INVITES_COLLECTION = "chatInvites"
         const val MAX_CHAT_TITLE_LENGTH = 80
         const val INVITE_TTL_MILLIS = 7L * 24L * 60L * 60L * 1000L
