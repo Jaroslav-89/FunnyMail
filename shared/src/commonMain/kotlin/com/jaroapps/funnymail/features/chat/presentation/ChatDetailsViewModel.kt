@@ -22,7 +22,7 @@ data class ChatDetailsUiState(
     val letters: List<Letter> = emptyList(),
     val isLoading: Boolean = false,
     val isSending: Boolean = false,
-    val draftSent: Boolean = false,
+    val lastSentLetterId: String? = null,
     val message: String? = null,
     val messageIsError: Boolean = false,
 )
@@ -57,7 +57,6 @@ class ChatDetailsViewModel(
             it.copy(
                 letters = emptyList(),
                 isLoading = true,
-                draftSent = false,
                 message = null,
                 messageIsError = false,
             )
@@ -103,7 +102,6 @@ class ChatDetailsViewModel(
             _state.update {
                 it.copy(
                     isSending = true,
-                    draftSent = false,
                     message = null,
                     messageIsError = false,
                 )
@@ -113,11 +111,11 @@ class ChatDetailsViewModel(
                 authorUserId = userId,
                 drawing = drawing,
             ).fold(
-                onSuccess = {
+                onSuccess = { letter ->
                     _state.update {
                         it.copy(
                             isSending = false,
-                            draftSent = true,
+                            lastSentLetterId = letter.id,
                             message = "Письмо отправлено в чат.",
                             messageIsError = false,
                         )
