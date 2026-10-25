@@ -3,7 +3,6 @@ package com.jaroapps.funnymail.features.chat.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
-import com.jaroapps.funnymail.resources.Res
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
 import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
@@ -19,6 +18,17 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.jaroapps.funnymail.resources.chat_created
+import com.jaroapps.funnymail.resources.chat_enter_title
+import com.jaroapps.funnymail.resources.chat_generic_operation_failed
+import com.jaroapps.funnymail.resources.chat_joined
+import com.jaroapps.funnymail.resources.chat_or_invite_not_found
+import com.jaroapps.funnymail.resources.chat_permission_error
+import com.jaroapps.funnymail.resources.enter_invite_code
+import com.jaroapps.funnymail.resources.firebase_not_configured
+import com.jaroapps.funnymail.resources.invite_code_ready
+import com.jaroapps.funnymail.resources.letter_login_required
+import com.jaroapps.funnymail.resources.network_connection_failed
 
 data class ChatUiState(
     val currentUser: UserProfile? = null,
@@ -79,12 +89,12 @@ class ChatViewModel(
 
     fun createChat(title: String) {
         val userId = _state.value.currentUser?.id ?: run {
-            showError(Res.string.letter_login_required)
+            showError(letter_login_required)
             return
         }
         if (_state.value.isSubmitting) return
         if (title.isBlank()) {
-            showError(Res.string.chat_enter_title)
+            showError(chat_enter_title)
             return
         }
 
@@ -103,7 +113,7 @@ class ChatViewModel(
                         it.copy(
                             isSubmitting = false,
                             lastCreatedChatId = chat.id,
-                            message = getString(Res.string.chat_created),
+                            message = getString(chat_created),
                             messageIsError = false,
                         )
                     }
@@ -115,7 +125,7 @@ class ChatViewModel(
 
     fun createInvite(chatId: String) {
         val userId = _state.value.currentUser?.id ?: run {
-            showError(Res.string.letter_login_required)
+            showError(letter_login_required)
             return
         }
         if (_state.value.isSubmitting) return
@@ -128,7 +138,7 @@ class ChatViewModel(
                         it.copy(
                             isSubmitting = false,
                             activeInvite = invite,
-                            message = getString(Res.string.invite_code_ready),
+                            message = getString(invite_code_ready),
                             messageIsError = false,
                         )
                     }
@@ -140,12 +150,12 @@ class ChatViewModel(
 
     fun joinWithInvite(code: String) {
         val userId = _state.value.currentUser?.id ?: run {
-            showError(Res.string.letter_login_required)
+            showError(letter_login_required)
             return
         }
         if (_state.value.isSubmitting) return
         if (code.isBlank()) {
-            showError(Res.string.enter_invite_code)
+            showError(enter_invite_code)
             return
         }
 
@@ -165,7 +175,7 @@ class ChatViewModel(
                             isSubmitting = false,
                             activeInvite = null,
                             lastJoinedChatId = chat.id,
-                            message = getString(Res.string.chat_joined, chat.title),
+                            message = getString(chat_joined, chat.title),
                             messageIsError = false,
                         )
                     }
@@ -208,14 +218,14 @@ class ChatViewModel(
         val details = message.orEmpty().lowercase()
         return when {
             "permission-denied" in details || "permission_denied" in details || "permission denied" in details ->
-                getString(Res.string.chat_permission_error)
+                getString(chat_permission_error)
             "firebase не настроен" in details || "firebase is not configured" in details ->
-                getString(Res.string.firebase_not_configured)
+                getString(firebase_not_configured)
             "не найдено" in details || "not found" in details ->
-                getString(Res.string.chat_or_invite_not_found)
+                getString(chat_or_invite_not_found)
             "network" in details || "unavailable" in details ->
-                getString(Res.string.network_connection_failed)
-            else -> getString(Res.string.chat_generic_operation_failed)
+                getString(network_connection_failed)
+            else -> getString(chat_generic_operation_failed)
         }
     }
 }
