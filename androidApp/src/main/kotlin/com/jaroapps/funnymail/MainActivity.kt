@@ -70,6 +70,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         NativeSocialSignIn.attachPlatformContext(null)
+        DrawingDraftStorage.attachPlatformContext(null)
+        ThemePreferenceStorage.attachPlatformContext(null)
         LocalDrawingDatabaseBuilder.attachPlatformContext(null)
         super.onDestroy()
     }
