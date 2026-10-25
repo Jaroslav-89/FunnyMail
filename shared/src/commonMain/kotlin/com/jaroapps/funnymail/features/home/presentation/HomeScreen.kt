@@ -56,7 +56,7 @@ fun HomeScreen(
             contentPadding = PaddingValues(vertical = 16.dp),
             shape = RoundedCornerShape(16.dp),
         ) {
-            Text("Нарисовать письмо")
+            Text("Нарисовать рисунок")
         }
 
         Card(
