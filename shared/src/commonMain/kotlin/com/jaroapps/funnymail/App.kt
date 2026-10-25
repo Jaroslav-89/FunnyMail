@@ -198,8 +198,8 @@ private fun FunnyMailContent(
                     if (user == null) {
                         reportResult(sendDrawingLoginRequiredText)
                     } else {
-                        val drawing = DrawingCodec().decode(json).getOrElse { error ->
-                            reportResult(error.message ?: readingDrawingFailedText)
+                        val drawing = DrawingCodec().decode(json).getOrElse {
+                            reportResult(readingDrawingFailedText)
                             return@launch
                         }
                         letterRepository.sendLetter(
