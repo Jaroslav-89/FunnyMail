@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -172,13 +173,15 @@ fun ChatsScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text("Код приглашения", style = MaterialTheme.typography.titleMedium)
+                        SelectionContainer {
+                            Text(
+                                invite.code,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                         Text(
-                            invite.code,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Text(
-                            "Действует 7 дней с момента создания. Передайте код другу, чтобы он мог вступить в этот чат.",
+                            "Выделите код, чтобы скопировать его. Приглашение действует 7 дней с момента создания.",
                             style = MaterialTheme.typography.bodySmall,
                         )
                         TextButton(onClick = viewModel::dismissInvite) {
