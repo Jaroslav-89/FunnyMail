@@ -53,6 +53,7 @@ import com.jaroapps.funnymail.core.ui.SearchMagnifierIcon
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import com.jaroapps.funnymail.features.chat.presentation.ChatViewModel
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -64,6 +65,7 @@ fun HomeScreen(
     val viewModel: ChatViewModel = koinViewModel()
     val chatRepository = koinInject<ChatRepository>()
     val state by viewModel.state.collectAsState()
+    val currentUserId = state.currentUser?.id
 
     var actionsExpanded by rememberSaveable { mutableStateOf(false) }
     var showCreateChatDialog by rememberSaveable { mutableStateOf(false) }
@@ -225,11 +227,13 @@ fun HomeScreen(
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
-                                    UnreadMessageBadge(
-                                        chatRepository = chatRepository,
-                                        chatId = chat.id,
-                                        userId = state.currentUser.id,
-                                    )
+                                    currentUserId?.let { userId ->
+                                        UnreadMessageBadge(
+                                            chatRepository = chatRepository,
+                                            chatId = chat.id,
+                                            userId = userId,
+                                        )
+                                    }
                                 }
                             }
                         }
