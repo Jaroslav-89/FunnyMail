@@ -54,6 +54,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.jaroapps.funnymail.core.ui.AppBackButton
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingCanvas
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
@@ -357,13 +358,7 @@ fun DrawingScreen(
                 .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            RoundToolButton(onClick = onBack) {
-                DrawingToolGlyph(
-                    icon = DrawingToolIcon.Back,
-                    color = Color(0xFF202124),
-                    modifier = Modifier.size(23.dp),
-                )
-            }
+            AppBackButton(onClick = onBack)
 
             Spacer(Modifier.weight(1f))
 
