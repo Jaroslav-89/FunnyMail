@@ -411,6 +411,7 @@ class FirebaseChatRepository(
     @Serializable
     private data class FirestoreUnreadLetterDocument(
         val authorUserId: String,
+        val drawingJson: String = "",
         val createdAt: BaseTimestamp = Timestamp.ServerTimestamp,
         val expiresAt: BaseTimestamp = Timestamp.ServerTimestamp,
     )
