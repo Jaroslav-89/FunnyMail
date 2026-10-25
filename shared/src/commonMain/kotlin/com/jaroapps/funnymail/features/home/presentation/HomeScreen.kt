@@ -43,7 +43,7 @@ fun HomeScreen(
             style = MaterialTheme.typography.titleMedium,
         )
         Text(
-            text = "Создавайте рисунки и отправляйте их друзьям. Ваши письма будут доступны в чате.",
+            text = "Создавайте рисунки и сохраняйте их в локальной галерее на этом устройстве. Из чатов можно отправлять рисунки друзьям.",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -79,7 +79,7 @@ fun HomeScreen(
                         "Рисунок проверен и сохранён на этом устройстве. Он ещё не отправлен — " +
                             "для отправки писем нужно подключить чаты и Firestore."
                     } else {
-                        "Пока здесь нет писем. Начните с нового рисунка — список появится после подключения хранилища."
+                        "Создавайте рисунки — они будут храниться в локальной галерее на этом устройстве."
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -97,7 +97,7 @@ fun HomeScreen(
             onClick = onOpenLetters,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Мои письма")
+            Text("Мои рисунки")
         }
         OutlinedButton(
             onClick = onOpenChats,
