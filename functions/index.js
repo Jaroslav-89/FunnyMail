@@ -1,5 +1,5 @@
 const admin = require("firebase-admin");
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
 
 admin.initializeApp();
 
@@ -55,10 +55,6 @@ exports.notifyChatMembersOnNewLetter = onDocumentCreated(
 
         const response = await admin.messaging().sendEachForMulticast({
           tokens,
-          notification: {
-            title: "FunnyMail",
-            body,
-          },
           data: {
             type: "new_chat_message",
             chatId,
@@ -66,13 +62,10 @@ exports.notifyChatMembersOnNewLetter = onDocumentCreated(
             letterId,
           },
           android: {
+            // A high-priority data-only payload lets Android's messaging service
+            // update the launcher badge as well as post the visible notification.
             priority: "high",
-            notification: {
-              channelId: "new_chat_messages",
-              notificationCount: 1,
-              color: "#F5A800",
-              tag: `letter-${letterId}`,
-            },
+            ttl: 60 * 60 * 1000,
           },
           apns: {
             payload: {
@@ -99,5 +92,72 @@ exports.notifyChatMembersOnNewLetter = onDocumentCreated(
         }
       }
     }
+  },
+);
+
+async function pruneChatDrawings(chatId) {
+  const chatRef = db.collection("chats").doc(chatId);
+  const chatSnapshot = await chatRef.get();
+  if (!chatSnapshot.exists) return;
+
+  const chat = chatSnapshot.data() || {};
+  const limit = chat.maxLettersCount;
+  if (!Number.isInteger(limit) || limit < 1) return;
+
+  const snapshot = await chatRef.collection("letters")
+    .orderBy("createdAt", "asc")
+    .get();
+  const now = Date.now();
+  const activeLetters = snapshot.docs.filter((document) => {
+    const expiresAt = document.data().expiresAt;
+    return expiresAt && typeof expiresAt.toMillis === "function" &&
+      expiresAt.toMillis() > now;
+  });
+  const numberToDelete = Math.max(0, activeLetters.length - limit);
+  const toDelete = activeLetters.slice(0, numberToDelete);
+
+  for (let offset = 0; offset < toDelete.length; offset += 500) {
+    const batch = db.batch();
+    toDelete.slice(offset, offset + 500).forEach((document) => batch.delete(document.ref));
+    await batch.commit();
+  }
+}
+
+// Enforce the configured maximum immediately after a drawing is saved.
+exports.enforceDrawingLimitOnNewLetter = onDocumentCreated(
+  {
+    document: "chats/{chatId}/letters/{letterId}",
+    region: "europe-west1",
+  },
+  async (event) => {
+    if (!event.data) return;
+    await pruneChatDrawings(event.params.chatId);
+  },
+);
+
+// If the creator changes the configured limit, remove excess oldest drawings.
+exports.enforceDrawingLimitOnChatUpdate = onDocumentUpdated(
+  {
+    document: "chats/{chatId}",
+    region: "europe-west1",
+  },
+  async (event) => {
+    const before = event.data?.before.data() || {};
+    const after = event.data?.after.data() || {};
+    if (before.maxLettersCount === after.maxLettersCount) return;
+    if (!Number.isInteger(after.maxLettersCount) || after.maxLettersCount < 1) return;
+    await pruneChatDrawings(event.params.chatId);
+  },
+);
+
+// Process explicit cleanup requests made by chat members when they enter an over-limit chat.
+exports.processChatCleanupRequest = onDocumentCreated(
+  {
+    document: "chats/{chatId}/cleanupRequests/{requestId}",
+    region: "europe-west1",
+  },
+  async (event) => {
+    if (!event.data) return;
+    await pruneChatDrawings(event.params.chatId);
   },
 );
