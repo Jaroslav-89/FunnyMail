@@ -59,10 +59,10 @@ class MainActivity : ComponentActivity() {
         manager.createNotificationChannel(
             NotificationChannel(
                 "new_chat_messages_v2",
-                "Новые сообщения в чатах",
+                getString(R.string.chat_notifications_channel),
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
-                description = "Уведомления о новых сообщениях в чатах FunnyMail"
+                description = getString(R.string.chat_notifications_description)
                 setShowBadge(false)
             },
         )
