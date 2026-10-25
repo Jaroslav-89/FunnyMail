@@ -115,7 +115,7 @@ fun ChatDetailsScreen(
         onDispose { viewModel.stopObserving(chat.id) }
     }
 
-    LaunchedEffect(state.letters.size, state.isLoading) {
+    LaunchedEffect(chat.id, state.letters.size, state.letters.lastOrNull()?.id, state.isLoading) {
         if (state.letters.isNotEmpty()) {
             lettersListState.scrollToItem(state.letters.lastIndex)
         }
