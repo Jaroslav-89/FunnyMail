@@ -121,6 +121,27 @@ class FirebaseLetterRepository(
         savedLetter
     }
 
+    override suspend fun deleteLetter(
+        chatId: String,
+        letterId: String,
+        requestingUserId: String,
+    ): Result<Unit> = asResult {
+        require(chatId.isNotBlank()) { "Не выбран чат." }
+        require(letterId.isNotBlank()) { "Не выбран рисунок." }
+        require(requestingUserId.isNotBlank()) { "Для удаления рисунка нужно войти в аккаунт." }
+
+        val reference = firestoreProvider()
+            .collection(CHATS_COLLECTION)
+            .document(chatId)
+            .collection(LETTERS_COLLECTION)
+            .document(letterId)
+        val letter = reference.get().data<FirestoreLetterDocument>()
+        require(letter.authorUserId == requestingUserId) {
+            "Удалить этот рисунок может только его автор."
+        }
+        reference.delete()
+    }
+
     private fun FirestoreLetterDocument.toDomain(
         documentId: String,
         chatId: String,
