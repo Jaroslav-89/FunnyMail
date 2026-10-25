@@ -20,6 +20,5 @@ data class UserProfile(
             ?: providerDisplayName.takeIf { it.isNotBlank() }
             ?: generatedName.takeIf { it.isNotBlank() }
             ?: displayName.takeIf { it.isNotBlank() }
-            ?: email.substringBefore('@').takeIf { it.isNotBlank() }
             ?: "Пользователь"
 }
