@@ -32,14 +32,14 @@ import kotlin.time.Clock
 class FirebaseChatRepository(
     private val firestoreProvider: () -> FirebaseFirestore = {
         check(FirebaseRuntimeStatus.isConfigured) {
-            getString(Res.string.firebase_not_configured)
+            "Firebase is not configured. Add platform configuration files."
         }
         Firebase.firestore
     },
 ) : ChatRepository {
 
     override fun observeChats(userId: String): Flow<List<Chat>> {
-        require(userId.isNotBlank()) { getString(Res.string.chat_login_required) }
+        require(userId.isNotBlank()) { "Sign in to load chats." }
         return firestoreProvider()
             .collection(CHATS_COLLECTION)
             .where("memberIds", arrayContains = userId)
@@ -206,7 +206,7 @@ class FirebaseChatRepository(
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeUnreadCount(chatId: String, userId: String): Flow<Int> {
         require(chatId.isNotBlank()) { getString(Res.string.chat_not_selected_error) }
-        require(userId.isNotBlank()) { getString(Res.string.chat_unread_account_required) }
+        require(userId.isNotBlank()) { "Sign in to count unread messages." }
 
         val chatReference = firestoreProvider().collection(CHATS_COLLECTION).document(chatId)
         val readAtFlow = chatReference.collection(READS_COLLECTION).document(userId).snapshots.map { document ->
