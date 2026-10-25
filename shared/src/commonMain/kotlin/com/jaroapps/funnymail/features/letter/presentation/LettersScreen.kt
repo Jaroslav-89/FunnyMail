@@ -286,6 +286,7 @@ fun DrawingPreview(
             strokes = drawing.strokes,
             canvasWidth = drawing.canvas.width,
             canvasHeight = drawing.canvas.height,
+            contentInsetFraction = 0.06f,
         )
     }
 }
