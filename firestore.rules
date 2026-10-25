@@ -51,7 +51,10 @@ service cloud.firestore {
           !('lastMessageAt' in request.resource.data.keys())
           || request.resource.data.lastMessageAt == null
         )
-        && request.resource.data.creatorUserId == request.auth.uid
+        && (
+          !('creatorUserId' in request.resource.data.keys())
+          || request.resource.data.creatorUserId == request.auth.uid
+        )
         && request.resource.data.title is string
         && request.resource.data.title.size() > 0
         && request.resource.data.title.size() <= 80
@@ -134,7 +137,7 @@ service cloud.firestore {
 
       // Queries cannot reliably prove a server-time comparison against each result.
       // Restrict list access to chat members; the app's query filters expiresAt,
-      // and the configured Firestore TTL policy removes expired letters asynchronously.
+      // and the configured Firestore TTL policy removes expired documents asynchronously.
       allow list: if isChatMember(chatId);
       allow update: if false;
       allow delete: if isChatCreator(chatId);
