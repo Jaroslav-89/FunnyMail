@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import org.jetbrains.compose.resources.stringResource
+import com.jaroapps.funnymail.resources.Res
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -30,11 +32,11 @@ fun PlaceholderScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            "Функция ещё не подключена — данные пока не создаются и не отправляются.",
+            stringResource(Res.string.placeholder_not_connected),
             style = MaterialTheme.typography.bodyMedium,
         )
         Button(onClick = onBack) {
-            Text("На главную")
+            Text(stringResource(Res.string.home))
         }
     }
 }
