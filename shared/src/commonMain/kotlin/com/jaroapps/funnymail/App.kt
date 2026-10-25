@@ -57,10 +57,6 @@ fun App() {
             firebaseConfigured = firebaseConfigured,
             hasDraft = lastDraftJson != null,
             draftJson = lastDraftJson,
-            onDraftPrepared = { json ->
-                DrawingDraftStorage.save(json)
-                lastDraftJson = json
-            },
             onClearDraft = {
                 DrawingDraftStorage.clear()
                 lastDraftJson = null
@@ -74,7 +70,6 @@ private fun FunnyMailContent(
     firebaseConfigured: Boolean,
     hasDraft: Boolean,
     draftJson: String?,
-    onDraftPrepared: (String) -> Unit,
     onClearDraft: () -> Unit,
 ) {
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
