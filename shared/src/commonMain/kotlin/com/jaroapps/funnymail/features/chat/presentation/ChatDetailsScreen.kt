@@ -1,6 +1,12 @@
 package com.jaroapps.funnymail.features.chat.presentation
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -8,13 +14,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -25,10 +34,17 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.jaroapps.funnymail.core.ui.DrawingListIcon
+import com.jaroapps.funnymail.core.ui.PaperPlusIcon
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
@@ -41,6 +57,8 @@ fun ChatDetailsScreen(
     draftJson: String?,
     onBack: () -> Unit,
     onDraftSent: () -> Unit,
+    onCreateDrawing: () -> Unit,
+    onOpenDrawings: () -> Unit,
 ) {
     val viewModel: ChatDetailsViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
@@ -48,6 +66,7 @@ fun ChatDetailsScreen(
         draftJson?.let { DrawingCodec().decode(it).getOrNull() }
     }
     var handledSentLetterId by remember { mutableStateOf(state.lastSentLetterId) }
+    var actionsExpanded by rememberSaveable { mutableStateOf(false) }
 
     DisposableEffect(chat.id) {
         viewModel.observeLetters(chat.id)
@@ -61,6 +80,7 @@ fun ChatDetailsScreen(
         }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -222,5 +242,77 @@ fun ChatDetailsScreen(
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
+    }
+
+    Column(
+        modifier = Modifier
+            .align(Alignment.BottomEnd)
+            .padding(end = 20.dp, bottom = 20.dp),
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        AnimatedVisibility(
+            visible = actionsExpanded,
+            enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
+            exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom),
+        ) {
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                FloatingActionButton(
+                    onClick = {
+                        actionsExpanded = false
+                        onCreateDrawing()
+                    },
+                    modifier = Modifier
+                        .size(52.dp)
+                        .semantics { contentDescription = "Новый рисунок" },
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                ) {
+                    PaperPlusIcon(color = MaterialTheme.colorScheme.onSecondaryContainer)
+                }
+                FloatingActionButton(
+                    onClick = {
+                        actionsExpanded = false
+                        onOpenDrawings()
+                    },
+                    modifier = Modifier
+                        .size(52.dp)
+                        .semantics { contentDescription = "Мои рисунки" },
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                ) {
+                    DrawingListIcon(color = MaterialTheme.colorScheme.onSecondaryContainer)
+                }
+            }
+        }
+
+        FloatingActionButton(
+            onClick = { actionsExpanded = !actionsExpanded },
+            modifier = Modifier
+                .size(58.dp)
+                .semantics {
+                    contentDescription = if (actionsExpanded) {
+                        "Закрыть меню действий"
+                    } else {
+                        "Открыть меню действий"
+                    }
+                },
+            shape = CircleShape,
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+        ) {
+            Text(
+                text = "+",
+                fontSize = 32.sp,
+                lineHeight = 32.sp,
+                modifier = Modifier.rotate(if (actionsExpanded) 45f else 0f),
+            )
+        }
+    }
     }
 }
