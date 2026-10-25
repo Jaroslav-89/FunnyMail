@@ -43,7 +43,8 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [x] Local draft persistence on Android (SharedPreferences) and iOS (NSUserDefaults)
 - [ ] Firestore letter adapters and sending letters to chats
 - [ ] Offline synchronization
-- [ ] Security Rules, server-controlled expiry and TTL
+- [x] Firestore Security Rules for chat membership and seven-day invite expiry (publish them to the Firebase project)
+- [ ] Firestore TTL cleanup and server-controlled expiry for letters
 - [ ] End-to-end platform verification
 
 Platform sign-in options are intentionally separate: Android offers email/password and Google; iOS offers email/password and Apple ID.
@@ -62,7 +63,7 @@ Platform sign-in options are intentionally separate: Android offers email/passwo
 
 1. Create a Cloud Firestore database in the same Firebase project used for Authentication.
 2. Publish the rules from `firestore.rules` in Firebase Console → Firestore Database → Rules. Until the rules are published, chat and invite writes will be rejected.
-3. The app creates `chats` and `chatInvites` documents. Invite validity lasts seven days from the server-assigned `createdAt` timestamp; the security rules use server `request.time`, not the device clock.
+3. The app creates `chats` and `chatInvites` documents. Invite validity lasts seven days from the server-assigned `createdAt` timestamp; the security rules use server `request.time`, not the device clock. Expired invite documents are denied but are not automatically deleted yet; TTL cleanup is still pending.
 4. Firestore document access is limited to signed-in users. Chat reads are limited to members, and joining requires a live invite created by a current member. Do not replace these rules with open read/write rules.
 5. Since Firestore adds a native iOS Firebase dependency, rerun the SwiftPM linkage generation commands below on macOS, commit generated linkage files if they change, and resolve package versions in Xcode before the iOS build.
 
