@@ -26,18 +26,25 @@ fun AppBackButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     description: String = "Назад",
+    keepLightAppearance: Boolean = false,
 ) {
     Box(
         modifier = modifier
             .size(48.dp)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+            .background(
+                if (keepLightAppearance) Color.White else MaterialTheme.colorScheme.surfaceVariant,
+            )
+            .border(
+                1.dp,
+                if (keepLightAppearance) Color(0xFFE8EAED) else MaterialTheme.colorScheme.outlineVariant,
+                CircleShape,
+            )
             .clickable(onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
-        CanvasBackArrow(color = MaterialTheme.colorScheme.onSurface)
+        CanvasBackArrow(color = if (keepLightAppearance) Color(0xFF202124) else MaterialTheme.colorScheme.onSurface)
     }
 }
 
