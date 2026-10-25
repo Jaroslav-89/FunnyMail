@@ -250,4 +250,5 @@
     <string name="letter_delete_login_required">Для удаления рисунка нужно войти в аккаунт.</string>
     <string name="letter_delete_author_only">Удалить рисунок может его автор или создатель чата.</string>
     <string name="letter_timestamp_invalid">Firestore не вернул корректную метку времени %1$s для письма.</string>
+    <string name="back">Назад</string>
 </resources>
