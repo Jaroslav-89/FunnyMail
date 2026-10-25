@@ -12,7 +12,7 @@ struct ComposeView: UIViewControllerRepresentable {
 
 struct ContentView: View {
     var body: some View {
+        // Keep Compose inside the iOS safe area so controls remain below the status bar.
         ComposeView()
-            .ignoresSafeArea()
     }
 }
