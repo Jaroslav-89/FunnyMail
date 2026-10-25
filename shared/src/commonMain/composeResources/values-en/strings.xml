@@ -252,4 +252,20 @@
     <string name="letter_timestamp_invalid">Firestore did not return a valid %1$s timestamp for the drawing.</string>
     <string name="back">Back</string>
     <string name="back_to_chat">Back to chat</string>
+    <string name="chats_screen_tagline">Letters for friends</string>
+    <string name="chats_screen_description">Create a group chat or join an existing one using an invitation code.</string>
+    <string name="chats_account_required">Account required</string>
+    <string name="chats_account_description">Sign in or register to create chats and join them.</string>
+    <string name="chats_sign_in_register">Sign in / Register</string>
+    <string name="chats_create_chat">Create chat</string>
+    <string name="chats_join_by_code">Join with a code</string>
+    <string name="chats_join">Join</string>
+    <string name="chats_invite_help">Select the code to copy it. The invitation is valid for 7 days after creation.</string>
+    <string name="chats_hide_code">Hide code</string>
+    <string name="chats_your_chats">Your chats</string>
+    <string name="chats_empty">No chats yet. Create one above or join using an invitation.</string>
+    <string name="chats_open_chat">Open chat</string>
+    <string name="chats_invite_friend">Invite a friend</string>
+    <string name="chats_working">Working…</string>
+    <string name="chats_member_and_code">%1$d members · chat code %2$s…</string>
 </resources>

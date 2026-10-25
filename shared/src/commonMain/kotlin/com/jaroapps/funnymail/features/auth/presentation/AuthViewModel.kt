@@ -2,7 +2,6 @@ package com.jaroapps.funnymail.features.auth.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.jaroapps.funnymail.resources.Res
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.getString
 import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
@@ -15,6 +14,27 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.jaroapps.funnymail.resources.auth_done
+import com.jaroapps.funnymail.resources.auth_email_already_exists
+import com.jaroapps.funnymail.resources.auth_enter_email
+import com.jaroapps.funnymail.resources.auth_enter_email_password
+import com.jaroapps.funnymail.resources.auth_enter_name
+import com.jaroapps.funnymail.resources.auth_firebase_config_files
+import com.jaroapps.funnymail.resources.auth_google_cancelled_hint
+import com.jaroapps.funnymail.resources.auth_google_configuration_error
+import com.jaroapps.funnymail.resources.auth_google_no_credential
+import com.jaroapps.funnymail.resources.auth_invalid_credentials
+import com.jaroapps.funnymail.resources.auth_invalid_email
+import com.jaroapps.funnymail.resources.auth_operation_failed
+import com.jaroapps.funnymail.resources.auth_password_min_length
+import com.jaroapps.funnymail.resources.auth_password_too_short
+import com.jaroapps.funnymail.resources.auth_profile_save_failed
+import com.jaroapps.funnymail.resources.auth_profile_saved
+import com.jaroapps.funnymail.resources.auth_signed_out
+import com.jaroapps.funnymail.resources.auth_signin_cancelled
+import com.jaroapps.funnymail.resources.auth_username_check_failed
+import com.jaroapps.funnymail.resources.auth_username_format_error
+import com.jaroapps.funnymail.resources.network_connection_failed
 
 data class AuthUiState(
     val currentUser: UserProfile? = null,
@@ -68,7 +88,7 @@ class AuthViewModel(
 
     fun signIn(email: String, password: String) {
         if (email.isBlank() || password.isEmpty()) {
-            showError(Res.string.auth_enter_email_password)
+            showError(auth_enter_email_password)
             return
         }
         submit { authRepository.signInWithEmail(email.trim(), password) }
@@ -84,15 +104,15 @@ class AuthViewModel(
 
     fun register(displayName: String, email: String, password: String) {
         if (displayName.isBlank()) {
-            showError(Res.string.auth_enter_name)
+            showError(auth_enter_name)
             return
         }
         if (email.isBlank()) {
-            showError(Res.string.auth_enter_email)
+            showError(auth_enter_email)
             return
         }
         if (password.length < MIN_PASSWORD_LENGTH) {
-            showError(Res.string.auth_password_min_length, MIN_PASSWORD_LENGTH)
+            showError(auth_password_min_length, MIN_PASSWORD_LENGTH)
             return
         }
         submit {
@@ -119,7 +139,7 @@ class AuthViewModel(
         val userId = _state.value.currentUser?.id ?: return
         if (_state.value.isCheckingUsername || _state.value.isSavingProfile) return
         if (!USERNAME_REGEX.matches(username)) {
-            showError(Res.string.auth_username_format_error)
+            showError(auth_username_format_error)
             return
         }
 
@@ -166,7 +186,7 @@ class AuthViewModel(
                                 isCheckingUsername = false,
                                 usernameAvailability = null,
                                 usernameCheckQuery = null,
-                                message = error.message ?: getString(Res.string.auth_username_check_failed),
+                                message = error.message ?: getString(auth_username_check_failed),
                                 messageIsError = true,
                             )
                         }
@@ -180,7 +200,7 @@ class AuthViewModel(
         val userId = _state.value.currentUser?.id ?: return
         if (_state.value.isSavingProfile || _state.value.isCheckingUsername) return
         if (username.isNotBlank() && !USERNAME_REGEX.matches(username)) {
-            showError(Res.string.auth_username_format_error)
+            showError(auth_username_format_error)
             return
         }
 
@@ -193,7 +213,7 @@ class AuthViewModel(
                             currentUser = user,
                             isSavingProfile = false,
                             usernameAvailability = true,
-                            message = getString(Res.string.auth_profile_saved),
+                            message = getString(auth_profile_saved),
                             messageIsError = false,
                         )
                     }
@@ -206,7 +226,7 @@ class AuthViewModel(
                             isSavingProfile = false,
                             usernameAvailability = if (usernameAlreadyTaken) false else null,
                             message = if (usernameAlreadyTaken) null
-                                else getString(Res.string.auth_profile_save_failed),
+                                else getString(auth_profile_save_failed),
                             messageIsError = !usernameAlreadyTaken,
                         )
                     }
@@ -226,7 +246,7 @@ class AuthViewModel(
                         it.copy(
                             currentUser = null,
                             isSubmitting = false,
-                            message = getString(Res.string.auth_signed_out),
+                            message = getString(auth_signed_out),
                             messageIsError = false,
                         )
                     }
@@ -258,7 +278,7 @@ class AuthViewModel(
                         it.copy(
                             currentUser = user,
                             isSubmitting = false,
-                            message = getString(Res.string.auth_done),
+                            message = getString(auth_done),
                             messageIsError = false,
                         )
                     }
@@ -288,29 +308,29 @@ class AuthViewModel(
         val text = message.orEmpty().lowercase()
         return when {
             "google_no_credential" in text ->
-                getString(Res.string.auth_google_no_credential)
+                getString(auth_google_no_credential)
             "google_provider_configuration" in text || "google_credential_error" in text ->
-                getString(Res.string.auth_google_configuration_error)
+                getString(auth_google_configuration_error)
             "google_sign_in_cancelled" in text ->
-                getString(Res.string.auth_google_cancelled_hint)
+                getString(auth_google_cancelled_hint)
             "cancel" in text || "cancelled" in text || "canceled" in text ->
-                getString(Res.string.auth_signin_cancelled)
+                getString(auth_signin_cancelled)
             "firebase is not configured" in text ->
-                getString(Res.string.auth_firebase_config_files)
+                getString(auth_firebase_config_files)
             "email-already-in-use" in text || "already in use" in text ->
-                getString(Res.string.auth_email_already_exists)
+                getString(auth_email_already_exists)
             "invalid-email" in text || "badly formatted" in text ->
-                getString(Res.string.auth_invalid_email)
+                getString(auth_invalid_email)
             "invalid-credential" in text || "wrong-password" in text ||
                 "user-not-found" in text || "invalid login credentials" in text ->
-                getString(Res.string.auth_invalid_credentials)
+                getString(auth_invalid_credentials)
             "weak-password" in text || "at least 6 characters" in text ->
-                getString(Res.string.auth_password_too_short)
+                getString(auth_password_too_short)
             "network" in text || "unable to resolve host" in text ->
-                getString(Res.string.network_connection_failed)
+                getString(network_connection_failed)
             "email is required" in text || "password is required" in text ->
-                getString(Res.string.auth_enter_email_password)
-            else -> getString(Res.string.auth_operation_failed)
+                getString(auth_enter_email_password)
+            else -> getString(auth_operation_failed)
         }
     }
 

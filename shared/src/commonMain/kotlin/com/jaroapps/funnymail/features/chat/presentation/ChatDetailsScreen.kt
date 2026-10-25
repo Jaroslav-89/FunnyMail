@@ -2,8 +2,6 @@ package com.jaroapps.funnymail.features.chat.presentation
 
 import org.jetbrains.compose.resources.stringResource
 
-import com.jaroapps.funnymail.resources.Res
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -88,6 +86,37 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import com.jaroapps.funnymail.resources.add_to_chat
+import com.jaroapps.funnymail.resources.add_user_to_chat
+import com.jaroapps.funnymail.resources.already_in_chat
+import com.jaroapps.funnymail.resources.automatic_delete_failed
+import com.jaroapps.funnymail.resources.chat_drawing_delete_failed
+import com.jaroapps.funnymail.resources.chat_drawing_delete_success
+import com.jaroapps.funnymail.resources.delete_own_drawing
+import com.jaroapps.funnymail.resources.done
+import com.jaroapps.funnymail.resources.drawing_from_member
+import com.jaroapps.funnymail.resources.drawing_menu_close
+import com.jaroapps.funnymail.resources.drawing_menu_open
+import com.jaroapps.funnymail.resources.edit_chat
+import com.jaroapps.funnymail.resources.email_or_username
+import com.jaroapps.funnymail.resources.empty_chat_letters
+import com.jaroapps.funnymail.resources.find_user
+import com.jaroapps.funnymail.resources.find_user_hint
+import com.jaroapps.funnymail.resources.invite_code
+import com.jaroapps.funnymail.resources.invite_code_expires
+import com.jaroapps.funnymail.resources.invite_create_code
+import com.jaroapps.funnymail.resources.new_drawing
+import com.jaroapps.funnymail.resources.open_drawing_fullscreen
+import com.jaroapps.funnymail.resources.open_my_drawings
+import com.jaroapps.funnymail.resources.stroke_point_count
+import com.jaroapps.funnymail.resources.user_add_failed
+import com.jaroapps.funnymail.resources.user_added
+import com.jaroapps.funnymail.resources.user_already_member
+import com.jaroapps.funnymail.resources.user_not_found
+import com.jaroapps.funnymail.resources.user_search_failed
+import com.jaroapps.funnymail.resources.username_at
+import com.jaroapps.funnymail.resources.you_already_member
+import com.jaroapps.funnymail.resources.you_sent
 
 @Composable
 fun ChatDetailsScreen(
@@ -106,21 +135,21 @@ fun ChatDetailsScreen(
     val chatRepository = koinInject<ChatRepository>()
     val letterRepository = koinInject<LetterRepository>()
     val coroutineScope = rememberCoroutineScope()
-    val automaticDeleteFailedText = stringResource(Res.string.automatic_delete_failed)
-    val drawingDeletedText = stringResource(Res.string.chat_drawing_delete_success)
-    val drawingDeleteFailedText = stringResource(Res.string.chat_drawing_delete_failed)
-    val userNotFoundText = stringResource(Res.string.user_not_found)
-    val userAlreadyMemberText = stringResource(Res.string.user_already_member)
-    val youAlreadyMemberText = stringResource(Res.string.you_already_member)
-    val userSearchFailedText = stringResource(Res.string.user_search_failed)
-    val userAddedText = stringResource(Res.string.user_added)
-    val addUserFailedText = stringResource(Res.string.user_add_failed)
-    val editChatDescription = stringResource(Res.string.edit_chat)
-    val addUserDescription = stringResource(Res.string.add_user_to_chat)
-    val newDrawingDescription = stringResource(Res.string.new_drawing)
-    val myDrawingsDescription = stringResource(Res.string.open_my_drawings)
-    val openActionsMenuDescription = stringResource(Res.string.drawing_menu_open)
-    val closeActionsMenuDescription = stringResource(Res.string.drawing_menu_close)
+    val automaticDeleteFailedText = stringResource(automatic_delete_failed)
+    val drawingDeletedText = stringResource(chat_drawing_delete_success)
+    val drawingDeleteFailedText = stringResource(chat_drawing_delete_failed)
+    val userNotFoundText = stringResource(user_not_found)
+    val userAlreadyMemberText = stringResource(user_already_member)
+    val youAlreadyMemberText = stringResource(you_already_member)
+    val userSearchFailedText = stringResource(user_search_failed)
+    val userAddedText = stringResource(user_added)
+    val addUserFailedText = stringResource(user_add_failed)
+    val editChatDescription = stringResource(edit_chat)
+    val addUserDescription = stringResource(add_user_to_chat)
+    val newDrawingDescription = stringResource(new_drawing)
+    val myDrawingsDescription = stringResource(open_my_drawings)
+    val openActionsMenuDescription = stringResource(drawing_menu_open)
+    val closeActionsMenuDescription = stringResource(drawing_menu_close)
     val lettersListState = rememberLazyListState()
     var actionsExpanded by rememberSaveable { mutableStateOf(false) }
     var showInviteDialog by rememberSaveable { mutableStateOf(false) }
@@ -236,7 +265,7 @@ fun ChatDetailsScreen(
             }
             state.letters.isEmpty() -> {
                 Text(
-                    text = stringResource(Res.string.empty_chat_letters),
+                    text = stringResource(empty_chat_letters),
                     modifier = Modifier.align(Alignment.Center).padding(horizontal = 28.dp),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -423,10 +452,10 @@ fun ChatDetailsScreen(
                 onDismissRequest = {
                     if (!isCreatingInvite && !isSearchingUser && !isAddingUser) showInviteDialog = false
                 },
-                title = { Text(stringResource(Res.string.add_user_to_chat)) },
+                title = { Text(stringResource(add_user_to_chat)) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(stringResource(Res.string.find_user_hint))
+                        Text(stringResource(find_user_hint))
                         OutlinedTextField(
                             value = userSearchQuery,
                             onValueChange = {
@@ -434,7 +463,7 @@ fun ChatDetailsScreen(
                                 foundUser = null
                                 searchMessage = null
                             },
-                            label = { Text(stringResource(Res.string.email_or_username)) },
+                            label = { Text(stringResource(email_or_username)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -470,7 +499,7 @@ fun ChatDetailsScreen(
                             if (isSearchingUser) CircularProgressIndicator(
                                 modifier = Modifier.size(18.dp),
                                 strokeWidth = 2.dp,
-                            ) else Text(stringResource(Res.string.find_user))
+                            ) else Text(stringResource(find_user))
                         }
 
                         foundUser?.let { user ->
@@ -486,7 +515,7 @@ fun ChatDetailsScreen(
                                 ) {
                                     Text(user.chatDisplayName, style = MaterialTheme.typography.titleMedium)
                                     if (user.username.isNotBlank()) {
-                                        Text(stringResource(Res.string.username_at, user.username), color = MaterialTheme.colorScheme.primary)
+                                        Text(stringResource(username_at, user.username), color = MaterialTheme.colorScheme.primary)
                                     }
                                     if (user.email.isNotBlank()) {
                                         Text(
@@ -525,7 +554,7 @@ fun ChatDetailsScreen(
                                         if (isAddingUser) CircularProgressIndicator(
                                             modifier = Modifier.size(18.dp),
                                             strokeWidth = 2.dp,
-                                        ) else Text(if (user.id in chat.memberIds) stringResource(Res.string.already_in_chat) else stringResource(Res.string.add_to_chat))
+                                        ) else Text(if (user.id in chat.memberIds) stringResource(already_in_chat) else stringResource(add_to_chat))
                                     }
                                 }
                             }
@@ -552,22 +581,22 @@ fun ChatDetailsScreen(
                             if (isCreatingInvite) CircularProgressIndicator(
                                 modifier = Modifier.size(18.dp),
                                 strokeWidth = 2.dp,
-                            ) else Text(stringResource(Res.string.invite_create_code))
+                            ) else Text(stringResource(invite_create_code))
                         }
                         generatedInvite?.let { invite ->
-                            Text(stringResource(Res.string.invite_code), style = MaterialTheme.typography.titleSmall)
+                            Text(stringResource(invite_code), style = MaterialTheme.typography.titleSmall)
                             SelectionContainer {
                                 Text(invite.code, style = MaterialTheme.typography.headlineSmall,
                                     color = MaterialTheme.colorScheme.primary)
                             }
-                            Text(stringResource(Res.string.invite_code_expires), style = MaterialTheme.typography.bodySmall,
+                            Text(stringResource(invite_code_expires), style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         inviteError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = { showInviteDialog = false }) { Text(stringResource(Res.string.done)) }
+                    TextButton(onClick = { showInviteDialog = false }) { Text(stringResource(done)) }
                 },
             )
         }
@@ -582,7 +611,7 @@ private fun ChatLetterCard(
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val openDrawingFullscreenDescription = stringResource(Res.string.open_drawing_fullscreen)
+    val openDrawingFullscreenDescription = stringResource(open_drawing_fullscreen)
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -593,19 +622,19 @@ private fun ChatLetterCard(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = if (letter.authorUserId == currentUserId) stringResource(Res.string.you_sent) else authorDisplayName ?: stringResource(Res.string.drawing_from_member),
+                    text = if (letter.authorUserId == currentUserId) stringResource(you_sent) else authorDisplayName ?: stringResource(drawing_from_member),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 if (letter.authorUserId == currentUserId) {
-                    ChatHeaderIconButton(onClick = onDelete, description = stringResource(Res.string.delete_own_drawing)) {
+                    ChatHeaderIconButton(onClick = onDelete, description = stringResource(delete_own_drawing)) {
                         TrashCanIcon(color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
             Text(
-                text = stringResource(Res.string.stroke_point_count, letter.drawing.strokes.size, letter.drawing.strokes.sumOf { it.points.size }),
+                text = stringResource(stroke_point_count, letter.drawing.strokes.size, letter.drawing.strokes.sumOf { it.points.size }),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

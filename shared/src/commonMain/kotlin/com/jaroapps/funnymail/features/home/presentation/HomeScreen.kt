@@ -2,8 +2,6 @@ package com.jaroapps.funnymail.features.home.presentation
 
 import org.jetbrains.compose.resources.stringResource
 
-import com.jaroapps.funnymail.resources.Res
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -61,6 +59,25 @@ import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import com.jaroapps.funnymail.features.chat.presentation.ChatViewModel
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import com.jaroapps.funnymail.resources.account_label
+import com.jaroapps.funnymail.resources.app_name
+import com.jaroapps.funnymail.resources.cancel
+import com.jaroapps.funnymail.resources.chat_list_title
+import com.jaroapps.funnymail.resources.chat_member_count
+import com.jaroapps.funnymail.resources.chat_menu_close
+import com.jaroapps.funnymail.resources.chat_menu_open
+import com.jaroapps.funnymail.resources.chat_title
+import com.jaroapps.funnymail.resources.create
+import com.jaroapps.funnymail.resources.create_chat_prompt
+import com.jaroapps.funnymail.resources.enter_invite_code
+import com.jaroapps.funnymail.resources.invite_code
+import com.jaroapps.funnymail.resources.join
+import com.jaroapps.funnymail.resources.join_chat
+import com.jaroapps.funnymail.resources.max_title_length
+import com.jaroapps.funnymail.resources.new_chat
+import com.jaroapps.funnymail.resources.no_chats_hint
+import com.jaroapps.funnymail.resources.no_chats_title
+import com.jaroapps.funnymail.resources.sign_in
 
 @Composable
 fun HomeScreen(
@@ -71,11 +88,11 @@ fun HomeScreen(
     val viewModel: ChatViewModel = koinViewModel()
     val chatRepository = koinInject<ChatRepository>()
     val state by viewModel.state.collectAsState()
-    val accountDescription = stringResource(Res.string.account_label)
-    val createChatDescription = stringResource(Res.string.new_chat)
-    val joinChatDescription = stringResource(Res.string.join_chat)
-    val openChatMenuDescription = stringResource(Res.string.chat_menu_open)
-    val closeChatMenuDescription = stringResource(Res.string.chat_menu_close)
+    val accountDescription = stringResource(account_label)
+    val createChatDescription = stringResource(new_chat)
+    val joinChatDescription = stringResource(join_chat)
+    val openChatMenuDescription = stringResource(chat_menu_open)
+    val closeChatMenuDescription = stringResource(chat_menu_close)
     val currentUserId = state.currentUser?.id
 
     var actionsExpanded by rememberSaveable { mutableStateOf(false) }
@@ -106,7 +123,7 @@ fun HomeScreen(
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = stringResource(Res.string.app_name),
+                text = stringResource(app_name),
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -125,7 +142,7 @@ fun HomeScreen(
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = stringResource(Res.string.app_name),
+                text = stringResource(app_name),
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -134,7 +151,7 @@ fun HomeScreen(
                 onClick = onAuthorize,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(Res.string.sign_in))
+                Text(stringResource(sign_in))
             }
         }
         return
@@ -150,7 +167,7 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = stringResource(Res.string.app_name),
+                    text = stringResource(app_name),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.headlineLarge,
                     color = Color(0xFFF5A800),
@@ -174,7 +191,7 @@ fun HomeScreen(
             }
 
             Text(
-                text = stringResource(Res.string.chat_list_title),
+                text = stringResource(chat_list_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -194,11 +211,11 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            stringResource(Res.string.no_chats_title),
+                            stringResource(no_chats_title),
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
-                            stringResource(Res.string.no_chats_hint),
+                            stringResource(no_chats_hint),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
                         )
@@ -233,7 +250,7 @@ fun HomeScreen(
                                             fontWeight = FontWeight.SemiBold,
                                         )
                                         Text(
-                                            text = stringResource(Res.string.chat_member_count, chat.memberIds.size),
+                                            text = stringResource(chat_member_count, chat.memberIds.size),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -339,16 +356,16 @@ fun HomeScreen(
                     viewModel.clearMessage()
                 }
             },
-            title = { Text(stringResource(Res.string.new_chat)) },
+            title = { Text(stringResource(new_chat)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(stringResource(Res.string.create_chat_prompt))
+                    Text(stringResource(create_chat_prompt))
                     OutlinedTextField(
                         value = chatTitle,
                         onValueChange = { chatTitle = it },
-                        label = { Text(stringResource(Res.string.chat_title)) },
+                        label = { Text(stringResource(chat_title)) },
                         singleLine = true,
-                        supportingText = { Text(stringResource(Res.string.max_title_length)) },
+                        supportingText = { Text(stringResource(max_title_length)) },
                         enabled = !state.isSubmitting,
                     )
                     if (state.messageIsError && state.message != null) {
@@ -362,7 +379,7 @@ fun HomeScreen(
                     enabled = !state.isSubmitting && chatTitle.isNotBlank(),
                 ) {
                     if (state.isSubmitting) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    else Text(stringResource(Res.string.create))
+                    else Text(stringResource(create))
                 }
             },
             dismissButton = {
@@ -372,7 +389,7 @@ fun HomeScreen(
                         viewModel.clearMessage()
                     },
                     enabled = !state.isSubmitting,
-                ) { Text(stringResource(Res.string.cancel)) }
+                ) { Text(stringResource(cancel)) }
             },
         )
     }
@@ -385,14 +402,14 @@ fun HomeScreen(
                     viewModel.clearMessage()
                 }
             },
-            title = { Text(stringResource(Res.string.join_chat)) },
+            title = { Text(stringResource(join_chat)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(stringResource(Res.string.enter_invite_code))
+                    Text(stringResource(enter_invite_code))
                     OutlinedTextField(
                         value = inviteCode,
                         onValueChange = { inviteCode = it.trimStart() },
-                        label = { Text(stringResource(Res.string.invite_code)) },
+                        label = { Text(stringResource(invite_code)) },
                         singleLine = true,
                         enabled = !state.isSubmitting,
                     )
@@ -407,7 +424,7 @@ fun HomeScreen(
                     enabled = !state.isSubmitting && inviteCode.isNotBlank(),
                 ) {
                     if (state.isSubmitting) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    else Text(stringResource(Res.string.join))
+                    else Text(stringResource(join))
                 }
             },
             dismissButton = {
@@ -417,12 +434,11 @@ fun HomeScreen(
                         viewModel.clearMessage()
                     },
                     enabled = !state.isSubmitting,
-                ) { Text(stringResource(Res.string.cancel)) }
+                ) { Text(stringResource(cancel)) }
             },
         )
     }
 }
-
 
 @Composable
 private fun UnreadMessageBadge(

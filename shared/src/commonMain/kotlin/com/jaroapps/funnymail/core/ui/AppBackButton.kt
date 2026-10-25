@@ -15,8 +15,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
-import com.jaroapps.funnymail.resources.Res
 import org.jetbrains.compose.resources.stringResource
+import com.jaroapps.funnymail.resources.back
 
 /** Consistent back button used by the app's screen headers. */
 @Composable
@@ -26,7 +26,7 @@ fun AppBackButton(
     description: String? = null,
     keepLightAppearance: Boolean = false,
 ) {
-    val defaultDescription = stringResource(Res.string.back)
+    val defaultDescription = stringResource(back)
     Box(
         modifier = modifier
             .size(48.dp)

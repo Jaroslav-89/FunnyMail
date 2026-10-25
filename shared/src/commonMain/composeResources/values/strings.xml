@@ -252,4 +252,20 @@
     <string name="letter_timestamp_invalid">Firestore не вернул корректную метку времени %1$s для письма.</string>
     <string name="back">Назад</string>
     <string name="back_to_chat">Назад в чат</string>
+    <string name="chats_screen_tagline">Письма для друзей</string>
+    <string name="chats_screen_description">Создайте общий чат или вступите в уже существующий по коду приглашения.</string>
+    <string name="chats_account_required">Нужен аккаунт</string>
+    <string name="chats_account_description">Войдите или зарегистрируйтесь, чтобы создавать чаты и присоединяться к ним.</string>
+    <string name="chats_sign_in_register">Войти / зарегистрироваться</string>
+    <string name="chats_create_chat">Создать чат</string>
+    <string name="chats_join_by_code">Вступить по коду</string>
+    <string name="chats_join">Присоединиться</string>
+    <string name="chats_invite_help">Выделите код, чтобы скопировать его. Приглашение действует 7 дней с момента создания.</string>
+    <string name="chats_hide_code">Скрыть код</string>
+    <string name="chats_your_chats">Ваши чаты</string>
+    <string name="chats_empty">Чатов пока нет. Создайте первый чат выше или вступите по приглашению.</string>
+    <string name="chats_open_chat">Открыть чат</string>
+    <string name="chats_invite_friend">Пригласить друга</string>
+    <string name="chats_working">Выполняем операцию…</string>
+    <string name="chats_member_and_code">%1$d участн. · код чата %2$s…</string>
 </resources>
