@@ -245,7 +245,7 @@ private fun FunnyMailContent(
         darkColorScheme(
             primary = Color(0xFFF5A800),
             onPrimary = Color(0xFF202124),
-            background = Color(0xFF101114),
+            background = Color(0xFF222325),
             surface = Color(0xFF181A1D),
             surfaceVariant = Color(0xFF292B2F),
             onSurface = Color(0xFFF5F5F5),
