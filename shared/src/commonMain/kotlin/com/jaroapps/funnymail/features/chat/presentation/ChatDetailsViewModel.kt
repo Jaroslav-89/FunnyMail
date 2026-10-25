@@ -1,5 +1,13 @@
 package com.jaroapps.funnymail.features.chat.presentation
 
+import com.jaroapps.funnymail.resources.firebase_not_configured
+import com.jaroapps.funnymail.resources.letter_draw_something
+import com.jaroapps.funnymail.resources.letter_generic_error
+import com.jaroapps.funnymail.resources.letter_login_required
+import com.jaroapps.funnymail.resources.letter_permission_error
+import com.jaroapps.funnymail.resources.letter_sent
+import com.jaroapps.funnymail.resources.letter_too_large
+import com.jaroapps.funnymail.resources.network_connection_failed
 import com.jaroapps.funnymail.resources.Res
 
 import androidx.lifecycle.ViewModel
