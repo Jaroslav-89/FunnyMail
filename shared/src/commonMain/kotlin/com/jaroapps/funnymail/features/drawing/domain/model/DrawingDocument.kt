@@ -26,6 +26,12 @@ data class DrawingCanvas(
     val height: Int = 1000,
     @SerialName("backgroundColor")
     val backgroundColor: String = "#FFFFFF",
+    /** SOLID or GRADIENT; defaults keep older saved JSON compatible. */
+    val backgroundMode: String = "SOLID",
+    /** LEFT_TO_RIGHT, TOP_TO_BOTTOM, TOP_LEFT_TO_BOTTOM_RIGHT, or TOP_RIGHT_TO_BOTTOM_LEFT. */
+    val gradientDirection: String = "TOP_TO_BOTTOM",
+    val gradientStartColor: String = "#00AA00",
+    val gradientEndColor: String = "#F5A800",
 )
 
 @Serializable
