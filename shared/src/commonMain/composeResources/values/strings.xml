@@ -251,4 +251,5 @@
     <string name="letter_delete_author_only">Удалить рисунок может его автор или создатель чата.</string>
     <string name="letter_timestamp_invalid">Firestore не вернул корректную метку времени %1$s для письма.</string>
     <string name="back">Назад</string>
+    <string name="back_to_chat">Назад в чат</string>
 </resources>
