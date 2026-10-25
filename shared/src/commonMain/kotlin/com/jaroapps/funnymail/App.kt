@@ -164,7 +164,7 @@ private fun FunnyMailContent(
                         ).fold(
                             onSuccess = {
                                 reportResult(null)
-                                if (destination == AppDestination.Drawing) {
+                                if (destination == AppDestination.Drawing || destination == AppDestination.Letters) {
                                     destination = AppDestination.ChatDetail
                                     editingDrawingId = null
                                     editingDrawingJson = null
