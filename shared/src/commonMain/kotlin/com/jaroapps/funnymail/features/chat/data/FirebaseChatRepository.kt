@@ -96,9 +96,101 @@ class FirebaseChatRepository(
                 FirestoreChatDocument(
                     title = normalizedTitle,
                     memberIds = listOf(creatorUserId),
+                    creatorUserId = creatorUserId,
                 ),
             )
         reference.get().data<FirestoreChatDocument>().toDomain(reference.id)
+    }
+
+
+    override suspend fun updateChatTitle(
+        chatId: String,
+        title: String,
+        updatedByUserId: String,
+    ): Result<Chat> = asResult {
+        val normalizedTitle = title.trim()
+        require(chatId.isNotBlank()) { "Не выбран чат." }
+        require(updatedByUserId.isNotBlank()) { "Для изменения чата нужно войти в аккаунт." }
+        require(normalizedTitle.isNotEmpty()) { "Введите название чата." }
+        require(normalizedTitle.length <= MAX_CHAT_TITLE_LENGTH) {
+            "Название чата не должно превышать $MAX_CHAT_TITLE_LENGTH символов."
+        }
+
+        val chatReference = firestoreProvider().collection(CHATS_COLLECTION).document(chatId)
+        val current = chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
+        require(current.creatorUserId == updatedByUserId) {
+            "Изменять название чата может только его создатель."
+        }
+
+        chatReference.update(
+            "title" to normalizedTitle,
+            "updatedAt" to FieldValue.serverTimestamp,
+        )
+        chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
+    }
+
+    override suspend fun removeMember(
+        chatId: String,
+        requestingUserId: String,
+        memberUserId: String,
+    ): Result<Chat> = asResult {
+        require(chatId.isNotBlank()) { "Не выбран чат." }
+        require(requestingUserId.isNotBlank()) { "Для управления участниками нужно войти в аккаунт." }
+        require(memberUserId.isNotBlank()) { "Не выбран участник." }
+
+        val chatReference = firestoreProvider().collection(CHATS_COLLECTION).document(chatId)
+        val current = chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
+        require(current.creatorUserId == requestingUserId) {
+            "Удалять участников может только создатель чата."
+        }
+        require(memberUserId != current.creatorUserId) { "Создателя нельзя удалить из чата." }
+        require(memberUserId in current.memberIds) { "Участник уже не состоит в чате." }
+
+        chatReference.update(
+            "memberIds" to FieldValue.arrayRemove(memberUserId),
+            "updatedAt" to FieldValue.serverTimestamp,
+        )
+        chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
+    }
+
+    override suspend fun leaveChat(
+        chatId: String,
+        userId: String,
+    ): Result<Unit> = asResult {
+        require(chatId.isNotBlank()) { "Не выбран чат." }
+        require(userId.isNotBlank()) { "Для выхода из чата нужно войти в аккаунт." }
+
+        val chatReference = firestoreProvider().collection(CHATS_COLLECTION).document(chatId)
+        val current = chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
+        require(userId in current.memberIds) { "Вы уже не состоите в этом чате." }
+        require(userId != current.creatorUserId) {
+            "Создатель не может выйти из чата. Вместо этого удалите чат."
+        }
+
+        chatReference.update(
+            "memberIds" to FieldValue.arrayRemove(userId),
+            "updatedAt" to FieldValue.serverTimestamp,
+        )
+    }
+
+    override suspend fun deleteChat(
+        chatId: String,
+        requestingUserId: String,
+    ): Result<Unit> = asResult {
+        require(chatId.isNotBlank()) { "Не выбран чат." }
+        require(requestingUserId.isNotBlank()) { "Для удаления чата нужно войти в аккаунт." }
+
+        val firestore = firestoreProvider()
+        val chatReference = firestore.collection(CHATS_COLLECTION).document(chatId)
+        val current = chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
+        require(current.creatorUserId == requestingUserId) {
+            "Удалять чат может только его создатель."
+        }
+
+        // Firestore does not cascade-delete subcollections, so remove each letter first.
+        val letters = chatReference.collection(LETTERS_COLLECTION).get()
+        letters.documents.forEach { document -> document.reference.delete() }
+        chatReference.delete()
     }
 
     override suspend fun createInvite(
@@ -165,6 +257,7 @@ class FirebaseChatRepository(
         id = id,
         title = title,
         memberIds = memberIds,
+        creatorUserId = creatorUserId.ifBlank { memberIds.firstOrNull().orEmpty() },
         createdAtEpochMillis = createdAt.requireEpochMillis("createdAt"),
         updatedAtEpochMillis = updatedAt.requireEpochMillis("updatedAt"),
         lastMessageAtEpochMillis = (lastMessageAt as? Timestamp)?.toMilliseconds()?.toLong(),
@@ -187,6 +280,7 @@ class FirebaseChatRepository(
     private data class FirestoreChatDocument(
         val title: String,
         val memberIds: List<String>,
+        val creatorUserId: String = "",
         val createdAt: BaseTimestamp = Timestamp.ServerTimestamp,
         val updatedAt: BaseTimestamp = Timestamp.ServerTimestamp,
         val lastInviteCode: String = "",
