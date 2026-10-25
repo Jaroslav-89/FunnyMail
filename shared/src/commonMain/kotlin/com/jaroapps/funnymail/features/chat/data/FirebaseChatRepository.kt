@@ -15,7 +15,7 @@ import dev.gitlive.firebase.firestore.toMilliseconds
 import dev.gitlive.firebase.firestore.where
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlin.time.Clock
@@ -163,11 +163,6 @@ class FirebaseChatRepository(
         require(userId.isNotBlank()) { "Для подсчёта непрочитанных сообщений нужен аккаунт." }
 
         val chatReference = firestoreProvider().collection(CHATS_COLLECTION).document(chatId)
-        val lettersFlow = chatReference.collection(LETTERS_COLLECTION).snapshots.map { snapshot ->
-            snapshot.documents.mapNotNull { document ->
-                runCatching { document.data<FirestoreUnreadLetterDocument>() }.getOrNull()
-            }
-        }
         val readAtFlow = chatReference.collection(READS_COLLECTION).document(userId).snapshots.map { document ->
             if (!document.exists) {
                 0L
@@ -178,15 +173,29 @@ class FirebaseChatRepository(
             }
         }
 
-        return combine(lettersFlow, readAtFlow) { letters, readAt ->
+        // Query only messages newer than the user's read marker and within the seven-day
+        // retention window, so chat cards do not repeatedly download every drawing.
+        return readAtFlow.flatMapLatest { readAt ->
             val now = Clock.System.now().toEpochMilliseconds()
-            letters.count { letter ->
-                val createdAt = letter.createdAt.toEpochMillisOrNull()
-                val expiresAt = letter.expiresAt.toEpochMillisOrNull()
-                letter.authorUserId != userId &&
-                    createdAt != null && createdAt > readAt &&
-                    expiresAt != null && expiresAt > now
-            }
+            val earliestRetainedMessage = now - UNREAD_WINDOW_MILLIS
+            val queryCutoff = (maxOf(readAt, earliestRetainedMessage) + 1L).coerceAtLeast(1L)
+                .toFirestoreTimestamp()
+
+            chatReference.collection(LETTERS_COLLECTION)
+                .where("createdAt", greaterThan = queryCutoff)
+                .snapshots
+                .map { snapshot ->
+                    val observedAt = Clock.System.now().toEpochMilliseconds()
+                    snapshot.documents.mapNotNull { document ->
+                        runCatching { document.data<FirestoreUnreadLetterDocument>() }.getOrNull()
+                    }.count { letter ->
+                        val createdAt = letter.createdAt.toEpochMillisOrNull()
+                        val expiresAt = letter.expiresAt.toEpochMillisOrNull()
+                        letter.authorUserId != userId &&
+                            createdAt != null && createdAt > readAt &&
+                            expiresAt != null && expiresAt > observedAt
+                    }
+                }
         }
     }
 
@@ -366,6 +375,11 @@ class FirebaseChatRepository(
     private fun BaseTimestamp.toEpochMillisOrNull(): Long? =
         (this as? Timestamp)?.toMilliseconds()?.toLong()
 
+    private fun Long.toFirestoreTimestamp(): Timestamp = Timestamp(
+        seconds = this / 1_000L,
+        nanoseconds = ((this % 1_000L) * 1_000_000L).toInt(),
+    )
+
     private fun BaseTimestamp.requireEpochMillis(field: String): Long =
         (this as? Timestamp)?.toMilliseconds()?.toLong()
             ?: error("Firestore не вернул серверное время для поля $field.")
@@ -423,6 +437,7 @@ class FirebaseChatRepository(
         const val INVITES_COLLECTION = "chatInvites"
         const val MAX_CHAT_TITLE_LENGTH = 80
         const val MAX_CHAT_DESCRIPTION_LENGTH = 120
+        const val UNREAD_WINDOW_MILLIS = 7L * 24L * 60L * 60L * 1_000L
         const val INVITE_TTL_MILLIS = 7L * 24L * 60L * 60L * 1000L
     }
 }
