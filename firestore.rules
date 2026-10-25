@@ -35,8 +35,12 @@ service cloud.firestore {
 
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly([
-          'title', 'memberIds', 'createdAt', 'updatedAt', 'lastInviteCode'
+          'title', 'memberIds', 'createdAt', 'updatedAt', 'lastInviteCode', 'lastMessageAt'
         ])
+        && (
+          !('lastMessageAt' in request.resource.data.keys())
+          || request.resource.data.lastMessageAt == null
+        )
         && request.resource.data.title is string
         && request.resource.data.title.size() > 0
         && request.resource.data.title.size() <= 80
@@ -58,6 +62,11 @@ service cloud.firestore {
         && !(request.auth.uid in resource.data.memberIds)
         && request.resource.data.updatedAt == request.time
         && hasValidInviteForChat(chatId);
+
+      // A member can update only the last-letter timestamp, and only to server request.time.
+      allow update: if isChatMember(chatId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageAt'])
+        && request.resource.data.lastMessageAt == request.time;
 
       allow delete: if false;
     }

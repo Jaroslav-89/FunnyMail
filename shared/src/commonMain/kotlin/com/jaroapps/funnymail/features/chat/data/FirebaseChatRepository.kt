@@ -6,6 +6,7 @@ import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
 import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.BaseTimestamp
+import dev.gitlive.firebase.firestore.Direction
 import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import dev.gitlive.firebase.firestore.Timestamp
@@ -43,8 +44,39 @@ class FirebaseChatRepository(
                     runCatching {
                         document.data<FirestoreChatDocument>().toDomain(document.id)
                     }.getOrNull()
-                }.sortedByDescending { it.updatedAtEpochMillis }
+                }.map { chat ->
+                    if (chat.lastMessageAtEpochMillis != null) {
+                        chat
+                    } else {
+                        // Backfill sort order in memory for chats created before lastMessageAt
+                        // was introduced. Once a new letter is sent, the server timestamp is
+                        // persisted on the chat document and no extra query is required.
+                        val lastLetterAt = try {
+                            findLatestLetterTimestamp(chat.id)
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
+                            null
+                        }
+                        chat.copy(lastMessageAtEpochMillis = lastLetterAt)
+                    }
+                }.sortedByDescending { it.lastMessageAtEpochMillis ?: it.updatedAtEpochMillis }
             }
+    }
+
+    private suspend fun findLatestLetterTimestamp(chatId: String): Long? {
+        val snapshot = firestoreProvider()
+            .collection(CHATS_COLLECTION)
+            .document(chatId)
+            .collection(LETTERS_COLLECTION)
+            .orderBy("createdAt", Direction.DESCENDING)
+            .limit(1)
+            .get()
+
+        return snapshot.documents.firstOrNull()
+            ?.data<FirestoreLatestLetterTimestamp>()
+            ?.createdAt
+            ?.let { (it as? Timestamp)?.toMilliseconds()?.toLong() }
     }
 
     override suspend fun createChat(
@@ -135,6 +167,7 @@ class FirebaseChatRepository(
         memberIds = memberIds,
         createdAtEpochMillis = createdAt.requireEpochMillis("createdAt"),
         updatedAtEpochMillis = updatedAt.requireEpochMillis("updatedAt"),
+        lastMessageAtEpochMillis = (lastMessageAt as? Timestamp)?.toMilliseconds()?.toLong(),
     )
 
     private fun BaseTimestamp.requireEpochMillis(field: String): Long =
@@ -157,12 +190,18 @@ class FirebaseChatRepository(
         val createdAt: BaseTimestamp = Timestamp.ServerTimestamp,
         val updatedAt: BaseTimestamp = Timestamp.ServerTimestamp,
         val lastInviteCode: String = "",
+        val lastMessageAt: BaseTimestamp? = null,
     )
 
     @Serializable
     private data class FirestoreInviteDocument(
         val chatId: String,
         val createdByUserId: String,
+        val createdAt: BaseTimestamp = Timestamp.ServerTimestamp,
+    )
+
+    @Serializable
+    private data class FirestoreLatestLetterTimestamp(
         val createdAt: BaseTimestamp = Timestamp.ServerTimestamp,
     )
 

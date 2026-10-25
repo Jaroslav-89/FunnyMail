@@ -8,6 +8,7 @@ import com.jaroapps.funnymail.features.letter.domain.repository.LetterRepository
 import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.firestore.BaseTimestamp
 import dev.gitlive.firebase.firestore.FirebaseFirestore
+import dev.gitlive.firebase.firestore.FieldValue
 import dev.gitlive.firebase.firestore.Timestamp
 import dev.gitlive.firebase.firestore.firestore
 import dev.gitlive.firebase.firestore.toMilliseconds
@@ -99,9 +100,25 @@ class FirebaseLetterRepository(
                 ),
             )
 
-        reference.get()
+        val savedLetter = reference.get()
             .data<FirestoreLetterDocument>()
             .toDomain(documentId = reference.id, chatId = chatId)
+
+        // Keep the chat list ordered by its newest letter. Rules only allow members to
+        // advance lastMessageAt using a server timestamp. The letter has already been saved,
+        // so a metadata-update failure must not report a failed send and invite duplicate retries.
+        try {
+            firestoreProvider()
+                .collection(CHATS_COLLECTION)
+                .document(chatId)
+                .update("lastMessageAt" to FieldValue.serverTimestamp)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            // The chat list can still derive the latest timestamp from its letter subcollection.
+        }
+
+        savedLetter
     }
 
     private fun FirestoreLetterDocument.toDomain(

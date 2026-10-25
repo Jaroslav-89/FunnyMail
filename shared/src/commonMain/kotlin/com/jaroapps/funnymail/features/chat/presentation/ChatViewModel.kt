@@ -19,12 +19,15 @@ import kotlinx.coroutines.launch
 
 data class ChatUiState(
     val currentUser: UserProfile? = null,
+    val isAuthLoaded: Boolean = false,
     val chats: List<Chat> = emptyList(),
     val isLoading: Boolean = false,
     val isSubmitting: Boolean = false,
     val message: String? = null,
     val messageIsError: Boolean = false,
     val activeInvite: ChatInvite? = null,
+    val lastCreatedChatId: String? = null,
+    val lastJoinedChatId: String? = null,
 )
 
 class ChatViewModel(
@@ -40,9 +43,12 @@ class ChatViewModel(
                 _state.update {
                     it.copy(
                         currentUser = user,
+                        isAuthLoaded = true,
                         chats = emptyList(),
                         isLoading = user != null,
                         activeInvite = null,
+                        lastCreatedChatId = null,
+                        lastJoinedChatId = null,
                         message = null,
                         messageIsError = false,
                     )
@@ -80,12 +86,20 @@ class ChatViewModel(
         }
 
         viewModelScope.launch {
-            _state.update { it.copy(isSubmitting = true, message = null, messageIsError = false) }
+            _state.update {
+                it.copy(
+                    isSubmitting = true,
+                    message = null,
+                    messageIsError = false,
+                    lastCreatedChatId = null,
+                )
+            }
             chatRepository.createChat(title, userId).fold(
-                onSuccess = {
+                onSuccess = { chat ->
                     _state.update {
                         it.copy(
                             isSubmitting = false,
+                            lastCreatedChatId = chat.id,
                             message = "Чат создан.",
                             messageIsError = false,
                         )
@@ -133,13 +147,21 @@ class ChatViewModel(
         }
 
         viewModelScope.launch {
-            _state.update { it.copy(isSubmitting = true, message = null, messageIsError = false) }
+            _state.update {
+                it.copy(
+                    isSubmitting = true,
+                    message = null,
+                    messageIsError = false,
+                    lastJoinedChatId = null,
+                )
+            }
             chatRepository.joinWithInvite(code, userId).fold(
                 onSuccess = { chat ->
                     _state.update { current ->
                         current.copy(
                             isSubmitting = false,
                             activeInvite = null,
+                            lastJoinedChatId = chat.id,
                             message = "Вы присоединились к чату «${chat.title}».",
                             messageIsError = false,
                         )
@@ -152,6 +174,10 @@ class ChatViewModel(
 
     fun dismissInvite() {
         _state.update { it.copy(activeInvite = null) }
+    }
+
+    fun clearMessage() {
+        _state.update { it.copy(message = null, messageIsError = false) }
     }
 
     private fun handleFailure(error: Throwable) {

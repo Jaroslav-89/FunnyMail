@@ -128,3 +128,111 @@ fun TrashCanIcon(
         )
     }
 }
+
+@Composable
+fun AccountPersonIcon(
+    modifier: Modifier = Modifier.size(24.dp),
+    color: Color,
+) {
+    Canvas(modifier = modifier) {
+        val strokeWidth = size.minDimension * 0.085f
+        drawCircle(
+            color = color,
+            radius = size.minDimension * 0.15f,
+            center = Offset(size.width * 0.5f, size.height * 0.31f),
+            style = Stroke(width = strokeWidth),
+        )
+        val body = Path().apply {
+            moveTo(size.width * 0.20f, size.height * 0.88f)
+            lineTo(size.width * 0.20f, size.height * 0.77f)
+            cubicTo(
+                size.width * 0.20f, size.height * 0.60f,
+                size.width * 0.34f, size.height * 0.53f,
+                size.width * 0.50f, size.height * 0.53f,
+            )
+            cubicTo(
+                size.width * 0.66f, size.height * 0.53f,
+                size.width * 0.80f, size.height * 0.60f,
+                size.width * 0.80f, size.height * 0.77f,
+            )
+            lineTo(size.width * 0.80f, size.height * 0.88f)
+        }
+        drawPath(
+            path = body,
+            color = color,
+            style = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round),
+        )
+    }
+}
+
+@Composable
+fun SearchMagnifierIcon(
+    modifier: Modifier = Modifier.size(24.dp),
+    color: Color,
+) {
+    Canvas(modifier = modifier) {
+        val strokeWidth = size.minDimension * 0.09f
+        drawCircle(
+            color = color,
+            radius = size.minDimension * 0.27f,
+            center = Offset(size.width * 0.42f, size.height * 0.42f),
+            style = Stroke(width = strokeWidth),
+        )
+        drawLine(
+            color = color,
+            start = Offset(size.width * 0.62f, size.height * 0.62f),
+            end = Offset(size.width * 0.88f, size.height * 0.88f),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Round,
+        )
+    }
+}
+
+@Composable
+fun PersonPlusIcon(
+    modifier: Modifier = Modifier.size(24.dp),
+    color: Color,
+) {
+    Canvas(modifier = modifier) {
+        val strokeWidth = size.minDimension * 0.075f
+        drawCircle(
+            color = color,
+            radius = size.minDimension * 0.15f,
+            center = Offset(size.width * 0.35f, size.height * 0.28f),
+            style = Stroke(width = strokeWidth),
+        )
+        val body = Path().apply {
+            moveTo(size.width * 0.06f, size.height * 0.84f)
+            lineTo(size.width * 0.06f, size.height * 0.73f)
+            cubicTo(
+                size.width * 0.06f, size.height * 0.57f,
+                size.width * 0.18f, size.height * 0.49f,
+                size.width * 0.35f, size.height * 0.49f,
+            )
+            cubicTo(
+                size.width * 0.47f, size.height * 0.49f,
+                size.width * 0.55f, size.height * 0.55f,
+                size.width * 0.61f, size.height * 0.65f,
+            )
+        }
+        drawPath(
+            path = body,
+            color = color,
+            style = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round),
+        )
+        drawLine(
+            color = color,
+            start = Offset(size.width * 0.74f, size.height * 0.22f),
+            end = Offset(size.width * 0.74f, size.height * 0.51f),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Round,
+        )
+        drawLine(
+            color = color,
+            start = Offset(size.width * 0.595f, size.height * 0.365f),
+            end = Offset(size.width * 0.885f, size.height * 0.365f),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Round,
+        )
+    }
+}

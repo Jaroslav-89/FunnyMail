@@ -42,6 +42,8 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [x] Save each prepared drawing to a local Room/SQLite database on Android and iOS
 - [x] Local drawing gallery with previews, full-size viewing and delete actions
 - [x] Chat floating-action menu for creating drawings or opening the local gallery; send drawings to the active chat
+- [x] Authentication-aware home screen with a profile shortcut, chat creation/join dialogs, and cards sorted by latest letter
+- [x] Chat header invite dialog with a shareable invite code
 - [x] Drawing JSON validation and draft preview
 - [x] Local draft persistence on Android (SharedPreferences) and iOS (NSUserDefaults)
 - [x] Firestore letter adapter, sending drawing drafts to chats, and live letter feed
@@ -67,7 +69,7 @@ Platform sign-in options are intentionally separate: Android offers email/passwo
 
 1. Create a Cloud Firestore database in the same Firebase project used for Authentication.
 2. Publish the rules from `firestore.rules` in Firebase Console → Firestore Database → Rules. Until the rules are published, chat, invite, and letter writes will be rejected.
-3. The app creates `chats` and `chatInvites` documents and stores sent drawings as JSON strings in `chats/{chatId}/letters/{letterId}`. Invite validity lasts seven days from the server-assigned `createdAt` timestamp; the security rules use server `request.time`, not the device clock. Expired invites are denied but are not automatically deleted yet.
+3. The app creates `chats` and `chatInvites` documents and stores sent drawings as JSON strings in `chats/{chatId}/letters/{letterId}`. Invite validity lasts seven days from the server-assigned `createdAt` timestamp; the security rules use server `request.time`, not the device clock. Expired invites are denied but are not automatically deleted yet. Chat documents also maintain `lastMessageAt`, a server timestamp used to sort the home-screen chat list by the latest letter. Publish the latest `firestore.rules` file so signed-in chat members can update this activity field after sending a letter.
 4. Letter documents include an `expiresAt` timestamp. Firestore Security Rules constrain new letters to expire around seven days after creation (five-minute client-clock tolerance), deny direct document reads after expiry, and restrict collection queries to members of the chat. The app's live query filters by `expiresAt`; because Firestore Rules cannot reliably enforce a server-clock expiry comparison for every query result, a determined chat member could request expired letters until TTL removes them. To enable automatic deletion, open **Google Cloud Console → Databases → your Firestore database → Time-to-live → Create Policy**. Set **Collection group** to `letters`, **Timestamp field** to `expiresAt`, keep the expiration offset at `0`, and create the policy. TTL deletion is asynchronous and may take up to 24 hours after expiry; the app stops displaying expired letters immediately after its expiry filter runs, while the rules deny direct-document reads after expiry.
 5. Firestore document access is limited to signed-in users. Chat and letter reads are limited to chat members, and joining requires a live invite created by a current member. Do not replace these rules with open read/write rules.
 6. Since Firestore adds a native iOS Firebase dependency, rerun the SwiftPM linkage generation commands below on macOS, commit generated linkage files if they change, and resolve package versions in Xcode before the iOS build.
