@@ -84,10 +84,17 @@ fun DrawingScreen(
     onBack: () -> Unit,
     onSaveDrawing: (String, (String?) -> Unit) -> Unit,
     onSendDrawing: (String, (String?) -> Unit) -> Unit,
+    initialDrawingJson: String? = null,
 ) {
-    var strokes by remember { mutableStateOf<List<DrawingStroke>>(emptyList()) }
-    var redoStrokes by remember { mutableStateOf<List<DrawingStroke>>(emptyList()) }
-    var savedDrawingJson by remember { mutableStateOf<String?>(null) }
+    val drawingCodec = remember { DrawingCodec() }
+    val initialDrawing = remember(initialDrawingJson) {
+        initialDrawingJson?.let { drawingCodec.decode(it).getOrNull() }
+    }
+    var strokes by remember(initialDrawingJson) {
+        mutableStateOf(initialDrawing?.strokes ?: emptyList())
+    }
+    var redoStrokes by remember(initialDrawingJson) { mutableStateOf<List<DrawingStroke>>(emptyList()) }
+    var savedDrawingJson by remember(initialDrawingJson) { mutableStateOf(initialDrawingJson) }
     var isSaving by remember { mutableStateOf(false) }
     var isSending by remember { mutableStateOf(false) }
     var activePoints by remember { mutableStateOf<List<List<Double>>>(emptyList()) }
@@ -99,11 +106,16 @@ fun DrawingScreen(
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var statusIsError by remember { mutableStateOf(false) }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
-    var canvasHeight by remember { mutableStateOf(1000) }
-    var canvasAspectInitialized by remember { mutableStateOf(false) }
+    var canvasWidth by remember(initialDrawingJson) {
+        mutableStateOf(initialDrawing?.canvas?.width ?: 1000)
+    }
+    var canvasHeight by remember(initialDrawingJson) {
+        mutableStateOf(initialDrawing?.canvas?.height ?: 1000)
+    }
+    var canvasAspectInitialized by remember(initialDrawingJson) {
+        mutableStateOf(initialDrawing != null)
+    }
     var isDrawingGestureActive by remember { mutableStateOf(false) }
-
-    val drawingCodec = remember { DrawingCodec() }
     val paintColor = if (eraserEnabled) "#FFFFFF" else selectedColor
     val currentDrawingJson = remember(strokes, canvasHeight) {
         if (strokes.isEmpty()) {
@@ -112,7 +124,7 @@ fun DrawingScreen(
             drawingCodec.encode(
                 DrawingDocument(
                     canvas = DrawingCanvas(
-                        width = 1000,
+                        width = canvasWidth,
                         height = canvasHeight,
                         backgroundColor = "#FFFFFF",
                     ),
@@ -176,7 +188,7 @@ fun DrawingScreen(
                     canvasSize = newSize
                     if (!canvasAspectInitialized && newSize.width > 0 && newSize.height > 0) {
                         canvasHeight = (
-                            1000f * newSize.height / newSize.width
+                            canvasWidth.toFloat() * newSize.height / newSize.width
                         ).roundToInt().coerceIn(1, 4096)
                         canvasAspectInitialized = true
                     }
@@ -186,13 +198,14 @@ fun DrawingScreen(
                     brushWidth,
                     canvasSize.width,
                     canvasSize.height,
+                    canvasWidth,
                     canvasHeight,
                 ) {
                     val viewportScale = min(
-                        size.width.toFloat() / 1000f,
+                        size.width.toFloat() / canvasWidth.toFloat(),
                         size.height.toFloat() / canvasHeight.toFloat(),
                     ).coerceAtLeast(0.0001f)
-                    val viewportWidth = 1000f * viewportScale
+                    val viewportWidth = canvasWidth.toFloat() * viewportScale
                     val viewportHeight = canvasHeight.toFloat() * viewportScale
                     val viewportLeft = (size.width.toFloat() - viewportWidth) / 2f
                     val viewportTop = (size.height.toFloat() - viewportHeight) / 2f
@@ -256,7 +269,7 @@ fun DrawingScreen(
             }
             drawDrawingStrokes(
                 strokes = visibleStrokes,
-                canvasWidth = 1000,
+                canvasWidth = canvasWidth,
                 canvasHeight = canvasHeight,
             )
         }
@@ -523,7 +536,14 @@ fun DrawingScreen(
                         },
                         enabled = !isSaving && !isCurrentDrawingSaved,
                     ) {
-                        Text(if (isSaving) "Сохраняем…" else "Сохранить в галерею")
+                        Text(
+                            when {
+                                isSaving -> "Сохраняем…"
+                                isCurrentDrawingSaved && initialDrawingJson != null -> "Изменения сохранены"
+                                initialDrawingJson != null -> "Сохранить изменения"
+                                else -> "Сохранить в галерею"
+                            },
+                        )
                     }
                     Button(
                         onClick = {
