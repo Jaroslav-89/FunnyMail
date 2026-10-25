@@ -2,8 +2,6 @@ package com.jaroapps.funnymail.features.letter.presentation
 
 import org.jetbrains.compose.resources.stringResource
 
-import com.jaroapps.funnymail.resources.Res
-
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -58,6 +56,25 @@ import com.jaroapps.funnymail.features.drawing.domain.model.SavedDrawing
 import com.jaroapps.funnymail.features.drawing.domain.repository.LocalDrawingRepository
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import com.jaroapps.funnymail.resources.back_to_gallery
+import com.jaroapps.funnymail.resources.delete_drawing_failed
+import com.jaroapps.funnymail.resources.draft_add_failed
+import com.jaroapps.funnymail.resources.draft_add_hint
+import com.jaroapps.funnymail.resources.draft_added_gallery
+import com.jaroapps.funnymail.resources.draft_not_in_gallery
+import com.jaroapps.funnymail.resources.drawing_number
+import com.jaroapps.funnymail.resources.drawing_removed_device
+import com.jaroapps.funnymail.resources.drawing_sent_current_chat
+import com.jaroapps.funnymail.resources.empty_drawings_hint
+import com.jaroapps.funnymail.resources.empty_drawings_title
+import com.jaroapps.funnymail.resources.open_my_drawings
+import com.jaroapps.funnymail.resources.reading_drawing_failed
+import com.jaroapps.funnymail.resources.reading_saved_drawing_failed
+import com.jaroapps.funnymail.resources.save_to_gallery
+import com.jaroapps.funnymail.resources.send_to_chat
+import com.jaroapps.funnymail.resources.sending
+import com.jaroapps.funnymail.resources.stroke_point_count
+import com.jaroapps.funnymail.resources.view
 
 @Composable
 fun LettersScreen(
@@ -72,13 +89,13 @@ fun LettersScreen(
     val drawings by drawingsFlow.collectAsState(initial = emptyList())
     val coroutineScope = rememberCoroutineScope()
     val drawingCodec = remember { DrawingCodec() }
-    val drawingRemovedDeviceText = stringResource(Res.string.drawing_removed_device)
-    val deleteDrawingFailedText = stringResource(Res.string.delete_drawing_failed)
-    val drawingSentCurrentChatText = stringResource(Res.string.drawing_sent_current_chat)
-    val readingSavedDrawingFailedText = stringResource(Res.string.reading_saved_drawing_failed)
-    val draftAddedGalleryText = stringResource(Res.string.draft_added_gallery)
-    val draftAddFailedText = stringResource(Res.string.draft_add_failed)
-    val readingDrawingFailedText = stringResource(Res.string.reading_drawing_failed)
+    val drawingRemovedDeviceText = stringResource(drawing_removed_device)
+    val deleteDrawingFailedText = stringResource(delete_drawing_failed)
+    val drawingSentCurrentChatText = stringResource(drawing_sent_current_chat)
+    val readingSavedDrawingFailedText = stringResource(reading_saved_drawing_failed)
+    val draftAddedGalleryText = stringResource(draft_added_gallery)
+    val draftAddFailedText = stringResource(draft_add_failed)
+    val readingDrawingFailedText = stringResource(reading_drawing_failed)
     var selectedDrawingId by remember { mutableStateOf<Long?>(null) }
     var sendingDrawingId by remember { mutableStateOf<Long?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
@@ -131,7 +148,7 @@ fun LettersScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    stringResource(Res.string.drawing_number, selectedDrawing.id),
+                    stringResource(drawing_number, selectedDrawing.id),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.headlineSmall,
                 )
@@ -152,7 +169,7 @@ fun LettersScreen(
             }
             if (selectedDocument != null) {
                 Text(
-                    stringResource(Res.string.stroke_point_count, selectedDocument.strokes.size, selectedDocument.strokes.sumOf { it.points.size }),
+                    stringResource(stroke_point_count, selectedDocument.strokes.size, selectedDocument.strokes.sumOf { it.points.size }),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -161,13 +178,13 @@ fun LettersScreen(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 )
             } else {
-                Text(stringResource(Res.string.reading_saved_drawing_failed), color = MaterialTheme.colorScheme.error)
+                Text(stringResource(reading_saved_drawing_failed), color = MaterialTheme.colorScheme.error)
             }
             OutlinedButton(
                 onClick = { selectedDrawingId = null },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(Res.string.back_to_gallery))
+                Text(stringResource(back_to_gallery))
             }
             }
         } else {
@@ -184,9 +201,9 @@ fun LettersScreen(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
                         ) {
                             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(stringResource(Res.string.empty_drawings_title), style = MaterialTheme.typography.titleMedium)
+                                Text(stringResource(empty_drawings_title), style = MaterialTheme.typography.titleMedium)
                                 Text(
-                                    stringResource(Res.string.empty_drawings_hint),
+                                    stringResource(empty_drawings_hint),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 )
@@ -203,10 +220,10 @@ fun LettersScreen(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
                         ) {
                             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Text(stringResource(Res.string.draft_not_in_gallery), style = MaterialTheme.typography.titleMedium)
+                                Text(stringResource(draft_not_in_gallery), style = MaterialTheme.typography.titleMedium)
                                 DrawingPreview(draft, Modifier.fillMaxWidth().height(180.dp))
                                 Text(
-                                    stringResource(Res.string.draft_add_hint),
+                                    stringResource(draft_add_hint),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 )
@@ -222,7 +239,7 @@ fun LettersScreen(
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
-                                ) { Text(stringResource(Res.string.save_to_gallery)) }
+                                ) { Text(stringResource(save_to_gallery)) }
                             }
                         }
                     }
@@ -243,7 +260,7 @@ fun LettersScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    stringResource(Res.string.drawing_number, savedDrawing.id),
+                                    stringResource(drawing_number, savedDrawing.id),
                                     modifier = Modifier.weight(1f),
                                     style = MaterialTheme.typography.titleMedium,
                                 )
@@ -264,13 +281,13 @@ fun LettersScreen(
                             }
                             if (document != null) {
                                 Text(
-                                    stringResource(Res.string.stroke_point_count, document.strokes.size, document.strokes.sumOf { it.points.size }),
+                                    stringResource(stroke_point_count, document.strokes.size, document.strokes.sumOf { it.points.size }),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 DrawingPreview(document, Modifier.fillMaxWidth().height(180.dp))
                             } else {
-                                Text(stringResource(Res.string.reading_drawing_failed), color = MaterialTheme.colorScheme.error)
+                                Text(stringResource(reading_drawing_failed), color = MaterialTheme.colorScheme.error)
                             }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -279,13 +296,13 @@ fun LettersScreen(
                                 OutlinedButton(
                                     onClick = { selectedDrawingId = savedDrawing.id },
                                     modifier = Modifier.weight(1f),
-                                ) { Text(stringResource(Res.string.view)) }
+                                ) { Text(stringResource(view)) }
                                 Button(
                                     onClick = { sendDrawing(savedDrawing) },
                                     enabled = document != null && sendingDrawingId == null,
                                     modifier = Modifier.weight(1f),
                                 ) {
-                                    Text(if (sendingDrawingId == savedDrawing.id) stringResource(Res.string.sending) else stringResource(Res.string.send_to_chat))
+                                    Text(if (sendingDrawingId == savedDrawing.id) stringResource(sending) else stringResource(send_to_chat))
                                 }
                             }
                         }
@@ -306,7 +323,7 @@ fun LettersScreen(
                 modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp)),
             ) {
                 Text(
-                    text = stringResource(Res.string.open_my_drawings),
+                    text = stringResource(open_my_drawings),
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary,
