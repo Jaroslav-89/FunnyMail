@@ -388,12 +388,17 @@ class FirebaseAuthRepository(
         return user.withDirectory(directory)
     }
 
-    private fun FirebaseUser.socialProviderDisplayName(): String? =
-        if (providerData.any { it.providerId == GOOGLE_PROVIDER_ID || it.providerId == APPLE_PROVIDER_ID }) {
-            displayName?.trim()?.takeIf { it.isNotEmpty() }
-        } else {
-            null
+    private fun FirebaseUser.socialProviderDisplayName(): String? {
+        val socialProviders = providerData.filter {
+            it.providerId == GOOGLE_PROVIDER_ID || it.providerId == APPLE_PROVIDER_ID
         }
+        if (socialProviders.isEmpty()) return null
+
+        return displayName?.trim()?.takeIf { it.isNotEmpty() }
+            ?: socialProviders.firstNotNullOfOrNull { info ->
+                info.displayName?.trim()?.takeIf { it.isNotEmpty() }
+            }
+    }
 
     private fun FirebaseUser.withDirectory(directory: FirestoreUserDirectory): UserProfile =
         UserProfile(
