@@ -80,7 +80,7 @@ fun DrawingScreen(
             TextButton(onClick = onBack) { Text("← Назад") }
             Spacer(Modifier.weight(1f))
             Text(
-                text = "Новое письмо",
+                text = "Новый рисунок",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
