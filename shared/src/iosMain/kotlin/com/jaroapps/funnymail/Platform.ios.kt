@@ -9,4 +9,4 @@ class IOSPlatform: Platform {
 
 actual fun getPlatform(): Platform = IOSPlatform()
 
-actual fun getDeviceLanguageCode(): String = NSLocale.currentLocale.languageCode
+actual fun getDeviceLanguageCode(): String = NSLocale.currentLocale.languageCode ?: "en"
