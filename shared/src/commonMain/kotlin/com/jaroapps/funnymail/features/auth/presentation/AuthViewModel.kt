@@ -2,6 +2,9 @@ package com.jaroapps.funnymail.features.auth.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.jaroapps.funnymail.resources.Res
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.getString
 import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
 import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
 import kotlinx.coroutines.CancellationException
@@ -65,7 +68,7 @@ class AuthViewModel(
 
     fun signIn(email: String, password: String) {
         if (email.isBlank() || password.isEmpty()) {
-            showError("Введите email и пароль.")
+            showError(Res.string.auth_enter_email_password)
             return
         }
         submit { authRepository.signInWithEmail(email.trim(), password) }
@@ -81,15 +84,15 @@ class AuthViewModel(
 
     fun register(displayName: String, email: String, password: String) {
         if (displayName.isBlank()) {
-            showError("Введите имя для профиля.")
+            showError(Res.string.auth_enter_name)
             return
         }
         if (email.isBlank()) {
-            showError("Введите email.")
+            showError(Res.string.auth_enter_email)
             return
         }
         if (password.length < MIN_PASSWORD_LENGTH) {
-            showError("Пароль должен содержать минимум $MIN_PASSWORD_LENGTH символов.")
+            showError(Res.string.auth_password_min_length, MIN_PASSWORD_LENGTH)
             return
         }
         submit {
@@ -116,9 +119,7 @@ class AuthViewModel(
         val userId = _state.value.currentUser?.id ?: return
         if (_state.value.isCheckingUsername || _state.value.isSavingProfile) return
         if (!USERNAME_REGEX.matches(username)) {
-            _state.update {
-                it.copy(usernameAvailability = null, message = "Ник должен содержать 3–20 символов: латинские буквы, цифры или _.", messageIsError = true)
-            }
+            showError(Res.string.auth_username_format_error)
             return
         }
 
@@ -165,7 +166,7 @@ class AuthViewModel(
                                 isCheckingUsername = false,
                                 usernameAvailability = null,
                                 usernameCheckQuery = null,
-                                message = error.message ?: "Не удалось проверить ник.",
+                                message = error.message ?: getString(Res.string.auth_username_check_failed),
                                 messageIsError = true,
                             )
                         }
@@ -179,7 +180,7 @@ class AuthViewModel(
         val userId = _state.value.currentUser?.id ?: return
         if (_state.value.isSavingProfile || _state.value.isCheckingUsername) return
         if (username.isNotBlank() && !USERNAME_REGEX.matches(username)) {
-            _state.update { it.copy(message = "Ник должен содержать 3–20 символов: латинские буквы, цифры или _.", messageIsError = true) }
+            _state.update { it.copy(message = getString(Res.string.auth_username_format_error), messageIsError = true) }
             return
         }
 
@@ -192,19 +193,21 @@ class AuthViewModel(
                             currentUser = user,
                             isSavingProfile = false,
                             usernameAvailability = true,
-                            message = "Профиль сохранён.",
+                            message = getString(Res.string.auth_profile_saved),
                             messageIsError = false,
                         )
                     }
                 },
                 onFailure = { error ->
+                    val usernameAlreadyTaken =
+                        error.message?.contains(getString(Res.string.auth_username_taken)) == true
                     _state.update {
                         it.copy(
                             isSavingProfile = false,
-                            usernameAvailability = if (error.message?.contains("Этот ник уже занят") == true) false else null,
-                            message = if (error.message?.contains("Этот ник уже занят") == true) null
-                                else error.message ?: "Не удалось сохранить профиль.",
-                            messageIsError = error.message?.contains("Этот ник уже занят") != true,
+                            usernameAvailability = if (usernameAlreadyTaken) false else null,
+                            message = if (usernameAlreadyTaken) null
+                                else error.message ?: getString(Res.string.auth_profile_save_failed),
+                            messageIsError = !usernameAlreadyTaken,
                         )
                     }
                 },
@@ -223,7 +226,7 @@ class AuthViewModel(
                         it.copy(
                             currentUser = null,
                             isSubmitting = false,
-                            message = "Вы вышли из аккаунта.",
+                            message = getString(Res.string.auth_signed_out),
                             messageIsError = false,
                         )
                     }
@@ -255,7 +258,7 @@ class AuthViewModel(
                         it.copy(
                             currentUser = user,
                             isSubmitting = false,
-                            message = "Готово.",
+                            message = getString(Res.string.auth_done),
                             messageIsError = false,
                         )
                     }
@@ -274,41 +277,40 @@ class AuthViewModel(
         }
     }
 
-    private fun showError(message: String) {
-        _state.update { it.copy(message = message, messageIsError = true) }
+    private fun showError(resource: StringResource, vararg arguments: Any) {
+        viewModelScope.launch {
+            val message = getString(resource, *arguments)
+            _state.update { it.copy(message = message, messageIsError = true) }
+        }
     }
 
-    private fun Throwable.toAuthMessage(): String {
+    private suspend fun Throwable.toAuthMessage(): String {
         val text = message.orEmpty().lowercase()
         return when {
             "google_no_credential" in text ->
-                "Не удалось получить Google-аккаунт. Проверьте, что на устройстве добавлен " +
-                    "аккаунт Google и обновлены Сервисы Google Play."
+                getString(Res.string.auth_google_no_credential)
             "google_provider_configuration" in text || "google_credential_error" in text ->
-                "Не удалось запустить вход Google. Проверьте Web Client ID, SHA-1/SHA-256 " +
-                    "подписи Android-приложения и настройки Google в Firebase."
+                getString(Res.string.auth_google_configuration_error)
             "google_sign_in_cancelled" in text ->
-                "Вход через Google отменён. Если ошибка появляется после выбора аккаунта, " +
-                    "проверьте SHA-1/SHA-256 подписи и OAuth-клиенты в Firebase."
+                getString(Res.string.auth_google_cancelled_hint)"
             "cancel" in text || "cancelled" in text || "canceled" in text ->
-                "Вход отменён."
+                getString(Res.string.auth_signin_cancelled)
             "firebase is not configured" in text ->
-                "Firebase не настроен. Добавьте google-services.json для Android и " +
-                    "GoogleService-Info.plist для iOS."
+                getString(Res.string.auth_firebase_config_files)"
             "email-already-in-use" in text || "already in use" in text ->
-                "Аккаунт с таким email уже существует."
+                getString(Res.string.auth_email_already_exists)
             "invalid-email" in text || "badly formatted" in text ->
-                "Проверьте формат email."
+                getString(Res.string.auth_invalid_email)
             "invalid-credential" in text || "wrong-password" in text ||
                 "user-not-found" in text || "invalid login credentials" in text ->
-                "Неверный email или пароль."
+                getString(Res.string.auth_invalid_credentials)
             "weak-password" in text || "at least 6 characters" in text ->
-                "Пароль слишком короткий. Нужно не менее 6 символов."
+                getString(Res.string.auth_password_too_short)
             "network" in text || "unable to resolve host" in text ->
-                "Не удалось подключиться. Проверьте интернет."
+                getString(Res.string.network_connection_failed)
             "email is required" in text || "password is required" in text ->
-                "Введите email и пароль."
-            else -> "Не удалось выполнить операцию. Проверьте данные и настройки Firebase."
+                getString(Res.string.auth_enter_email_password)
+            else -> getString(Res.string.auth_operation_failed)
         }
     }
 
