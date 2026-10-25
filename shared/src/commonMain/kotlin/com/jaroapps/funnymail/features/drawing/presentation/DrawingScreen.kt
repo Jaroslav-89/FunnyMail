@@ -949,12 +949,10 @@ private fun ColorWheel(
         )
         drawCircle(
             brush = Brush.radialGradient(
-                colorStops = arrayOf(
-                    0f to Color.White,
-                    0.30f to Color.White,
-                    0.65f to Color.Transparent,
-                    1f to Color.Transparent,
-                ),
+                0f to Color.White,
+                0.30f to Color.White,
+                0.65f to Color.Transparent,
+                1f to Color.Transparent,
                 center = center,
                 radius = radius,
             ),
@@ -963,11 +961,9 @@ private fun ColorWheel(
         )
         drawCircle(
             brush = Brush.radialGradient(
-                colorStops = arrayOf(
-                    0f to Color.Transparent,
-                    0.65f to Color.Transparent,
-                    1f to Color.Black,
-                ),
+                0f to Color.Transparent,
+                0.65f to Color.Transparent,
+                1f to Color.Black,
                 center = center,
                 radius = radius,
             ),
