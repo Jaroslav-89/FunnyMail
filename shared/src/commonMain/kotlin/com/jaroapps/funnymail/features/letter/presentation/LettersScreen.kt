@@ -118,7 +118,22 @@ fun LettersScreen(
         }
 
         if (selectedDrawing != null) {
-            Text("Рисунок #${selectedDrawing.id}", style = MaterialTheme.typography.headlineSmall)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Рисунок #${selectedDrawing.id}",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+                IconButton(
+                    onClick = { deleteDrawing(selectedDrawing) },
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    TrashCanIcon(color = MaterialTheme.colorScheme.error)
+                }
+            }
             if (selectedDocument != null) {
                 Text(
                     "${selectedDocument.strokes.size} штрихов · ${selectedDocument.strokes.sumOf { it.points.size }} точек",
@@ -132,16 +147,11 @@ fun LettersScreen(
             } else {
                 Text("Не удалось прочитать сохранённый рисунок.", color = MaterialTheme.colorScheme.error)
             }
-            Row(
+            OutlinedButton(
+                onClick = { selectedDrawingId = null },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                OutlinedButton(onClick = { selectedDrawingId = null }, modifier = Modifier.weight(1f)) {
-                    Text("К галерее")
-                }
-                TextButton(onClick = { deleteDrawing(selectedDrawing) }, modifier = Modifier.weight(1f)) {
-                    Text("Удалить", color = MaterialTheme.colorScheme.error)
-                }
+                Text("К галерее")
             }
         } else {
             LazyColumn(
