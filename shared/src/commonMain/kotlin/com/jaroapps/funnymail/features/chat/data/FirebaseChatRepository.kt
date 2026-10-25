@@ -135,7 +135,7 @@ class FirebaseChatRepository(
         memberIds = memberIds,
         createdAtEpochMillis = createdAt.requireEpochMillis("createdAt"),
         updatedAtEpochMillis = updatedAt.requireEpochMillis("updatedAt"),
-        lastMessageAtEpochMillis = lastMessageAt?.toMilliseconds()?.toLong(),
+        lastMessageAtEpochMillis = (lastMessageAt as? Timestamp)?.toMilliseconds()?.toLong(),
     )
 
     private fun BaseTimestamp.requireEpochMillis(field: String): Long =
