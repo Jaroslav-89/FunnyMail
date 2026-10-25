@@ -20,6 +20,16 @@ service cloud.firestore {
         && request.auth.uid in get(chatPath(chatId)).data.memberIds;
     }
 
+    function chatCreatorId(chatId) {
+      let chat = get(chatPath(chatId)).data;
+      return ('creatorUserId' in chat) ? chat.creatorUserId : chat.memberIds[0];
+    }
+
+    function isChatCreator(chatId) {
+      return isChatMember(chatId)
+        && request.auth.uid == chatCreatorId(chatId);
+    }
+
     function hasValidInviteForChat(chatId) {
       let path = invitePath(request.resource.data.lastInviteCode);
       return request.resource.data.lastInviteCode is string
@@ -35,11 +45,15 @@ service cloud.firestore {
 
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly([
-          'title', 'memberIds', 'createdAt', 'updatedAt', 'lastInviteCode', 'lastMessageAt'
+          'title', 'memberIds', 'creatorUserId', 'createdAt', 'updatedAt', 'lastInviteCode', 'lastMessageAt'
         ])
         && (
           !('lastMessageAt' in request.resource.data.keys())
           || request.resource.data.lastMessageAt == null
+        )
+        && (
+          !('creatorUserId' in request.resource.data.keys())
+          || request.resource.data.creatorUserId == request.auth.uid
         )
         && request.resource.data.title is string
         && request.resource.data.title.size() > 0
@@ -63,12 +77,38 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.time
         && hasValidInviteForChat(chatId);
 
+      // Only the creator can rename a chat.
+      allow update: if isChatCreator(chatId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'updatedAt'])
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 80
+        && request.resource.data.updatedAt == request.time;
+
+      // The creator can remove exactly one non-creator member.
+      allow update: if isChatCreator(chatId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds', 'updatedAt'])
+        && resource.data.memberIds.hasAll(request.resource.data.memberIds)
+        && resource.data.memberIds.size() == request.resource.data.memberIds.size() + 1
+        && request.auth.uid in request.resource.data.memberIds
+        && request.resource.data.updatedAt == request.time;
+
+      // An invited member can leave by removing only their own membership.
+      allow update: if isChatMember(chatId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds', 'updatedAt'])
+        && resource.data.memberIds.hasAll(request.resource.data.memberIds)
+        && resource.data.memberIds.size() == request.resource.data.memberIds.size() + 1
+        && request.auth.uid in resource.data.memberIds
+        && !(request.auth.uid in request.resource.data.memberIds)
+        && chatCreatorId(chatId) in request.resource.data.memberIds
+        && request.resource.data.updatedAt == request.time;
+
       // A member can update only the last-letter timestamp, and only to server request.time.
       allow update: if isChatMember(chatId)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageAt'])
         && request.resource.data.lastMessageAt == request.time;
 
-      allow delete: if false;
+      allow delete: if isChatCreator(chatId);
     }
 
     match /chats/{chatId}/letters/{letterId} {
@@ -97,9 +137,10 @@ service cloud.firestore {
 
       // Queries cannot reliably prove a server-time comparison against each result.
       // Restrict list access to chat members; the app's query filters expiresAt,
-      // and the configured Firestore TTL policy removes expired letters asynchronously.
+      // and the configured Firestore TTL policy removes expired documents asynchronously.
       allow list: if isChatMember(chatId);
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if isChatCreator(chatId);
     }
 
     match /chatInvites/{code} {
