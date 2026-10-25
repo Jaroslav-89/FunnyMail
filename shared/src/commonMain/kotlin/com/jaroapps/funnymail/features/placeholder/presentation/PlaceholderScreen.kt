@@ -11,8 +11,7 @@ import org.jetbrains.compose.resources.stringResource
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.jaroapps.funnymail.resources.home
-import com.jaroapps.funnymail.resources.placeholder_not_connected
+import com.jaroapps.funnymail.resources.Res
 
 @Composable
 fun PlaceholderScreen(
@@ -33,11 +32,11 @@ fun PlaceholderScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            stringResource(placeholder_not_connected),
+            stringResource(Res.string.placeholder_not_connected),
             style = MaterialTheme.typography.bodyMedium,
         )
         Button(onClick = onBack) {
-            Text(stringResource(home))
+            Text(stringResource(Res.string.home))
         }
     }
 }
