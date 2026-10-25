@@ -27,6 +27,7 @@ import com.jaroapps.funnymail.resources.letter_delete_drawing_not_selected
 import com.jaroapps.funnymail.resources.letter_delete_login_required
 import com.jaroapps.funnymail.resources.letter_draw_something
 import com.jaroapps.funnymail.resources.letter_login_required
+import com.jaroapps.funnymail.resources.Res
 import com.jaroapps.funnymail.resources.letter_size_too_big
 
 /**
@@ -86,13 +87,13 @@ class FirebaseLetterRepository(
         authorUserId: String,
         drawing: DrawingDocument,
     ): Result<Letter> = asResult {
-        require(chatId.isNotBlank()) { getString(letter_chat_not_selected) }
-        require(authorUserId.isNotBlank()) { getString(letter_login_required) }
-        require(drawing.strokes.isNotEmpty()) { getString(letter_draw_something) }
+        require(chatId.isNotBlank()) { getString(Res.string.letter_chat_not_selected) }
+        require(authorUserId.isNotBlank()) { getString(Res.string.letter_login_required) }
+        require(drawing.strokes.isNotEmpty()) { getString(Res.string.letter_draw_something) }
 
         val drawingJson = drawingCodec.encode(drawing).getOrThrow()
         require(drawingJson.encodeToByteArray().size <= MAX_DRAWING_JSON_BYTES) {
-            getString(letter_size_too_big)
+            getString(Res.string.letter_size_too_big)
         }
 
         val expiresAtMillis = Clock.System.now().toEpochMilliseconds() + LETTER_TTL_MILLIS
@@ -134,9 +135,9 @@ class FirebaseLetterRepository(
         letterId: String,
         requestingUserId: String,
     ): Result<Unit> = asResult {
-        require(chatId.isNotBlank()) { getString(letter_chat_not_selected) }
-        require(letterId.isNotBlank()) { getString(letter_delete_drawing_not_selected) }
-        require(requestingUserId.isNotBlank()) { getString(letter_delete_login_required) }
+        require(chatId.isNotBlank()) { getString(Res.string.letter_chat_not_selected) }
+        require(letterId.isNotBlank()) { getString(Res.string.letter_delete_drawing_not_selected) }
+        require(requestingUserId.isNotBlank()) { getString(Res.string.letter_delete_login_required) }
 
         val reference = firestoreProvider()
             .collection(CHATS_COLLECTION)
@@ -153,7 +154,7 @@ class FirebaseLetterRepository(
             .data<FirestoreLetterChatAccess>()
         val creatorId = chat.creatorUserId.ifBlank { chat.memberIds.firstOrNull().orEmpty() }
         require(letter.authorUserId == requestingUserId || creatorId == requestingUserId) {
-            getString(letter_delete_author_only)
+            getString(Res.string.letter_delete_author_only)
         }
         reference.delete()
     }
