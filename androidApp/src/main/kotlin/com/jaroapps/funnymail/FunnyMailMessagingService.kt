@@ -19,7 +19,7 @@ class FunnyMailMessagingService : FirebaseMessagingService() {
         val title = message.notification?.title?.takeIf { it.isNotBlank() } ?: "FunnyMail"
         val chatName = message.data["chatTitle"]?.takeIf { it.isNotBlank() }
         val body = message.notification?.body?.takeIf { it.isNotBlank() }
-            ?: chatName?.let { "Новое сообщение в чате $it" }
+            ?: chatName?.let { "Новое сообщение в чате ($it)" }
             ?: "Новое сообщение в чате"
 
         ensureChannel()
