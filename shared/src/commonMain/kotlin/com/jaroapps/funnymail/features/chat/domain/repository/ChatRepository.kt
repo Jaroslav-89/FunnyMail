@@ -19,6 +19,16 @@ interface ChatRepository {
         updatedByUserId: String,
     ): Result<Chat>
 
+    suspend fun updateChatDescription(
+        chatId: String,
+        description: String,
+        updatedByUserId: String,
+    ): Result<Chat>
+
+    fun observeUnreadCount(chatId: String, userId: String): Flow<Int>
+
+    suspend fun markChatAsRead(chatId: String, userId: String): Result<Unit>
+
     suspend fun addMember(
         chatId: String,
         requestingUserId: String,
