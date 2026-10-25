@@ -158,7 +158,7 @@ fun ChatEditScreen(
                 readOnly = !isCreator,
                 singleLine = false,
                 minLines = 3,
-                maxLines = 6,
+                maxLines = 10,
                 label = { Text("Описание") },
                 supportingText = {
                     Text(if (isCreator) "${description.length}/120 символов" else "Изменять описание может только создатель")
