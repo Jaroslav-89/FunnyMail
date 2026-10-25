@@ -54,6 +54,7 @@ class MainActivity : ComponentActivity() {
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description = "Уведомления о новых сообщениях в чатах FunnyMail"
+                setShowBadge(true)
             },
         )
     }
