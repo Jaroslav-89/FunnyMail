@@ -180,7 +180,7 @@ class AuthViewModel(
         val userId = _state.value.currentUser?.id ?: return
         if (_state.value.isSavingProfile || _state.value.isCheckingUsername) return
         if (username.isNotBlank() && !USERNAME_REGEX.matches(username)) {
-            _state.update { it.copy(message = getString(Res.string.auth_username_format_error), messageIsError = true) }
+            showError(Res.string.auth_username_format_error)
             return
         }
 
