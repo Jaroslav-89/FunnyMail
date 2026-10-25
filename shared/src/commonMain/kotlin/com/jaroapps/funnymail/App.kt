@@ -23,7 +23,6 @@ import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.repository.LocalDrawingRepository
 import com.jaroapps.funnymail.features.auth.presentation.AuthScreen
 import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
-import com.jaroapps.funnymail.features.chat.presentation.ChatsScreen
 import com.jaroapps.funnymail.features.drawing.presentation.DrawingScreen
 import com.jaroapps.funnymail.features.home.presentation.HomeScreen
 import com.jaroapps.funnymail.features.letter.domain.repository.LetterRepository
@@ -56,7 +55,6 @@ fun App() {
     ) {
         FunnyMailContent(
             firebaseConfigured = firebaseConfigured,
-            hasDraft = lastDraftJson != null,
             draftJson = lastDraftJson,
             onClearDraft = {
                 DrawingDraftStorage.clear()
@@ -69,7 +67,6 @@ fun App() {
 @Composable
 private fun FunnyMailContent(
     firebaseConfigured: Boolean,
-    hasDraft: Boolean,
     draftJson: String?,
     onClearDraft: () -> Unit,
 ) {
@@ -129,9 +126,12 @@ private fun FunnyMailContent(
             ) {
                 when (destination) {
                     AppDestination.Home -> HomeScreen(
-                        onOpenChats = { destination = AppDestination.Chats },
+                        onAuthorize = { destination = AppDestination.Auth },
                         onOpenAccount = { destination = AppDestination.Auth },
-                        hasDraft = hasDraft,
+                        onOpenChat = { chat ->
+                            selectedChat = chat
+                            destination = AppDestination.ChatDetail
+                        },
                     )
                     AppDestination.Auth -> AuthScreen(
                         firebaseConfigured = firebaseConfigured,
@@ -159,27 +159,19 @@ private fun FunnyMailContent(
                         onClearDraft = onClearDraft,
                         onSendDrawing = sendDrawingToChat,
                     )
-                    AppDestination.Chats -> ChatsScreen(
-                        onBack = { destination = AppDestination.Home },
-                        onOpenAccount = { destination = AppDestination.Auth },
-                        onOpenChat = { chat ->
-                            selectedChat = chat
-                            destination = AppDestination.ChatDetail
-                        },
-                    )
                     AppDestination.ChatDetail -> {
                         val chat = selectedChat
                         if (chat == null) {
                             PlaceholderScreen(
                                 title = "Чат не выбран",
                                 description = "Вернитесь к списку чатов и выберите чат.",
-                                onBack = { destination = AppDestination.Chats },
+                                onBack = { destination = AppDestination.Home },
                             )
                         } else {
                             ChatDetailsScreen(
                                 chat = chat,
                                 draftJson = draftJson,
-                                onBack = { destination = AppDestination.Chats },
+                                onBack = { destination = AppDestination.Home },
                                 onDraftSent = onClearDraft,
                                 onCreateDrawing = { destination = AppDestination.Drawing },
                                 onOpenDrawings = { destination = AppDestination.Letters },
