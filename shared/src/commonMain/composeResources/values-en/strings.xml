@@ -250,4 +250,5 @@
     <string name="letter_delete_login_required">Sign in to delete the drawing.</string>
     <string name="letter_delete_author_only">Only the drawing's author or the chat creator can delete it.</string>
     <string name="letter_timestamp_invalid">Firestore did not return a valid %1$s timestamp for the drawing.</string>
+    <string name="back">Back</string>
 </resources>
