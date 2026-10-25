@@ -93,14 +93,10 @@ private fun FunnyMailContent(
 
     PlatformBackHandler(enabled = destination != AppDestination.Home) {
         destination = when (destination) {
-            AppDestination.Home,
-            AppDestination.Auth,
-            AppDestination.ChatDetail,
-            -> AppDestination.Home
-
-            AppDestination.Drawing,
-            AppDestination.Letters,
-            -> AppDestination.ChatDetail
+            AppDestination.Home, AppDestination.Auth, AppDestination.ChatDetail ->
+                AppDestination.Home
+            AppDestination.Drawing, AppDestination.Letters ->
+                AppDestination.ChatDetail
         }
     }
 
