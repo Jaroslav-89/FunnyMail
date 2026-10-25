@@ -16,11 +16,11 @@ import com.google.firebase.messaging.RemoteMessage
 
 class FunnyMailMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
-        val title = message.notification?.title?.takeIf { it.isNotBlank() } ?: "FunnyMail"
+        val title = message.notification?.title?.takeIf { it.isNotBlank() } ?: getString(R.string.app_name)
         val chatName = message.data["chatTitle"]?.takeIf { it.isNotBlank() }
         val body = message.notification?.body?.takeIf { it.isNotBlank() }
-            ?: chatName?.let { "Новое сообщение в чате ($it)" }
-            ?: "Новое сообщение в чате"
+            ?: chatName?.let { getString(R.string.new_chat_message, it) }
+            ?: getString(R.string.generic_new_chat_message)
 
         ensureChannel()
         LauncherBadge.setUnread(this, unread = true)
@@ -64,10 +64,10 @@ class FunnyMailMessagingService : FirebaseMessagingService() {
         manager.createNotificationChannel(
             NotificationChannel(
                 CHANNEL_ID,
-                "Новые сообщения в чатах",
+                getString(R.string.chat_notifications_channel),
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
-                description = "Уведомления о новых рисунках и сообщениях в чатах FunnyMail"
+                description = getString(R.string.chat_notifications_description)
                 setShowBadge(false)
             },
         )
