@@ -8,6 +8,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -245,6 +246,10 @@ private fun FunnyMailContent(
             secondaryContainer = Color(0xFFFFF0C2),
             onSecondaryContainer = Color(0xFF202124),
         )
+    }
+
+    SideEffect {
+        ThemePreferenceStorage.updateSystemBars(darkThemeEnabled)
     }
 
     MaterialTheme(colorScheme = appColorScheme) {
