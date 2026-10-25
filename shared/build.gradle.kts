@@ -54,8 +54,8 @@ kotlin {
         androidMain.dependencies {
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.core.ktx)
-            implementation(libs.compose.uiToolingPreview)
-            implementation(libs.compose.uiTooling)
+            implementation(libs.composeUiToolingPreview)
+            implementation(libs.composeUiTooling)
             implementation(libs.androidx.credentials)
             implementation(libs.androidx.credentials.play.services.auth)
             implementation(libs.google.id)
@@ -68,7 +68,7 @@ kotlin {
             implementation(libs.compose.material.icons.extended)
             implementation(libs.compose.ui)
             implementation(libs.compose.components.resources)
-            implementation(libs.compose.uiToolingPreview)
+            implementation(libs.composeUiToolingPreview)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(libs.kotlinx.serialization.json)
@@ -90,7 +90,7 @@ kotlin {
 }
 
 dependencies {
-    androidRuntimeClasspath(libs.compose.uiTooling)
+    androidRuntimeClasspath(libs.composeUiTooling)
     add("kspAndroid", libs.androidx.room3.compiler)
     add("kspIosSimulatorArm64", libs.androidx.room3.compiler)
     add("kspIosArm64", libs.androidx.room3.compiler)
