@@ -1,10 +1,12 @@
 package com.jaroapps.funnymail
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Build
@@ -24,6 +26,15 @@ class FunnyMailMessagingService : FirebaseMessagingService() {
 
         ensureChannel()
         LauncherBadge.setUnread(this, unread = true)
+
+        // Android 13+ requires runtime permission before posting notifications.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            return
+        }
+
         val intent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             message.data["chatId"]?.let { putExtra("chatId", it) }
