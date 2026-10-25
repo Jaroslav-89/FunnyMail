@@ -67,6 +67,7 @@ class FunnyMailMessagingService : FirebaseMessagingService() {
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description = "Уведомления о новых рисунках и сообщениях в чатах FunnyMail"
+                setShowBadge(true)
             },
         )
     }
