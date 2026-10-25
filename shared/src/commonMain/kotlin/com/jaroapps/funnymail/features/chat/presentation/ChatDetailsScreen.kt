@@ -259,6 +259,9 @@ fun ChatDetailsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(220.dp)
+                                .semantics {
+                                    contentDescription = "Открыть рисунок на весь экран"
+                                }
                                 .clickable { onViewDrawing(letter.drawing) },
                         )
                     }
