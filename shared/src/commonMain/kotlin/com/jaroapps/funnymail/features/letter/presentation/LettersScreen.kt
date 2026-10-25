@@ -3,6 +3,7 @@ package com.jaroapps.funnymail.features.letter.presentation
 import org.jetbrains.compose.resources.stringResource
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,13 +22,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -56,7 +60,6 @@ import com.jaroapps.funnymail.features.drawing.domain.model.SavedDrawing
 import com.jaroapps.funnymail.features.drawing.domain.repository.LocalDrawingRepository
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
-import com.jaroapps.funnymail.resources.back_to_gallery
 import com.jaroapps.funnymail.resources.delete_drawing_failed
 import com.jaroapps.funnymail.resources.draft_add_failed
 import com.jaroapps.funnymail.resources.draft_add_hint
@@ -69,21 +72,20 @@ import com.jaroapps.funnymail.resources.empty_drawings_hint
 import com.jaroapps.funnymail.resources.empty_drawings_title
 import com.jaroapps.funnymail.resources.open_my_drawings
 import com.jaroapps.funnymail.resources.reading_drawing_failed
-import com.jaroapps.funnymail.resources.reading_saved_drawing_failed
 import com.jaroapps.funnymail.resources.save_to_gallery
 import com.jaroapps.funnymail.resources.send_to_chat
-import com.jaroapps.funnymail.resources.sending
 import com.jaroapps.funnymail.resources.stroke_point_count
-import com.jaroapps.funnymail.resources.view
 import com.jaroapps.funnymail.resources.Res
 
 @Composable
 fun LettersScreen(
     draftJson: String?,
+    darkThemeEnabled: Boolean,
     onBack: () -> Unit,
     onClearDraft: () -> Unit,
     onEditDrawing: (Long, String) -> Unit,
     onSendDrawing: (String, (String?) -> Unit) -> Unit,
+    onViewDrawing: (DrawingDocument) -> Unit,
 ) {
     val repository = koinInject<LocalDrawingRepository>()
     val drawingsFlow = remember(repository) { repository.observeDrawings() }
@@ -93,18 +95,12 @@ fun LettersScreen(
     val drawingRemovedDeviceText = stringResource(Res.string.drawing_removed_device)
     val deleteDrawingFailedText = stringResource(Res.string.delete_drawing_failed)
     val drawingSentCurrentChatText = stringResource(Res.string.drawing_sent_current_chat)
-    val readingSavedDrawingFailedText = stringResource(Res.string.reading_saved_drawing_failed)
     val draftAddedGalleryText = stringResource(Res.string.draft_added_gallery)
     val draftAddFailedText = stringResource(Res.string.draft_add_failed)
     val readingDrawingFailedText = stringResource(Res.string.reading_drawing_failed)
-    var selectedDrawingId by remember { mutableStateOf<Long?>(null) }
     var sendingDrawingId by remember { mutableStateOf<Long?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
 
-    val selectedDrawing = drawings.firstOrNull { it.id == selectedDrawingId }
-    val selectedDocument = remember(selectedDrawing?.drawingJson) {
-        selectedDrawing?.drawingJson?.let { drawingCodec.decode(it).getOrNull() }
-    }
     val draft = remember(draftJson) {
         draftJson?.let { drawingCodec.decode(it).getOrNull() }
     }
@@ -117,7 +113,6 @@ fun LettersScreen(
             try {
                 repository.deleteDrawing(savedDrawing.id)
                 if (draftJson == savedDrawing.drawingJson) onClearDraft()
-                if (selectedDrawingId == savedDrawing.id) selectedDrawingId = null
                 statusMessage = drawingRemovedDeviceText
             } catch (error: Exception) {
                 statusMessage = deleteDrawingFailedText
@@ -139,57 +134,7 @@ fun LettersScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (selectedDrawing != null) {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(start = 12.dp, end = 12.dp, top = 80.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    stringResource(Res.string.drawing_number, selectedDrawing.id),
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.headlineSmall,
-                )
-                IconButton(
-                    onClick = {
-                        onEditDrawing(selectedDrawing.id, selectedDrawing.drawingJson)
-                    },
-                    modifier = Modifier.size(40.dp),
-                ) {
-                    EditPencilIcon(color = MaterialTheme.colorScheme.primary)
-                }
-                IconButton(
-                    onClick = { deleteDrawing(selectedDrawing) },
-                    modifier = Modifier.size(40.dp),
-                ) {
-                    TrashCanIcon(color = MaterialTheme.colorScheme.error)
-                }
-            }
-            if (selectedDocument != null) {
-                Text(
-                    stringResource(Res.string.stroke_point_count, selectedDocument.strokes.size, selectedDocument.strokes.sumOf { it.points.size }),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                DrawingPreview(
-                    drawing = selectedDocument,
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                )
-            } else {
-                Text(stringResource(Res.string.reading_saved_drawing_failed), color = MaterialTheme.colorScheme.error)
-            }
-            OutlinedButton(
-                onClick = { selectedDrawingId = null },
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(stringResource(Res.string.back_to_gallery))
-            }
-            }
-        } else {
-            LazyColumn(
+        LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 12.dp, top = 0.dp, end = 12.dp, bottom = 72.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -271,7 +216,7 @@ fun LettersScreen(
                                     },
                                     modifier = Modifier.size(40.dp),
                                 ) {
-                                    EditPencilIcon(color = MaterialTheme.colorScheme.primary)
+                                    EditPencilIcon(color = MaterialTheme.colorScheme.onSurface)
                                 }
                                 IconButton(
                                     onClick = { deleteDrawing(savedDrawing) },
@@ -286,31 +231,50 @@ fun LettersScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
-                                DrawingPreview(document, Modifier.fillMaxWidth().height(180.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(180.dp),
+                                ) {
+                                    DrawingPreview(
+                                        drawing = document,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clickable { onViewDrawing(document) },
+                                    )
+                                    FloatingActionButton(
+                                        onClick = { sendDrawing(savedDrawing) },
+                                        modifier = Modifier
+                                            .align(Alignment.BottomEnd)
+                                            .padding(8.dp)
+                                            .size(48.dp),
+                                        shape = CircleShape,
+                                        containerColor = Color(0xFFF5A800),
+                                        contentColor = if (darkThemeEnabled) Color(0xFF202124) else Color.White,
+                                    ) {
+                                        if (sendingDrawingId == savedDrawing.id) {
+                                            CircularProgressIndicator(
+                                                modifier = Modifier.size(20.dp),
+                                                color = if (darkThemeEnabled) Color(0xFF202124) else Color.White,
+                                                strokeWidth = 2.dp,
+                                            )
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Rounded.PlayArrow,
+                                                contentDescription = stringResource(Res.string.send_to_chat),
+                                                modifier = Modifier.size(26.dp),
+                                                tint = if (darkThemeEnabled) Color(0xFF202124) else Color.White,
+                                            )
+                                        }
+                                    }
+                                }
                             } else {
                                 Text(stringResource(Res.string.reading_drawing_failed), color = MaterialTheme.colorScheme.error)
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                OutlinedButton(
-                                    onClick = { selectedDrawingId = savedDrawing.id },
-                                    modifier = Modifier.weight(1f),
-                                ) { Text(stringResource(Res.string.view)) }
-                                Button(
-                                    onClick = { sendDrawing(savedDrawing) },
-                                    enabled = document != null && sendingDrawingId == null,
-                                    modifier = Modifier.weight(1f),
-                                ) {
-                                    Text(if (sendingDrawingId == savedDrawing.id) stringResource(Res.string.sending) else stringResource(Res.string.send_to_chat))
-                                }
                             }
                         }
                     }
                 }
             }
-        }
 
         Row(
             modifier = Modifier
