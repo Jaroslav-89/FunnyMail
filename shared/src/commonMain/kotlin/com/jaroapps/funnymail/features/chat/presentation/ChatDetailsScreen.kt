@@ -592,7 +592,7 @@ private fun ChatLetterCard(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = if (letter.authorUserId == currentUserId) "Вы отправили" else authorDisplayName ?: "Письмо от участника",
+                    text = if (letter.authorUserId == currentUserId) stringResource(Res.string.you_sent) else authorDisplayName ?: stringResource(Res.string.drawing_from_member),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -612,7 +612,7 @@ private fun ChatLetterCard(
                 drawing = letter.drawing,
                 modifier = Modifier.fillMaxWidth().height(220.dp)
                     .clickable(onClick = onClick)
-                    .semantics { contentDescription = "Открыть рисунок на весь экран" },
+                    .semantics { contentDescription = stringResource(Res.string.open_drawing_fullscreen) },
             )
         }
     }
