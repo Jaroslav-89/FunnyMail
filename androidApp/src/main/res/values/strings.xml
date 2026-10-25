@@ -1,4 +1,8 @@
 <resources>
     <string name="app_name">FunnyMail</string>
     <string name="default_notification_channel_id">new_chat_messages_v2</string>
+    <string name="chat_notifications_channel">Новые сообщения в чатах</string>
+    <string name="chat_notifications_description">Уведомления о новых сообщениях в чатах FunnyMail</string>
+    <string name="new_chat_message">Новое сообщение в чате (%1$s)</string>
+    <string name="generic_new_chat_message">Новое сообщение в чате</string>
 </resources>

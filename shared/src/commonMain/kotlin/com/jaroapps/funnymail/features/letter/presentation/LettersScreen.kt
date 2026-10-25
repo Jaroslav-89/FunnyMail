@@ -1,5 +1,9 @@
 package com.jaroapps.funnymail.features.letter.presentation
 
+import org.jetbrains.compose.resources.stringResource
+
+import com.jaroapps.funnymail.resources.Res
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -68,6 +72,13 @@ fun LettersScreen(
     val drawings by drawingsFlow.collectAsState(initial = emptyList())
     val coroutineScope = rememberCoroutineScope()
     val drawingCodec = remember { DrawingCodec() }
+    val drawingRemovedDeviceText = stringResource(Res.string.drawing_removed_device)
+    val deleteDrawingFailedText = stringResource(Res.string.delete_drawing_failed)
+    val drawingSentCurrentChatText = stringResource(Res.string.drawing_sent_current_chat)
+    val readingSavedDrawingFailedText = stringResource(Res.string.reading_saved_drawing_failed)
+    val draftAddedGalleryText = stringResource(Res.string.draft_added_gallery)
+    val draftAddFailedText = stringResource(Res.string.draft_add_failed)
+    val readingDrawingFailedText = stringResource(Res.string.reading_drawing_failed)
     var selectedDrawingId by remember { mutableStateOf<Long?>(null) }
     var sendingDrawingId by remember { mutableStateOf<Long?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
@@ -89,9 +100,9 @@ fun LettersScreen(
                 repository.deleteDrawing(savedDrawing.id)
                 if (draftJson == savedDrawing.drawingJson) onClearDraft()
                 if (selectedDrawingId == savedDrawing.id) selectedDrawingId = null
-                statusMessage = "Рисунок удалён с устройства."
+                statusMessage = drawingRemovedDeviceText
             } catch (error: Exception) {
-                statusMessage = error.message ?: "Не удалось удалить рисунок."
+                statusMessage = error.message ?: deleteDrawingFailedText
             }
         }
     }
@@ -102,7 +113,7 @@ fun LettersScreen(
         onSendDrawing(savedDrawing.drawingJson) { error ->
             sendingDrawingId = null
             statusMessage = if (error == null) {
-                "Рисунок отправлен в текущий чат."
+                drawingSentCurrentChatText
             } else {
                 error
             }
@@ -120,7 +131,7 @@ fun LettersScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "Рисунок #${selectedDrawing.id}",
+                    stringResource(Res.string.drawing_number, selectedDrawing.id),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.headlineSmall,
                 )
@@ -141,7 +152,7 @@ fun LettersScreen(
             }
             if (selectedDocument != null) {
                 Text(
-                    "${selectedDocument.strokes.size} штрихов · ${selectedDocument.strokes.sumOf { it.points.size }} точек",
+                    stringResource(Res.string.stroke_point_count, selectedDocument.strokes.size, selectedDocument.strokes.sumOf { it.points.size }),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -150,13 +161,13 @@ fun LettersScreen(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 )
             } else {
-                Text("Не удалось прочитать сохранённый рисунок.", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(Res.string.reading_saved_drawing_failed), color = MaterialTheme.colorScheme.error)
             }
             OutlinedButton(
                 onClick = { selectedDrawingId = null },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("К галерее")
+                Text(stringResource(Res.string.back_to_gallery))
             }
             }
         } else {
@@ -173,9 +184,9 @@ fun LettersScreen(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
                         ) {
                             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Пока нет рисунков", style = MaterialTheme.typography.titleMedium)
+                                Text(stringResource(Res.string.empty_drawings_title), style = MaterialTheme.typography.titleMedium)
                                 Text(
-                                    "Создай рисунок и нажми «Сохранить рисунок». Он появится здесь и останется на этом устройстве.",
+                                    stringResource(Res.string.empty_drawings_hint),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 )
@@ -192,10 +203,10 @@ fun LettersScreen(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
                         ) {
                             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Text("Черновик не в галерее", style = MaterialTheme.typography.titleMedium)
+                                Text(stringResource(Res.string.draft_not_in_gallery), style = MaterialTheme.typography.titleMedium)
                                 DrawingPreview(draft, Modifier.fillMaxWidth().height(180.dp))
                                 Text(
-                                    "Можно добавить ранее сохранённый черновик в локальную библиотеку.",
+                                    stringResource(Res.string.draft_add_hint),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 )
@@ -204,14 +215,14 @@ fun LettersScreen(
                                         coroutineScope.launch {
                                             try {
                                                 repository.saveDrawing(draftJson)
-                                                statusMessage = "Черновик добавлен в галерею."
+                                                statusMessage = draftAddedGalleryText
                                             } catch (error: Exception) {
-                                                statusMessage = error.message ?: "Не удалось добавить черновик."
+                                                statusMessage = error.message ?: draftAddFailedText
                                             }
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
-                                ) { Text("Сохранить в галерею") }
+                                ) { Text(stringResource(Res.string.save_to_gallery)) }
                             }
                         }
                     }
@@ -232,7 +243,7 @@ fun LettersScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    "Рисунок #${savedDrawing.id}",
+                                    stringResource(Res.string.drawing_number, savedDrawing.id),
                                     modifier = Modifier.weight(1f),
                                     style = MaterialTheme.typography.titleMedium,
                                 )
@@ -253,13 +264,13 @@ fun LettersScreen(
                             }
                             if (document != null) {
                                 Text(
-                                    "${document.strokes.size} штрихов · ${document.strokes.sumOf { it.points.size }} точек",
+                                    stringResource(Res.string.stroke_point_count, document.strokes.size, document.strokes.sumOf { it.points.size }),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 DrawingPreview(document, Modifier.fillMaxWidth().height(180.dp))
                             } else {
-                                Text("Не удалось прочитать рисунок. Его можно удалить.", color = MaterialTheme.colorScheme.error)
+                                Text(stringResource(Res.string.reading_drawing_failed), color = MaterialTheme.colorScheme.error)
                             }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -268,13 +279,13 @@ fun LettersScreen(
                                 OutlinedButton(
                                     onClick = { selectedDrawingId = savedDrawing.id },
                                     modifier = Modifier.weight(1f),
-                                ) { Text("Просмотреть") }
+                                ) { Text(stringResource(Res.string.view)) }
                                 Button(
                                     onClick = { sendDrawing(savedDrawing) },
                                     enabled = document != null && sendingDrawingId == null,
                                     modifier = Modifier.weight(1f),
                                 ) {
-                                    Text(if (sendingDrawingId == savedDrawing.id) "Отправляем…" else "Отправить")
+                                    Text(if (sendingDrawingId == savedDrawing.id) stringResource(Res.string.sending) else stringResource(Res.string.send_to_chat))
                                 }
                             }
                         }
@@ -295,7 +306,7 @@ fun LettersScreen(
                 modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp)),
             ) {
                 Text(
-                    text = "Мои рисунки",
+                    text = stringResource(Res.string.open_my_drawings),
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary,

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FunnyMail</string>
+    <string name="default_notification_channel_id">new_chat_messages_v2</string>
+    <string name="chat_notifications_channel">New chat messages</string>
+    <string name="chat_notifications_description">Notifications about new messages in FunnyMail chats</string>
+    <string name="new_chat_message">New message in chat (%1$s)</string>
+    <string name="generic_new_chat_message">New message in chat</string>
+</resources>

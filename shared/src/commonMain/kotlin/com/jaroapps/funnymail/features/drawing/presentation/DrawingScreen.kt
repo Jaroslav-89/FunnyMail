@@ -1,5 +1,9 @@
 package com.jaroapps.funnymail.features.drawing.presentation
 
+import org.jetbrains.compose.resources.stringResource
+
+import com.jaroapps.funnymail.resources.Res
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -100,6 +104,10 @@ fun DrawingScreen(
     initialDrawingJson: String? = null,
 ) {
     val drawingCodec = remember { DrawingCodec() }
+    val drawSomethingMessage = stringResource(Res.string.draw_something)
+    val drawingEditsSavedMessage = stringResource(Res.string.drawing_edits_saved)
+    val drawingSavedLocallyMessage = stringResource(Res.string.drawing_saved_locally)
+    val drawingSentChatMessage = stringResource(Res.string.drawing_sent_chat)
     val initialDrawing = remember(initialDrawingJson) {
         initialDrawingJson?.let { drawingCodec.decode(it).getOrNull() }
     }
@@ -191,7 +199,7 @@ fun DrawingScreen(
     val saveDrawingAction: () -> Unit = {
         val json = currentDrawingJson
         if (json == null) {
-            statusMessage = "Сначала нарисуй что-нибудь на холсте."
+            statusMessage = drawSomethingMessage
             statusIsError = true
         } else if (!isSaving && !isCurrentDrawingSaved) {
             isSaving = true
@@ -200,9 +208,9 @@ fun DrawingScreen(
                 if (saveError == null) {
                     savedDrawingJson = json
                     statusMessage = if (initialDrawingJson != null) {
-                        "Изменения сохранены в галерее."
+                        drawingEditsSavedMessage
                     } else {
-                        "Рисунок сохранён в локальную галерею."
+                        drawingSavedLocallyMessage
                     }
                     statusIsError = false
                 } else {
@@ -216,14 +224,14 @@ fun DrawingScreen(
     val sendDrawingAction: () -> Unit = {
         val json = currentDrawingJson
         if (json == null) {
-            statusMessage = "Сначала нарисуй что-нибудь на холсте."
+            statusMessage = drawSomethingMessage
             statusIsError = true
         } else if (!isSending) {
             isSending = true
             onSendDrawing(json) { sendError ->
                 isSending = false
                 if (sendError == null) {
-                    statusMessage = "Рисунок отправлен в чат."
+                    statusMessage = drawingSentChatMessage
                     statusIsError = false
                 } else {
                     statusMessage = sendError
@@ -344,7 +352,7 @@ fun DrawingScreen(
 
         if (strokes.isEmpty() && activePoints.isEmpty()) {
             Text(
-                text = "Начни рисовать здесь",
+                text = stringResource(Res.string.start_drawing_here),
                 modifier = Modifier.align(Alignment.Center),
                 color = Color(0xFF9AA0A6),
                 style = MaterialTheme.typography.bodyLarge,
@@ -403,7 +411,7 @@ fun DrawingScreen(
             RoundToolButton(
                 onClick = {
                     if (currentDrawingJson == null) {
-                        statusMessage = "Сначала нарисуй что-нибудь на холсте."
+                        statusMessage = drawSomethingMessage
                         statusIsError = true
                     } else {
                         showFinishDialog = true
@@ -566,7 +574,7 @@ fun DrawingScreen(
     if (showLineColorDialog) {
         AlertDialog(
             onDismissRequest = { showLineColorDialog = false },
-            title = { Text("Цвет линии") },
+            title = { Text(stringResource(Res.string.line_color)) },
             containerColor = Color.White,
             titleContentColor = Color(0xFF202124),
             textContentColor = Color(0xFF202124),
@@ -581,7 +589,7 @@ fun DrawingScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { showLineColorDialog = false }) { Text("Готово", color = Color(0xFF202124)) }
+                TextButton(onClick = { showLineColorDialog = false }) { Text(stringResource(Res.string.done), color = Color(0xFF202124)) }
             },
         )
     }
@@ -589,7 +597,7 @@ fun DrawingScreen(
     if (showBackgroundDialog) {
         AlertDialog(
             onDismissRequest = { showBackgroundDialog = false },
-            title = { Text("Фон рисунка") },
+            title = { Text(stringResource(Res.string.drawing_background)) },
             containerColor = Color.White,
             titleContentColor = Color(0xFF202124),
             textContentColor = Color(0xFF202124),
@@ -602,7 +610,7 @@ fun DrawingScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        listOf("SOLID" to "Однотонный", "GRADIENT" to "Градиент").forEach { (tab, label) ->
+                        listOf("SOLID" to stringResource(Res.string.solid), "GRADIENT" to stringResource(Res.string.gradient)).forEach { (tab, label) ->
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -724,10 +732,10 @@ fun DrawingScreen(
                         showBackgroundDialog = false
                         statusMessage = null
                     },
-                ) { Text("Готово", color = Color(0xFF202124)) }
+                ) { Text(stringResource(Res.string.done), color = Color(0xFF202124)) }
             },
             dismissButton = {
-                TextButton(onClick = { showBackgroundDialog = false }) { Text("Отмена", color = Color(0xFF202124)) }
+                TextButton(onClick = { showBackgroundDialog = false }) { Text(stringResource(Res.string.cancel), color = Color(0xFF202124)) }
             },
         )
     }
@@ -735,11 +743,11 @@ fun DrawingScreen(
     if (showFinishDialog) {
         AlertDialog(
             onDismissRequest = { showFinishDialog = false },
-            title = { Text("Готово с рисунком") },
+            title = { Text(stringResource(Res.string.finish_drawing)) },
             containerColor = Color.White,
             titleContentColor = Color(0xFF202124),
             textContentColor = Color(0xFF202124),
-            text = { Text("Сохрани рисунок в локальную галерею или отправь его в этот чат.") },
+            text = { Text(stringResource(Res.string.finish_drawing_hint)) },
             confirmButton = {
                 Column(
                     horizontalAlignment = Alignment.End,
@@ -755,10 +763,10 @@ fun DrawingScreen(
                     ) {
                         Text(
                             when {
-                                isSaving -> "Сохраняем…"
-                                isCurrentDrawingSaved && initialDrawingJson != null -> "Изменения сохранены"
-                                initialDrawingJson != null -> "Сохранить изменения"
-                                else -> "Сохранить в галерею"
+                                isSaving -> stringResource(Res.string.saving)
+                                isCurrentDrawingSaved && initialDrawingJson != null -> stringResource(Res.string.changes_saved)
+                                initialDrawingJson != null -> stringResource(Res.string.save_changes)
+                                else -> stringResource(Res.string.save_drawing_local)
                             },
                         )
                     }
@@ -769,13 +777,13 @@ fun DrawingScreen(
                         },
                         enabled = !isSending,
                     ) {
-                        Text(if (isSending) "Отправляем…" else "Отправить в чат")
+                        Text(if (isSending) stringResource(Res.string.sending) else stringResource(Res.string.send_to_chat))
                     }
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showFinishDialog = false }) {
-                    Text("Продолжить рисовать")
+                    Text(stringResource(Res.string.continue_drawing))
                 }
             },
         )
@@ -825,7 +833,7 @@ private fun ColorToolButton(
         contentAlignment = Alignment.Center,
     ) {
         if (eraserEnabled) {
-            Text("Ластик", color = Color(0xFF202124), fontSize = 12.sp)
+            Text(stringResource(Res.string.eraser), color = Color(0xFF202124), fontSize = 12.sp)
         }
     }
 }

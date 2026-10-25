@@ -1,5 +1,9 @@
 package com.jaroapps.funnymail.features.chat.presentation
 
+import org.jetbrains.compose.resources.stringResource
+
+import com.jaroapps.funnymail.resources.Res
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -71,6 +75,25 @@ fun ChatEditScreen(
     val letterRepository = koinInject<LetterRepository>()
     val authRepository = koinInject<AuthRepository>()
     val scope = rememberCoroutineScope()
+    val chatTitleSavedMessage = stringResource(Res.string.chat_title_saved)
+    val chatTitleSaveFailedMessage = stringResource(Res.string.chat_title_save_failed)
+    val chatDescriptionSavedMessage = stringResource(Res.string.chat_description_saved)
+    val chatDescriptionSaveFailedMessage = stringResource(Res.string.chat_description_save_failed)
+    val chatDescriptionMissingText = stringResource(Res.string.chat_description_missing)
+    val drawingLimitCleanupFailedMessage = stringResource(Res.string.drawing_limit_cleanup_failed)
+    val drawingLimitDisableSuccessMessage = stringResource(Res.string.drawing_limit_disable_success)
+    val drawingLimitSaveSuccessMessage = stringResource(Res.string.drawing_limit_save_success)
+    val drawingLimitSaveFailedMessage = stringResource(Res.string.drawing_limit_save_failed)
+    val userNotFoundText = stringResource(Res.string.user_not_found)
+    val userAlreadyMemberText = stringResource(Res.string.user_already_member)
+    val youAlreadyMemberText = stringResource(Res.string.you_already_member)
+    val userSearchFailedText = stringResource(Res.string.user_search_failed)
+    val userAddedText = stringResource(Res.string.user_added)
+    val addUserFailedText = stringResource(Res.string.user_add_failed)
+    val memberRemovedMessage = stringResource(Res.string.member_removed)
+    val memberRemoveFailedMessage = stringResource(Res.string.member_remove_failed)
+    val leaveChatFailedMessage = stringResource(Res.string.leave_chat_failed)
+    val deleteChatFailedMessage = stringResource(Res.string.delete_chat_failed)
     var memberProfiles by remember { mutableStateOf<Map<String, UserProfile>>(emptyMap()) }
     LaunchedEffect(chat.memberIds) {
         val profiles = mutableMapOf<String, UserProfile>()
@@ -109,7 +132,7 @@ fun ChatEditScreen(
                 .padding(top = 76.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text("Название чата", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(Res.string.chat_title), style = MaterialTheme.typography.titleMedium)
             if (isCreator) {
                 OutlinedTextField(
                     value = title,
@@ -117,8 +140,8 @@ fun ChatEditScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !busy,
                     singleLine = true,
-                    label = { Text("Название") },
-                    supportingText = { Text("До 80 символов") },
+                    label = { Text(stringResource(Res.string.chat_title_label)) },
+                    supportingText = { Text(stringResource(Res.string.max_title_length)) },
                 )
                 Button(
                     onClick = {
@@ -132,12 +155,12 @@ fun ChatEditScreen(
                                     onSuccess = {
                                         busy = false
                                         onChatUpdated(it)
-                                        message = "Название чата сохранено."
+                                        message = chatTitleSavedMessage
                                         messageIsError = false
                                     },
                                     onFailure = {
                                         busy = false
-                                        message = it.message ?: "Не удалось изменить название чата."
+                                        message = it.message ?: chatTitleSaveFailedMessage
                                         messageIsError = true
                                     },
                                 )
@@ -146,7 +169,7 @@ fun ChatEditScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !busy && title.trim().isNotEmpty() && title.trim() != chat.title,
-                ) { Text(if (busy) "Сохраняем…" else "Сохранить название") }
+                ) { Text(if (busy) stringResource(Res.string.saving) else stringResource(Res.string.save_chat_title)) }
             } else {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -162,7 +185,7 @@ fun ChatEditScreen(
                 }
             }
 
-            Text("Описание чата", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(Res.string.chat_description_title), style = MaterialTheme.typography.titleMedium)
             if (isCreator) {
                 OutlinedTextField(
                     value = description,
@@ -172,8 +195,8 @@ fun ChatEditScreen(
                     singleLine = false,
                     minLines = 3,
                     maxLines = 10,
-                    label = { Text("Описание") },
-                    supportingText = { Text("${description.length}/120 символов") },
+                    label = { Text(stringResource(Res.string.description_label)) },
+                    supportingText = { Text(stringResource(Res.string.description_length, description.length)) },
                 )
                 Button(
                     onClick = {
@@ -188,12 +211,12 @@ fun ChatEditScreen(
                                         busy = false
                                         description = updatedChat.description
                                         onChatUpdated(updatedChat)
-                                        message = "Описание чата сохранено."
+                                        message = chatDescriptionSavedMessage
                                         messageIsError = false
                                     },
                                     onFailure = { error ->
                                         busy = false
-                                        message = error.message ?: "Не удалось изменить описание чата."
+                                        message = error.message ?: chatDescriptionSaveFailedMessage
                                         messageIsError = true
                                     },
                                 )
@@ -202,7 +225,7 @@ fun ChatEditScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !busy && description.trim().length <= 120 && description.trim() != chat.description,
-                ) { Text(if (busy) "Сохраняем…" else "Сохранить описание") }
+                ) { Text(if (busy) stringResource(Res.string.saving) else stringResource(Res.string.save_chat_description)) }
             } else {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -210,7 +233,7 @@ fun ChatEditScreen(
                     color = MaterialTheme.colorScheme.surfaceVariant,
                 ) {
                     Text(
-                        text = chat.description.ifBlank { "Описание не задано." },
+                        text = chat.description.ifBlank { chatDescriptionMissingText },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -219,7 +242,7 @@ fun ChatEditScreen(
             }
 
             if (isCreator || chat.maxLettersCount != null) {
-                Text("Максимум рисунков в чате", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(Res.string.max_drawings_title), style = MaterialTheme.typography.titleMedium)
                 val parsedLimit = maxLettersText.toIntOrNull()
                 val normalizedLimit = if (maxLettersText.isBlank()) null else parsedLimit
                 if (isCreator) {
@@ -229,9 +252,9 @@ fun ChatEditScreen(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !busy,
                         singleLine = true,
-                        label = { Text("Лимит рисунков") },
+                        label = { Text(stringResource(Res.string.drawing_limit_label)) },
                         supportingText = {
-                            Text("Пусто — отключить лимит. Допустимо от 1 до 500 рисунков.")
+                            Text(stringResource(Res.string.drawing_limit_hint))
                         },
                     )
                     Button(
@@ -269,15 +292,15 @@ fun ChatEditScreen(
                                         }
                                         busy = false
                                         message = when {
-                                            cleanupFailed -> "Лимит сохранён, но не все старые рисунки удалось удалить."
-                                            newLimit == null -> "Лимит рисунков отключён."
-                                            else -> "Лимит сохранён. Лишние старые рисунки удалены."
+                                            cleanupFailed -> drawingLimitCleanupFailedMessage
+                                            newLimit == null -> drawingLimitDisableSuccessMessage
+                                            else -> drawingLimitSaveSuccessMessage
                                         }
                                         messageIsError = cleanupFailed
                                     } else {
                                         busy = false
                                         message = updateResult.exceptionOrNull()?.message
-                                            ?: "Не удалось изменить лимит рисунков."
+                                            ?: drawingLimitSaveFailedMessage
                                         messageIsError = true
                                     }
                                 }
@@ -286,7 +309,7 @@ fun ChatEditScreen(
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !busy && (maxLettersText.isBlank() || parsedLimit in 1..500) &&
                             normalizedLimit != chat.maxLettersCount,
-                    ) { Text(if (busy) "Сохраняем…" else "Сохранить лимит") }
+                    ) { Text(if (busy) stringResource(Res.string.saving) else stringResource(Res.string.save_drawing_limit)) }
                 } else {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
@@ -303,7 +326,7 @@ fun ChatEditScreen(
                                 color = MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
-                                "Лимит установлен создателем чата",
+                                stringResource(Res.string.drawing_limit_readonly),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -319,7 +342,7 @@ fun ChatEditScreen(
             ) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Участники", modifier = Modifier.weight(1f),
+                        Text(stringResource(Res.string.members), modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.titleMedium)
                         Text(chat.memberIds.size.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         AccountPersonIcon(
@@ -341,16 +364,16 @@ fun ChatEditScreen(
                                 Spacer(Modifier.width(10.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(
-                                        text = if (memberId == currentUserId) "Вы" else {
+                                        text = if (memberId == currentUserId) stringResource(Res.string.you) else {
                                             memberProfiles[memberId]?.chatDisplayName
-                                                ?: "Участник чата"
+                                                ?: stringResource(Res.string.chat_member)
                                         },
                                         style = MaterialTheme.typography.bodyLarge,
                                     )
                                     Text(
                                         text = when {
-                                            memberId == creatorId -> "Создатель чата"
-                                            else -> "Участник"
+                                            memberId == creatorId -> stringResource(Res.string.chat_creator)
+                                            else -> stringResource(Res.string.member)
                                         },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -381,7 +404,7 @@ fun ChatEditScreen(
             ) {
                 PersonPlusIcon(color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.width(8.dp))
-                Text("Пригласить пользователей")
+                Text(stringResource(Res.string.invite_users))
             }
             message?.let {
                 Text(it, color = if (messageIsError) MaterialTheme.colorScheme.error
@@ -396,13 +419,13 @@ fun ChatEditScreen(
                     colors = androidx.compose.material3.ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error,
                     ),
-                ) { Text("Удалить чат") }
+                ) { Text(stringResource(Res.string.delete_chat)) }
             } else {
                 OutlinedButton(
                     onClick = { confirmLeave = true },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !busy,
-                ) { Text("Выйти из чата") }
+                ) { Text(stringResource(Res.string.leave_chat)) }
             }
         }
 
@@ -421,7 +444,7 @@ fun ChatEditScreen(
                 color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
                 Text(
-                    text = "Настройки чата",
+                    text = stringResource(Res.string.chat_settings),
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
@@ -437,10 +460,10 @@ fun ChatEditScreen(
             onDismissRequest = {
                 if (!creatingInvite && !isSearchingUser && !isAddingUser) showInviteDialog = false
             },
-            title = { Text("Добавить пользователя в чат") },
+            title = { Text(stringResource(Res.string.add_user_to_chat)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Найдите пользователя по точному email или уникальному нику.")
+                    Text(stringResource(Res.string.find_user_hint))
                     OutlinedTextField(
                         value = userSearchQuery,
                         onValueChange = {
@@ -448,7 +471,7 @@ fun ChatEditScreen(
                             foundUser = null
                             searchMessage = null
                         },
-                        label = { Text("Email или @ник") },
+                        label = { Text(stringResource(Res.string.email_or_username)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -463,15 +486,15 @@ fun ChatEditScreen(
                                         onSuccess = { result ->
                                             foundUser = result
                                             searchMessage = when {
-                                                result == null -> "Пользователь не найден."
-                                                result.id in chat.memberIds -> "Этот пользователь уже состоит в чате."
-                                                result.id == currentUserId -> "Вы уже состоите в этом чате."
+                                                result == null -> userNotFoundText
+                                                result.id in chat.memberIds -> userAlreadyMemberText
+                                                result.id == currentUserId -> youAlreadyMemberText
                                                 else -> null
                                             }
                                             isSearchingUser = false
                                         },
                                         onFailure = { error ->
-                                            searchMessage = error.message ?: "Не удалось выполнить поиск."
+                                            searchMessage = error.message ?: userSearchFailedText
                                             isSearchingUser = false
                                         },
                                     )
@@ -482,7 +505,7 @@ fun ChatEditScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         if (isSearchingUser) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                        else Text("Найти пользователя")
+                        else Text(stringResource(Res.string.find_user))
                     }
 
                     foundUser?.let { user ->
@@ -492,7 +515,7 @@ fun ChatEditScreen(
                         ) {
                             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 Text(user.chatDisplayName, style = MaterialTheme.typography.titleMedium)
-                                if (user.username.isNotBlank()) Text("@" + user.username, color = MaterialTheme.colorScheme.primary)
+                                if (user.username.isNotBlank()) Text(stringResource(Res.string.username_at, user.username), color = MaterialTheme.colorScheme.primary)
                                 if (user.email.isNotBlank()) {
                                     Text(user.email, style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -509,11 +532,11 @@ fun ChatEditScreen(
                                                 repository.addMember(chat.id, userId, user.id).fold(
                                                     onSuccess = { updatedChat ->
                                                         onChatUpdated(updatedChat)
-                                                        searchMessage = "Пользователь добавлен в чат."
+                                                        searchMessage = userAddedText
                                                         isAddingUser = false
                                                     },
                                                     onFailure = { error ->
-                                                        searchMessage = error.message ?: "Не удалось добавить пользователя."
+                                                        searchMessage = error.message ?: addUserFailedText
                                                         isAddingUser = false
                                                     },
                                                 )
@@ -524,13 +547,13 @@ fun ChatEditScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                 ) {
                                     if (isAddingUser) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                                    else Text(if (user.id in chat.memberIds) "Уже в чате" else "Добавить в чат")
+                                    else Text(if (user.id in chat.memberIds) stringResource(Res.string.already_in_chat) else stringResource(Res.string.add_to_chat))
                                 }
                             }
                         }
                     }
                     searchMessage?.let {
-                        Text(it, color = if (it == "Пользователь добавлен в чат.")
+                        Text(it, color = if (it == userAddedText)
                             MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
                     }
 
@@ -550,15 +573,15 @@ fun ChatEditScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         if (creatingInvite) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                        else Text("Создать код приглашения")
+                        else Text(stringResource(Res.string.invite_create_code))
                     }
                     invite?.let { currentInvite ->
-                        Text("Код приглашения", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(Res.string.invite_code), style = MaterialTheme.typography.titleSmall)
                         SelectionContainer {
                             Text(currentInvite.code, style = MaterialTheme.typography.headlineSmall,
                                 color = MaterialTheme.colorScheme.primary)
                         }
-                        Text("Код действует 7 дней.", style = MaterialTheme.typography.bodySmall,
+                        Text(stringResource(Res.string.invite_code_expires), style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     inviteError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -566,7 +589,7 @@ fun ChatEditScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showInviteDialog = false },
-                    enabled = !creatingInvite && !isSearchingUser && !isAddingUser) { Text("Готово") }
+                    enabled = !creatingInvite && !isSearchingUser && !isAddingUser) { Text(stringResource(Res.string.done)) }
             },
         )
     }
@@ -574,8 +597,8 @@ fun ChatEditScreen(
     memberToRemove?.let { targetId ->
         AlertDialog(
             onDismissRequest = { if (!busy) memberToRemove = null },
-            title = { Text("Удалить участника?") },
-            text = { Text("Пользователь с ID ${targetId.take(12)} будет удалён из чата.") },
+            title = { Text(stringResource(Res.string.remove_member_question)) },
+            text = { Text(stringResource(Res.string.remove_member_description, targetId.take(12))) },
             confirmButton = {
                 TextButton(
                     enabled = !busy,
@@ -589,29 +612,29 @@ fun ChatEditScreen(
                                         busy = false
                                         memberToRemove = null
                                         onChatUpdated(it)
-                                        message = "Участник удалён из чата."
+                                        message = memberRemovedMessage
                                         messageIsError = false
                                     },
                                     onFailure = {
                                         busy = false
-                                        message = it.message ?: "Не удалось удалить участника."
+                                        message = it.message ?: memberRemoveFailedMessage
                                         messageIsError = true
                                     },
                                 )
                             }
                         }
                     },
-                ) { Text("Удалить", color = MaterialTheme.colorScheme.error) }
+                ) { Text(stringResource(Res.string.remove), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { memberToRemove = null }, enabled = !busy) { Text("Отмена") } },
+            dismissButton = { TextButton(onClick = { memberToRemove = null }, enabled = !busy) { Text(stringResource(Res.string.cancel)) } },
         )
     }
 
     if (confirmLeave) {
         AlertDialog(
             onDismissRequest = { if (!busy) confirmLeave = false },
-            title = { Text("Выйти из чата?") },
-            text = { Text("После выхода письма этого чата больше не будут доступны.") },
+            title = { Text(stringResource(Res.string.leave_chat_question)) },
+            text = { Text(stringResource(Res.string.leave_chat_description)) },
             confirmButton = {
                 TextButton(
                     enabled = !busy,
@@ -624,7 +647,7 @@ fun ChatEditScreen(
                                     onSuccess = { onChatRemoved() },
                                     onFailure = {
                                         busy = false
-                                        message = it.message ?: "Не удалось выйти из чата."
+                                        message = it.message ?: leaveChatFailedMessage
                                         messageIsError = true
                                         confirmLeave = false
                                     },
@@ -632,17 +655,17 @@ fun ChatEditScreen(
                             }
                         }
                     },
-                ) { Text("Выйти", color = MaterialTheme.colorScheme.error) }
+                ) { Text(stringResource(Res.string.sign_out), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { confirmLeave = false }, enabled = !busy) { Text("Отмена") } },
+            dismissButton = { TextButton(onClick = { confirmLeave = false }, enabled = !busy) { Text(stringResource(Res.string.cancel)) } },
         )
     }
 
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { if (!busy) confirmDelete = false },
-            title = { Text("Удалить чат?") },
-            text = { Text("Чат и все письма в нём будут удалены. Это действие нельзя отменить.") },
+            title = { Text(stringResource(Res.string.delete_chat_question)) },
+            text = { Text(stringResource(Res.string.delete_chat_description)) },
             confirmButton = {
                 TextButton(
                     enabled = !busy,
@@ -655,7 +678,7 @@ fun ChatEditScreen(
                                     onSuccess = { onChatRemoved() },
                                     onFailure = {
                                         busy = false
-                                        message = it.message ?: "Не удалось удалить чат."
+                                        message = it.message ?: deleteChatFailedMessage
                                         messageIsError = true
                                         confirmDelete = false
                                     },
@@ -663,9 +686,9 @@ fun ChatEditScreen(
                             }
                         }
                     },
-                ) { Text("Удалить", color = MaterialTheme.colorScheme.error) }
+                ) { Text(stringResource(Res.string.remove), color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }, enabled = !busy) { Text("Отмена") } },
+            dismissButton = { TextButton(onClick = { confirmDelete = false }, enabled = !busy) { Text(stringResource(Res.string.cancel)) } },
         )
     }
 }

@@ -8,6 +8,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -18,6 +19,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import org.jetbrains.compose.resources.stringResource
+import com.jaroapps.funnymail.resources.Res
 import com.jaroapps.funnymail.core.di.appModule
 import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import com.jaroapps.funnymail.core.navigation.AppDestination
@@ -86,6 +89,17 @@ private fun FunnyMailContent(
 ) {
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
     var darkThemeEnabled by rememberSaveable { mutableStateOf(ThemePreferenceStorage.loadDarkTheme()) }
+    val inviteLoginRequiredText = stringResource(Res.string.invite_login_required)
+    val inviteCreateFailedText = stringResource(Res.string.invite_create_failed)
+    val sendDrawingOpenChatFirstText = stringResource(Res.string.send_drawing_open_chat_first)
+    val sendDrawingLoginRequiredText = stringResource(Res.string.send_drawing_login_required)
+    val readingDrawingFailedText = stringResource(Res.string.reading_drawing_failed_short)
+    val sendingDrawingFailedText = stringResource(Res.string.sending_drawing_failed)
+    val savingDrawingFailedText = stringResource(Res.string.saving_drawing_failed)
+    val chatNotSelectedText = stringResource(Res.string.chat_not_selected)
+    val chooseChatHintText = stringResource(Res.string.choose_chat_hint)
+    val drawingUnavailableText = stringResource(Res.string.drawing_unavailable)
+    val selectDrawingHintText = stringResource(Res.string.select_drawing_hint)
     var selectedChat by remember { mutableStateOf<Chat?>(null) }
     var viewingDrawing by remember { mutableStateOf<DrawingDocument?>(null) }
     var editingDrawingId by remember { mutableStateOf<Long?>(null) }
@@ -156,19 +170,19 @@ private fun FunnyMailContent(
             try {
                 val user = authRepository.currentUser.first()
                 if (user == null) {
-                    reportResult(null, "Войдите в аккаунт, чтобы приглашать друзей.")
+                    reportResult(null, inviteLoginRequiredText)
                 } else {
                     chatRepository.createInvite(chatId, user.id).fold(
                         onSuccess = { invite -> reportResult(invite, null) },
                         onFailure = { error ->
-                            reportResult(null, error.message ?: "Не удалось создать приглашение.")
+                            reportResult(null, error.message ?: inviteCreateFailedText)
                         },
                     )
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                reportResult(null, error.message ?: "Не удалось создать приглашение.")
+                reportResult(null, error.message ?: inviteCreateFailedText)
             }
         }
     }
@@ -176,16 +190,16 @@ private fun FunnyMailContent(
     val sendDrawingToChat: (String, (String?) -> Unit) -> Unit = { json, reportResult ->
         val chatId = selectedChat?.id
         if (chatId == null) {
-            reportResult("Сначала откройте чат, в который нужно отправить рисунок.")
+            reportResult(sendDrawingOpenChatFirstText)
         } else {
             coroutineScope.launch {
                 try {
                     val user = authRepository.currentUser.first()
                     if (user == null) {
-                        reportResult("Войдите в аккаунт, чтобы отправлять рисунки.")
+                        reportResult(sendDrawingLoginRequiredText)
                     } else {
                         val drawing = DrawingCodec().decode(json).getOrElse { error ->
-                            reportResult(error.message ?: "Не удалось прочитать рисунок.")
+                            reportResult(error.message ?: readingDrawingFailedText)
                             return@launch
                         }
                         letterRepository.sendLetter(
@@ -203,14 +217,14 @@ private fun FunnyMailContent(
                                 }
                             },
                             onFailure = { error ->
-                                reportResult(error.message ?: "Не удалось отправить рисунок в чат.")
+                                reportResult(error.message ?: sendingDrawingFailedText)
                             },
                         )
                     }
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (error: Exception) {
-                    reportResult(error.message ?: "Не удалось отправить рисунок в чат.")
+                    reportResult(error.message ?: sendingDrawingFailedText)
                 }
             }
         }
@@ -245,6 +259,10 @@ private fun FunnyMailContent(
             secondaryContainer = Color(0xFFFFF0C2),
             onSecondaryContainer = Color(0xFF202124),
         )
+    }
+
+    SideEffect {
+        ThemePreferenceStorage.updateSystemBars(darkThemeEnabled)
     }
 
     MaterialTheme(colorScheme = appColorScheme) {
@@ -296,7 +314,7 @@ private fun FunnyMailContent(
                                     reportSaveResult(null)
                                 } catch (error: Exception) {
                                     reportSaveResult(
-                                        error.message ?: "Не удалось сохранить рисунок в галерею.",
+                                        error.message ?: savingDrawingFailedText,
                                     )
                                 }
                             }
@@ -319,8 +337,8 @@ private fun FunnyMailContent(
                         val chat = selectedChat
                         if (chat == null) {
                             PlaceholderScreen(
-                                title = "Чат не выбран",
-                                description = "Вернитесь к списку чатов и выберите чат.",
+                                title = chatNotSelectedText,
+                                description = chooseChatHintText,
                                 onBack = { destination = AppDestination.Home },
                             )
                         } else {
@@ -352,8 +370,8 @@ private fun FunnyMailContent(
                         val chat = selectedChat
                         if (chat == null) {
                             PlaceholderScreen(
-                                title = "Чат не выбран",
-                                description = "Вернитесь к списку чатов и выберите чат.",
+                                title = chatNotSelectedText,
+                                description = chooseChatHintText,
                                 onBack = { destination = AppDestination.Home },
                             )
                         } else {
@@ -374,8 +392,8 @@ private fun FunnyMailContent(
                         val drawing = viewingDrawing
                         if (drawing == null) {
                             PlaceholderScreen(
-                                title = "Рисунок недоступен",
-                                description = "Вернитесь в чат и выберите рисунок ещё раз.",
+                                title = drawingUnavailableText,
+                                description = selectDrawingHintText,
                                 onBack = {
                                     viewingDrawing = null
                                     destination = AppDestination.ChatDetail
