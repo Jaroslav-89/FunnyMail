@@ -251,7 +251,7 @@ fun ChatDetailsScreen(
                     )
                     AccountPersonIcon(
                         modifier = Modifier.padding(start = 3.dp).size(18.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
