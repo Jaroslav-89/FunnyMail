@@ -320,10 +320,14 @@ fun AuthScreen(
                 modifier = Modifier.padding(top = 6.dp),
             )
             if (NativeSocialSignIn.supportsGoogleSignIn) {
-                OutlinedButton(
+                Button(
                     onClick = viewModel::signInWithGoogle,
                     enabled = !state.isSubmitting && firebaseConfigured,
                     modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF075B35),
+                        contentColor = Color.White,
+                    ),
                 ) { Text("Продолжить с Google") }
             }
             if (NativeSocialSignIn.supportsAppleSignIn) {
