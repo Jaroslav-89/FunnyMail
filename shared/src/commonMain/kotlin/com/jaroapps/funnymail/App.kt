@@ -175,14 +175,14 @@ private fun FunnyMailContent(
                     chatRepository.createInvite(chatId, user.id).fold(
                         onSuccess = { invite -> reportResult(invite, null) },
                         onFailure = { error ->
-                            reportResult(null, error.message ?: inviteCreateFailedText)
+                            reportResult(null, inviteCreateFailedText)
                         },
                     )
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                reportResult(null, error.message ?: inviteCreateFailedText)
+                reportResult(null, inviteCreateFailedText)
             }
         }
     }
@@ -217,7 +217,7 @@ private fun FunnyMailContent(
                                 }
                             },
                             onFailure = { error ->
-                                reportResult(error.message ?: sendingDrawingFailedText)
+                                reportResult(sendingDrawingFailedText)
                             },
                         )
                     }
@@ -314,7 +314,7 @@ private fun FunnyMailContent(
                                     reportSaveResult(null)
                                 } catch (error: Exception) {
                                     reportSaveResult(
-                                        error.message ?: savingDrawingFailedText,
+                                        savingDrawingFailedText,
                                     )
                                 }
                             }
