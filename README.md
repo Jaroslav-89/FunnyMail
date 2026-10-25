@@ -111,5 +111,5 @@ For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run on an iOS simulator or 
 - The repository layer should expose data through `Flow`, so the UI can react to local and remote changes.
 - The Firestore letter adapter encodes a drawing into the `drawingJson` string field under `chats/{chatId}/letters/{letterId}`; it must not upload images or use Firebase Storage.
 - Letter creation/expiry timestamps and invite validation must be controlled by trusted backend logic, not only by the client clock.
-- The target retention period for letters is seven days, with Firestore TTL configured on the expiry field.
+- The target retention period for letters is seven days. The current client query hides older letters, but a server-enforced expiry field and Firestore TTL policy still need to be added before retention is production-ready.
 - Client-side validation is not a substitute for Firestore Security Rules and server-side authorization.
