@@ -284,6 +284,8 @@ class FirebaseAuthRepository(
         val firestore = firestoreProvider()
         val userRef = firestore.collection(USERS_COLLECTION).document(user.uid)
         val snapshot = userRef.get()
+        val resolvedProviderName = providerDisplayName?.takeIf { it.isNotBlank() }
+            ?: user.socialProviderDisplayName().orEmpty()
         var directory = if (snapshot.exists) {
             snapshot.data<FirestoreUserDirectory>()
         } else {
@@ -292,7 +294,7 @@ class FirebaseAuthRepository(
                 email = user.email.orEmpty(),
                 emailLower = user.email.orEmpty().trim().lowercase(),
                 customName = initialCustomName.trim(),
-                providerDisplayName = providerDisplayName.orEmpty(),
+                providerDisplayName = resolvedProviderName,
                 generatedName = generatedName(),
                 avatarUrl = user.photoURL.orEmpty(),
             )
@@ -300,8 +302,8 @@ class FirebaseAuthRepository(
 
         if (snapshot.exists) {
             var changed = false
-            if (directory.providerDisplayName.isBlank() && !providerDisplayName.isNullOrBlank()) {
-                directory = directory.copy(providerDisplayName = providerDisplayName.trim())
+            if (directory.providerDisplayName.isBlank() && resolvedProviderName.isNotBlank()) {
+                directory = directory.copy(providerDisplayName = resolvedProviderName.trim())
                 changed = true
             }
             if (directory.customName.isBlank() && initialCustomName.isNotBlank()) {
@@ -350,6 +352,13 @@ class FirebaseAuthRepository(
             reference.set(LookupRecord(userId = directory.uid))
         }
     }
+
+    private fun FirebaseUser.socialProviderDisplayName(): String? =
+        if (providerData.any { it.providerId == GOOGLE_PROVIDER_ID || it.providerId == APPLE_PROVIDER_ID }) {
+            displayName?.trim()?.takeIf { it.isNotEmpty() }
+        } else {
+            null
+        }
 
     private fun FirebaseUser.withDirectory(directory: FirestoreUserDirectory): UserProfile =
         UserProfile(
@@ -418,6 +427,7 @@ class FirebaseAuthRepository(
     private companion object {
         const val MIN_PASSWORD_LENGTH = 6
         const val APPLE_PROVIDER_ID = "apple.com"
+        const val GOOGLE_PROVIDER_ID = "google.com"
         const val MAX_CUSTOM_NAME_LENGTH = 40
         const val USERS_COLLECTION = "users"
         const val PUBLIC_PROFILES_COLLECTION = "publicProfiles"
