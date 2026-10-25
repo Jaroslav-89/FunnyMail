@@ -20,7 +20,8 @@ import kotlin.time.Clock
 
 /**
  * Stores a drawing as a JSON string in chats/{chatId}/letters/{letterId}.
- * Firestore rules restrict access to chat members and deny reading letters older than seven days.
+ * Reads are restricted to chat members. The client limits its query to seven days; automatic
+ * server-side expiry and TTL deletion still require Firebase configuration.
  */
 class FirebaseLetterRepository(
     private val firestoreProvider: () -> FirebaseFirestore = {
@@ -35,8 +36,8 @@ class FirebaseLetterRepository(
     override fun observeLetters(chatId: String): Flow<List<Letter>> {
         require(chatId.isNotBlank()) { "Не выбран чат." }
 
-        // Keep the query within the retention window so expired documents do not make
-        // the whole Firestore query fail the server-side read rule.
+        // Limit the query window in the client. Membership is enforced by Firestore rules;
+        // server-controlled expiry and TTL cleanup remain a separate deployment task.
         val oldestAllowedMillis = Clock.System.now().toEpochMilliseconds() - LETTER_TTL_MILLIS
         val oldestAllowedTimestamp = Timestamp(
             seconds = oldestAllowedMillis / 1_000L,
@@ -51,9 +52,13 @@ class FirebaseLetterRepository(
             .snapshots
             .map { snapshot ->
                 snapshot.documents
-                    .map { document ->
-                        document.data<FirestoreLetterDocument>()
-                            .toDomain(documentId = document.id, chatId = chatId)
+                    .mapNotNull { document ->
+                        // A local pending write can briefly expose an unresolved server timestamp.
+                        // Skip it until Firestore supplies the authoritative timestamp.
+                        runCatching {
+                            document.data<FirestoreLetterDocument>()
+                                .toDomain(documentId = document.id, chatId = chatId)
+                        }.getOrNull()
                     }
                     .filter { it.expiresAtEpochMillis > Clock.System.now().toEpochMilliseconds() }
                     .sortedByDescending { it.createdAtEpochMillis }
