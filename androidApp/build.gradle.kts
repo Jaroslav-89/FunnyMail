@@ -46,7 +46,10 @@ android {
     }
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8 performs code shrinking, optimization, and obfuscation for release APKs.
+            isMinifyEnabled = true
+            // Remove unused Android resources after code shrinking is enabled.
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
