@@ -158,7 +158,7 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxSize(),
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            AccountPersonIcon(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            AccountPersonIcon(color = MaterialTheme.colorScheme.onSurface)
                         }
                     }
                 }
