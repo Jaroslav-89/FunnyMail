@@ -22,8 +22,9 @@ import kotlin.time.Clock
 
 /**
  * Stores a drawing as a JSON string in chats/{chatId}/letters/{letterId}.
- * Reads are restricted to chat members. The client limits its query to seven days; automatic
- * server-side expiry and TTL deletion still require Firebase configuration.
+ * Firestore Security Rules enforce expiresAt at the seven-day boundary (with a five-minute
+ * client-clock tolerance). Configure Firestore TTL on collection group "letters", field expiresAt,
+ * to automatically remove expired documents.
  */
 class FirebaseLetterRepository(
     private val firestoreProvider: () -> FirebaseFirestore = {
@@ -38,8 +39,8 @@ class FirebaseLetterRepository(
     override fun observeLetters(chatId: String): Flow<List<Letter>> {
         require(chatId.isNotBlank()) { "Не выбран чат." }
 
-        // Limit the query window in the client. Membership is enforced by Firestore rules;
-        // server-controlled expiry and TTL cleanup remain a separate deployment task.
+        // Query only unexpired documents. Security Rules independently compare expiresAt to
+        // the server's request.time so clients cannot read an expired letter by changing local time.
         val nowMillis = Clock.System.now().toEpochMilliseconds()
         val nowTimestamp = nowMillis.toFirestoreTimestamp()
 
