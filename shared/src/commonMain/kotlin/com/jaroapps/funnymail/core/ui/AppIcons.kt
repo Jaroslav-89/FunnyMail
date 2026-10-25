@@ -236,3 +236,37 @@ fun PersonPlusIcon(
         )
     }
 }
+
+
+@Composable
+fun EditPencilIcon(
+    modifier: Modifier = Modifier.size(22.dp),
+    color: Color,
+) {
+    Canvas(modifier = modifier) {
+        val strokeWidth = size.minDimension * 0.085f
+        val pencil = Path().apply {
+            moveTo(size.width * 0.22f, size.height * 0.76f)
+            lineTo(size.width * 0.67f, size.height * 0.31f)
+            lineTo(size.width * 0.82f, size.height * 0.46f)
+            lineTo(size.width * 0.37f, size.height * 0.91f)
+            lineTo(size.width * 0.17f, size.height * 0.96f)
+            close()
+            moveTo(size.width * 0.60f, size.height * 0.38f)
+            lineTo(size.width * 0.75f, size.height * 0.53f)
+            moveTo(size.width * 0.21f, size.height * 0.76f)
+            lineTo(size.width * 0.37f, size.height * 0.91f)
+            moveTo(size.width * 0.15f, size.height * 0.15f)
+            lineTo(size.width * 0.53f, size.height * 0.15f)
+        }
+        drawPath(
+            path = pencil,
+            color = color,
+            style = Stroke(
+                width = strokeWidth,
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round,
+            ),
+        )
+    }
+}
