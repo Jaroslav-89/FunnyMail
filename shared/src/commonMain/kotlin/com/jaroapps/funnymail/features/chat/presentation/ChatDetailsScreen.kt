@@ -16,14 +16,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -44,8 +48,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jaroapps.funnymail.core.ui.DrawingListIcon
+import com.jaroapps.funnymail.core.ui.PersonPlusIcon
 import com.jaroapps.funnymail.core.ui.PaperPlusIcon
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
+import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.letter.presentation.DrawingPreview
@@ -59,6 +65,7 @@ fun ChatDetailsScreen(
     onDraftSent: () -> Unit,
     onCreateDrawing: () -> Unit,
     onOpenDrawings: () -> Unit,
+    onCreateInvite: (String, (ChatInvite?, String?) -> Unit) -> Unit,
 ) {
     val viewModel: ChatDetailsViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
@@ -67,6 +74,10 @@ fun ChatDetailsScreen(
     }
     var handledSentLetterId by remember { mutableStateOf(state.lastSentLetterId) }
     var actionsExpanded by rememberSaveable { mutableStateOf(false) }
+    var showInviteDialog by rememberSaveable { mutableStateOf(false) }
+    var isCreatingInvite by remember { mutableStateOf(false) }
+    var generatedInvite by remember { mutableStateOf<ChatInvite?>(null) }
+    var inviteError by remember { mutableStateOf<String?>(null) }
 
     DisposableEffect(chat.id) {
         viewModel.observeLetters(chat.id)
@@ -101,7 +112,28 @@ fun ChatDetailsScreen(
             )
         }
 
-        Text(chat.title, style = MaterialTheme.typography.headlineMedium)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = chat.title,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.headlineMedium,
+            )
+            IconButton(
+                onClick = {
+                    generatedInvite = null
+                    inviteError = null
+                    showInviteDialog = true
+                },
+                modifier = Modifier
+                    .size(48.dp)
+                    .semantics { contentDescription = "Пригласить друга" },
+            ) {
+                PersonPlusIcon(color = MaterialTheme.colorScheme.primary)
+            }
+        }
         Text(
             "${chat.memberIds.size} участн. · письма доступны 7 дней",
             style = MaterialTheme.typography.bodyMedium,
@@ -313,6 +345,67 @@ fun ChatDetailsScreen(
                 modifier = Modifier.rotate(if (actionsExpanded) 45f else 0f),
             )
         }
+    }
+
+    if (showInviteDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!isCreatingInvite) showInviteDialog = false
+            },
+            title = { Text("Пригласить друга") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Выберите способ приглашения в чат.")
+                    OutlinedButton(
+                        onClick = {
+                            if (!isCreatingInvite) {
+                                isCreatingInvite = true
+                                inviteError = null
+                                onCreateInvite(chat.id) { invite, error ->
+                                    isCreatingInvite = false
+                                    generatedInvite = invite
+                                    inviteError = error
+                                }
+                            }
+                        },
+                        enabled = !isCreatingInvite,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        if (isCreatingInvite) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.height(18.dp).width(18.dp),
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Text("По коду приглашения")
+                        }
+                    }
+                    generatedInvite?.let { invite ->
+                        Text("Код приглашения", style = MaterialTheme.typography.titleSmall)
+                        SelectionContainer {
+                            Text(
+                                text = invite.code,
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        Text(
+                            "Передайте код другу. Он действует 7 дней.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    inviteError?.let { message ->
+                        Text(message, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showInviteDialog = false }) {
+                    Text("Готово")
+                }
+            },
+        )
     }
     }
 }
