@@ -41,6 +41,7 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [x] Shared drawing canvas with color palette, adjustable brush, eraser, undo and clear controls
 - [x] Save each prepared drawing to a local Room/SQLite database on Android and iOS
 - [x] Local drawing gallery with previews, full-size viewing and delete actions
+- [x] Chat floating-action menu for creating drawings or opening the local gallery; send drawings to the active chat
 - [x] Drawing JSON validation and draft preview
 - [x] Local draft persistence on Android (SharedPreferences) and iOS (NSUserDefaults)
 - [x] Firestore letter adapter, sending drawing drafts to chats, and live letter feed

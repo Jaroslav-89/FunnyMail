@@ -22,12 +22,16 @@ import com.jaroapps.funnymail.features.chat.presentation.ChatDetailsScreen
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.repository.LocalDrawingRepository
 import com.jaroapps.funnymail.features.auth.presentation.AuthScreen
+import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
 import com.jaroapps.funnymail.features.chat.presentation.ChatsScreen
 import com.jaroapps.funnymail.features.drawing.presentation.DrawingScreen
 import com.jaroapps.funnymail.features.home.presentation.HomeScreen
+import com.jaroapps.funnymail.features.letter.domain.repository.LetterRepository
 import com.jaroapps.funnymail.features.letter.presentation.LettersScreen
 import com.jaroapps.funnymail.features.placeholder.presentation.PlaceholderScreen
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
@@ -54,10 +58,6 @@ fun App() {
             firebaseConfigured = firebaseConfigured,
             hasDraft = lastDraftJson != null,
             draftJson = lastDraftJson,
-            onDraftPrepared = { json ->
-                DrawingDraftStorage.save(json)
-                lastDraftJson = json
-            },
             onClearDraft = {
                 DrawingDraftStorage.clear()
                 lastDraftJson = null
@@ -71,13 +71,54 @@ private fun FunnyMailContent(
     firebaseConfigured: Boolean,
     hasDraft: Boolean,
     draftJson: String?,
-    onDraftPrepared: (String) -> Unit,
     onClearDraft: () -> Unit,
 ) {
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
     var selectedChat by remember { mutableStateOf<Chat?>(null) }
     val localDrawingRepository = koinInject<LocalDrawingRepository>()
+    val authRepository = koinInject<AuthRepository>()
+    val letterRepository = koinInject<LetterRepository>()
     val coroutineScope = rememberCoroutineScope()
+
+    val sendDrawingToChat: (String, (String?) -> Unit) -> Unit = { json, reportResult ->
+        val chatId = selectedChat?.id
+        if (chatId == null) {
+            reportResult("Сначала откройте чат, в который нужно отправить рисунок.")
+        } else {
+            coroutineScope.launch {
+                try {
+                    val user = authRepository.currentUser.first()
+                    if (user == null) {
+                        reportResult("Войдите в аккаунт, чтобы отправлять рисунки.")
+                    } else {
+                        val drawing = DrawingCodec().decode(json).getOrElse { error ->
+                            reportResult(error.message ?: "Не удалось прочитать рисунок.")
+                            return@launch
+                        }
+                        letterRepository.sendLetter(
+                            chatId = chatId,
+                            authorUserId = user.id,
+                            drawing = drawing,
+                        ).fold(
+                            onSuccess = {
+                                reportResult(null)
+                                if (destination == AppDestination.Drawing) {
+                                    destination = AppDestination.ChatDetail
+                                }
+                            },
+                            onFailure = { error ->
+                                reportResult(error.message ?: "Не удалось отправить рисунок в чат.")
+                            },
+                        )
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    reportResult(error.message ?: "Не удалось отправить рисунок в чат.")
+                }
+            }
+        }
+    }
 
     MaterialTheme {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -88,8 +129,6 @@ private fun FunnyMailContent(
             ) {
                 when (destination) {
                     AppDestination.Home -> HomeScreen(
-                        onCreateLetter = { destination = AppDestination.Drawing },
-                        onOpenLetters = { destination = AppDestination.Letters },
                         onOpenChats = { destination = AppDestination.Chats },
                         onOpenAccount = { destination = AppDestination.Auth },
                         hasDraft = hasDraft,
@@ -99,14 +138,12 @@ private fun FunnyMailContent(
                         onBack = { destination = AppDestination.Home },
                     )
                     AppDestination.Drawing -> DrawingScreen(
-                        onBack = { destination = AppDestination.Home },
-                        onPrepared = { json, reportSaveResult ->
+                        onBack = { destination = AppDestination.ChatDetail },
+                        onSaveDrawing = { json, reportSaveResult ->
                             coroutineScope.launch {
                                 try {
                                     localDrawingRepository.saveDrawing(json)
-                                    onDraftPrepared(json)
                                     reportSaveResult(null)
-                                    destination = AppDestination.Home
                                 } catch (error: Exception) {
                                     reportSaveResult(
                                         error.message ?: "Не удалось сохранить рисунок в галерею.",
@@ -114,11 +151,13 @@ private fun FunnyMailContent(
                                 }
                             }
                         },
+                        onSendDrawing = sendDrawingToChat,
                     )
                     AppDestination.Letters -> LettersScreen(
                         draftJson = draftJson,
-                        onBack = { destination = AppDestination.Home },
+                        onBack = { destination = AppDestination.ChatDetail },
                         onClearDraft = onClearDraft,
+                        onSendDrawing = sendDrawingToChat,
                     )
                     AppDestination.Chats -> ChatsScreen(
                         onBack = { destination = AppDestination.Home },
@@ -142,6 +181,8 @@ private fun FunnyMailContent(
                                 draftJson = draftJson,
                                 onBack = { destination = AppDestination.Chats },
                                 onDraftSent = onClearDraft,
+                                onCreateDrawing = { destination = AppDestination.Drawing },
+                                onOpenDrawings = { destination = AppDestination.Letters },
                             )
                         }
                     }

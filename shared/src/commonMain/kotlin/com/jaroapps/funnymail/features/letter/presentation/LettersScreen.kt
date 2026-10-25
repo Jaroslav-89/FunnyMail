@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -36,6 +38,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import com.jaroapps.funnymail.core.ui.TrashCanIcon
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
@@ -49,6 +52,7 @@ fun LettersScreen(
     draftJson: String?,
     onBack: () -> Unit,
     onClearDraft: () -> Unit,
+    onSendDrawing: (String, (String?) -> Unit) -> Unit,
 ) {
     val repository = koinInject<LocalDrawingRepository>()
     val drawingsFlow = remember(repository) { repository.observeDrawings() }
@@ -56,6 +60,7 @@ fun LettersScreen(
     val coroutineScope = rememberCoroutineScope()
     val drawingCodec = remember { DrawingCodec() }
     var selectedDrawingId by remember { mutableStateOf<Long?>(null) }
+    var sendingDrawingId by remember { mutableStateOf<Long?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
 
     val selectedDrawing = drawings.firstOrNull { it.id == selectedDrawingId }
@@ -82,6 +87,19 @@ fun LettersScreen(
         }
     }
 
+    fun sendDrawing(savedDrawing: SavedDrawing) {
+        if (sendingDrawingId != null) return
+        sendingDrawingId = savedDrawing.id
+        onSendDrawing(savedDrawing.drawingJson) { error ->
+            sendingDrawingId = null
+            statusMessage = if (error == null) {
+                "Рисунок отправлен в текущий чат."
+            } else {
+                error
+            }
+        }
+    }
+
     Column(
         modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -100,7 +118,22 @@ fun LettersScreen(
         }
 
         if (selectedDrawing != null) {
-            Text("Рисунок #${selectedDrawing.id}", style = MaterialTheme.typography.headlineSmall)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Рисунок #${selectedDrawing.id}",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+                IconButton(
+                    onClick = { deleteDrawing(selectedDrawing) },
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    TrashCanIcon(color = MaterialTheme.colorScheme.error)
+                }
+            }
             if (selectedDocument != null) {
                 Text(
                     "${selectedDocument.strokes.size} штрихов · ${selectedDocument.strokes.sumOf { it.points.size }} точек",
@@ -114,16 +147,11 @@ fun LettersScreen(
             } else {
                 Text("Не удалось прочитать сохранённый рисунок.", color = MaterialTheme.colorScheme.error)
             }
-            Row(
+            OutlinedButton(
+                onClick = { selectedDrawingId = null },
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                OutlinedButton(onClick = { selectedDrawingId = null }, modifier = Modifier.weight(1f)) {
-                    Text("К галерее")
-                }
-                TextButton(onClick = { deleteDrawing(selectedDrawing) }, modifier = Modifier.weight(1f)) {
-                    Text("Удалить", color = MaterialTheme.colorScheme.error)
-                }
+                Text("К галерее")
             }
         } else {
             LazyColumn(
@@ -192,7 +220,22 @@ fun LettersScreen(
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                     ) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("Рисунок #${savedDrawing.id}", style = MaterialTheme.typography.titleMedium)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    "Рисунок #${savedDrawing.id}",
+                                    modifier = Modifier.weight(1f),
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                                IconButton(
+                                    onClick = { deleteDrawing(savedDrawing) },
+                                    modifier = Modifier.size(40.dp),
+                                ) {
+                                    TrashCanIcon(color = MaterialTheme.colorScheme.error)
+                                }
+                            }
                             if (document != null) {
                                 Text(
                                     "${document.strokes.size} штрихов · ${document.strokes.sumOf { it.points.size }} точек",
@@ -211,10 +254,13 @@ fun LettersScreen(
                                     onClick = { selectedDrawingId = savedDrawing.id },
                                     modifier = Modifier.weight(1f),
                                 ) { Text("Просмотреть") }
-                                TextButton(
-                                    onClick = { deleteDrawing(savedDrawing) },
+                                Button(
+                                    onClick = { sendDrawing(savedDrawing) },
+                                    enabled = document != null && sendingDrawingId == null,
                                     modifier = Modifier.weight(1f),
-                                ) { Text("Удалить", color = MaterialTheme.colorScheme.error) }
+                                ) {
+                                    Text(if (sendingDrawingId == savedDrawing.id) "Отправляем…" else "Отправить")
+                                }
                             }
                         }
                     }
