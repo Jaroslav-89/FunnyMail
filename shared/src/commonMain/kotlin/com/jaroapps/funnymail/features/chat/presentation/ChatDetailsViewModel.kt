@@ -1,5 +1,7 @@
 package com.jaroapps.funnymail.features.chat.presentation
 
+import com.jaroapps.funnymail.resources.Res
+
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
@@ -18,14 +20,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import com.jaroapps.funnymail.resources.firebase_not_configured
-import com.jaroapps.funnymail.resources.letter_draw_something
-import com.jaroapps.funnymail.resources.letter_generic_error
-import com.jaroapps.funnymail.resources.letter_login_required
-import com.jaroapps.funnymail.resources.letter_permission_error
-import com.jaroapps.funnymail.resources.letter_sent
-import com.jaroapps.funnymail.resources.letter_too_large
-import com.jaroapps.funnymail.resources.network_connection_failed
 
 data class ChatDetailsUiState(
     val currentUser: UserProfile? = null,
@@ -99,12 +93,12 @@ class ChatDetailsViewModel(
 
     fun sendDraft(chatId: String, drawing: DrawingDocument) {
         val userId = _state.value.currentUser?.id ?: run {
-            showError(letter_login_required)
+            showError(Res.string.letter_login_required)
             return
         }
         if (_state.value.isSending) return
         if (drawing.strokes.isEmpty()) {
-            showError(letter_draw_something)
+            showError(Res.string.letter_draw_something)
             return
         }
 
@@ -126,7 +120,7 @@ class ChatDetailsViewModel(
                         it.copy(
                             isSending = false,
                             lastSentLetterId = letter.id,
-                            message = getString(letter_sent),
+                            message = getString(Res.string.letter_sent),
                             messageIsError = false,
                         )
                     }
@@ -156,14 +150,14 @@ class ChatDetailsViewModel(
         val details = message.orEmpty().lowercase()
         return when {
             "permission-denied" in details || "permission_denied" in details || "permission denied" in details ->
-                getString(letter_permission_error)
+                getString(Res.string.letter_permission_error)
             "firebase не настроен" in details || "firebase is not configured" in details ->
-                getString(firebase_not_configured)
+                getString(Res.string.firebase_not_configured)
             "рисунок слишком большой" in details || "too large" in details ->
-                getString(letter_too_large)
+                getString(Res.string.letter_too_large)
             "network" in details || "unavailable" in details ->
-                getString(network_connection_failed)
-            else -> getString(letter_generic_error)
+                getString(Res.string.network_connection_failed)
+            else -> getString(Res.string.letter_generic_error)
         }
     }
 }
