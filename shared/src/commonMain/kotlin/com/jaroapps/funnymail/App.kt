@@ -29,6 +29,7 @@ import com.jaroapps.funnymail.features.home.presentation.HomeScreen
 import com.jaroapps.funnymail.features.letter.domain.repository.LetterRepository
 import com.jaroapps.funnymail.features.letter.presentation.LettersScreen
 import com.jaroapps.funnymail.features.placeholder.presentation.PlaceholderScreen
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
 import org.koin.compose.KoinApplication
@@ -110,6 +111,8 @@ private fun FunnyMailContent(
                             },
                         )
                     }
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
                 } catch (error: Exception) {
                     reportResult(error.message ?: "Не удалось отправить рисунок в чат.")
                 }
