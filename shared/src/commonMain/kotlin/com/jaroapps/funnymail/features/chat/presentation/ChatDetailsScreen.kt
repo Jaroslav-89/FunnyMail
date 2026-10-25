@@ -121,7 +121,14 @@ fun ChatDetailsScreen(
         }
     }
 
-    LaunchedEffect(state.letters, state.currentUser?.id, state.currentUser?.customName, state.currentUser?.username) {
+    LaunchedEffect(
+        state.letters,
+        state.currentUser?.id,
+        state.currentUser?.customName,
+        state.currentUser?.username,
+        state.currentUser?.providerDisplayName,
+        state.currentUser?.generatedName,
+    ) {
         val userIds = state.letters.map { it.authorUserId }.distinct()
         val names = mutableMapOf<String, String>()
         userIds.forEach { authorId ->
