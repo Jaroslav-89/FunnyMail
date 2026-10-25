@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingStrokes
@@ -54,7 +56,8 @@ fun DrawingViewerScreen(
                 .clip(CircleShape)
                 .background(Color.White)
                 .border(1.dp, Color(0xFFE8EAED), CircleShape)
-                .clickable(onClick = onBack),
+                .clickable(onClick = onBack)
+                .semantics { contentDescription = "Назад в чат" },
             contentAlignment = Alignment.Center,
         ) {
             Canvas(Modifier.size(23.dp)) {
