@@ -19,6 +19,10 @@ data class AuthUiState(
     val isRegistration: Boolean = false,
     val message: String? = null,
     val messageIsError: Boolean = false,
+    val isCheckingUsername: Boolean = false,
+    val isSavingProfile: Boolean = false,
+    val usernameAvailability: Boolean? = null,
+    val usernameCheckQuery: String? = null,
 )
 
 class AuthViewModel(
@@ -32,7 +36,19 @@ class AuthViewModel(
             authRepository.currentUser
                 .catch { emit(null) }
                 .collect { user ->
-                    _state.update { current -> current.copy(currentUser = user) }
+                    _state.update { current ->
+                        if (current.currentUser?.id != user?.id) {
+                            current.copy(
+                                currentUser = user,
+                                isCheckingUsername = false,
+                                isSavingProfile = false,
+                                usernameAvailability = null,
+                                usernameCheckQuery = null,
+                            )
+                        } else {
+                            current.copy(currentUser = user)
+                        }
+                    }
                 }
         }
     }
@@ -81,6 +97,117 @@ class AuthViewModel(
                 email = email.trim(),
                 password = password,
                 displayName = displayName.trim(),
+            )
+        }
+    }
+
+    fun resetUsernameCheck() {
+        _state.update {
+            it.copy(
+                usernameAvailability = null,
+                usernameCheckQuery = null,
+                message = null,
+                messageIsError = false,
+            )
+        }
+    }
+
+    fun checkUsername(username: String) {
+        val userId = _state.value.currentUser?.id ?: return
+        if (_state.value.isCheckingUsername || _state.value.isSavingProfile) return
+        if (!USERNAME_REGEX.matches(username)) {
+            _state.update {
+                it.copy(usernameAvailability = null, message = "Ник должен содержать 3–20 символов: латинские буквы, цифры или _.", messageIsError = true)
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            _state.update {
+                it.copy(
+                    isCheckingUsername = true,
+                    usernameAvailability = null,
+                    usernameCheckQuery = username,
+                    message = null,
+                    messageIsError = false,
+                )
+            }
+            authRepository.checkUsernameAvailability(username, userId).fold(
+                onSuccess = { available ->
+                    _state.update { current ->
+                        if (current.usernameCheckQuery != username) {
+                            current.copy(
+                                isCheckingUsername = false,
+                                usernameAvailability = null,
+                                usernameCheckQuery = null,
+                            )
+                        } else {
+                            current.copy(
+                                isCheckingUsername = false,
+                                usernameAvailability = available,
+                                usernameCheckQuery = null,
+                                message = null,
+                                messageIsError = false,
+                            )
+                        }
+                    }
+                },
+                onFailure = { error ->
+                    _state.update { current ->
+                        if (current.usernameCheckQuery != username) {
+                            current.copy(
+                                isCheckingUsername = false,
+                                usernameAvailability = null,
+                                usernameCheckQuery = null,
+                            )
+                        } else {
+                            current.copy(
+                                isCheckingUsername = false,
+                                usernameAvailability = null,
+                                usernameCheckQuery = null,
+                                message = error.message ?: "Не удалось проверить ник.",
+                                messageIsError = true,
+                            )
+                        }
+                    }
+                },
+            )
+        }
+    }
+
+    fun saveUserProfile(customName: String, username: String) {
+        val userId = _state.value.currentUser?.id ?: return
+        if (_state.value.isSavingProfile || _state.value.isCheckingUsername) return
+        if (username.isNotBlank() && !USERNAME_REGEX.matches(username)) {
+            _state.update { it.copy(message = "Ник должен содержать 3–20 символов: латинские буквы, цифры или _.", messageIsError = true) }
+            return
+        }
+
+        viewModelScope.launch {
+            _state.update { it.copy(isSavingProfile = true, message = null, messageIsError = false) }
+            authRepository.updateUserProfile(userId, customName.trim(), username.trim().removePrefix("@").lowercase()).fold(
+                onSuccess = { user ->
+                    _state.update {
+                        it.copy(
+                            currentUser = user,
+                            isSavingProfile = false,
+                            usernameAvailability = true,
+                            message = "Профиль сохранён.",
+                            messageIsError = false,
+                        )
+                    }
+                },
+                onFailure = { error ->
+                    _state.update {
+                        it.copy(
+                            isSavingProfile = false,
+                            usernameAvailability = if (error.message?.contains("Этот ник уже занят") == true) false else null,
+                            message = if (error.message?.contains("Этот ник уже занят") == true) null
+                                else error.message ?: "Не удалось сохранить профиль.",
+                            messageIsError = error.message?.contains("Этот ник уже занят") != true,
+                        )
+                    }
+                },
             )
         }
     }
@@ -187,5 +314,6 @@ class AuthViewModel(
 
     private companion object {
         const val MIN_PASSWORD_LENGTH = 6
+        val USERNAME_REGEX = Regex("^[a-zA-Z0-9_]{3,20}$")
     }
 }

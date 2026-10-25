@@ -26,6 +26,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +38,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.core.ui.AccountPersonIcon
+import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
+import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
 import com.jaroapps.funnymail.core.ui.PersonPlusIcon
 import com.jaroapps.funnymail.core.ui.TrashCanIcon
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
@@ -55,7 +58,16 @@ fun ChatEditScreen(
     onCreateInvite: (String, (ChatInvite?, String?) -> Unit) -> Unit,
 ) {
     val repository = koinInject<ChatRepository>()
+    val authRepository = koinInject<AuthRepository>()
     val scope = rememberCoroutineScope()
+    var memberProfiles by remember { mutableStateOf<Map<String, UserProfile>>(emptyMap()) }
+    LaunchedEffect(chat.memberIds) {
+        val profiles = mutableMapOf<String, UserProfile>()
+        chat.memberIds.forEach { id ->
+            authRepository.getPublicProfile(id).getOrNull()?.let { profiles[id] = it }
+        }
+        memberProfiles = profiles
+    }
     val creatorId = chat.creatorUserId.ifBlank { chat.memberIds.firstOrNull().orEmpty() }
     val isCreator = currentUserId != null && currentUserId == creatorId
 
@@ -155,16 +167,17 @@ fun ChatEditScreen(
                                 Spacer(Modifier.width(10.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(
-                                        when {
-                                            memberId == currentUserId && memberId == creatorId -> "Вы · создатель"
-                                            memberId == currentUserId -> "Вы"
-                                            memberId == creatorId -> "Создатель чата"
-                                            else -> "Участник чата"
+                                        text = if (memberId == currentUserId) "Вы" else {
+                                            memberProfiles[memberId]?.chatDisplayName
+                                                ?: "Участник чата"
                                         },
                                         style = MaterialTheme.typography.bodyLarge,
                                     )
                                     Text(
-                                        "ID: ${memberId.take(12)}${if (memberId.length > 12) "…" else ""}",
+                                        text = when {
+                                            memberId == creatorId -> "Создатель чата"
+                                            else -> "Участник"
+                                        },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )

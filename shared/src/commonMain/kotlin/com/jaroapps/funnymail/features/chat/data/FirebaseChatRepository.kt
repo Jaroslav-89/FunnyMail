@@ -129,6 +129,33 @@ class FirebaseChatRepository(
         chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
     }
 
+
+    override suspend fun addMember(
+        chatId: String,
+        requestingUserId: String,
+        memberUserId: String,
+    ): Result<Chat> = asResult {
+        require(chatId.isNotBlank()) { "Не выбран чат." }
+        require(requestingUserId.isNotBlank()) { "Сначала войдите в аккаунт." }
+        require(memberUserId.isNotBlank()) { "Пользователь не найден." }
+        require(memberUserId != requestingUserId) { "Вы уже состоите в этом чате." }
+
+        val firestore = firestoreProvider()
+        val chatReference = firestore.collection(CHATS_COLLECTION).document(chatId)
+        val current = chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
+        require(requestingUserId in current.memberIds) { "Вы больше не состоите в этом чате." }
+        require(memberUserId !in current.memberIds) { "Пользователь уже состоит в этом чате." }
+        require(
+            firestore.collection("publicProfiles").document(memberUserId).get().exists,
+        ) { "Пользователь не найден." }
+
+        chatReference.update(
+            "memberIds" to FieldValue.arrayUnion(memberUserId),
+            "updatedAt" to FieldValue.serverTimestamp,
+        )
+        chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
+    }
+
     override suspend fun removeMember(
         chatId: String,
         requestingUserId: String,
