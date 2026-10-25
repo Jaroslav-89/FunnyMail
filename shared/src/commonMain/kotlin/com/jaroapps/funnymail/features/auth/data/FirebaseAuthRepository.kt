@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import kotlin.random.Random
 
@@ -45,6 +47,8 @@ class FirebaseAuthRepository(
         Firebase.firestore
     },
 ) : AuthRepository {
+    private val userDirectoryMutex = Mutex()
+
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override val currentUser: Flow<UserProfile?> = flow {
@@ -317,12 +321,13 @@ class FirebaseAuthRepository(
         initialCustomName: String = "",
         providerDisplayName: String? = null,
     ): UserProfile {
-        val firestore = firestoreProvider()
-        val userRef = firestore.collection(USERS_COLLECTION).document(user.uid)
-        val publicRef = firestore.collection(PUBLIC_PROFILES_COLLECTION).document(user.uid)
-        val emailLower = user.email.orEmpty().trim().lowercase()
-        val emailRef = emailLower.takeIf { it.isNotBlank() }?.let {
-            firestore.collection(EMAIL_LOOKUP_COLLECTION).document(it)
+        return userDirectoryMutex.withLock {
+            val firestore = firestoreProvider()
+            val userRef = firestore.collection(USERS_COLLECTION).document(user.uid)
+            val publicRef = firestore.collection(PUBLIC_PROFILES_COLLECTION).document(user.uid)
+            val emailLower = user.email.orEmpty().trim().lowercase()
+            val emailRef = emailLower.takeIf { it.isNotBlank() }?.let {
+                firestore.collection(EMAIL_LOOKUP_COLLECTION).document(it)
         }
         val resolvedProviderName = providerDisplayName?.takeIf { it.isNotBlank() }
             ?: user.socialProviderDisplayName().orEmpty()
@@ -385,7 +390,8 @@ class FirebaseAuthRepository(
             profile
         }
 
-        return user.withDirectory(directory)
+            user.withDirectory(directory)
+        }
     }
 
     private fun FirebaseUser.socialProviderDisplayName(): String? {
