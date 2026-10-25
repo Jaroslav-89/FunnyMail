@@ -23,6 +23,7 @@ class FunnyMailMessagingService : FirebaseMessagingService() {
             ?: "Новое сообщение в чате"
 
         ensureChannel()
+        LauncherBadge.setUnread(this, unread = true)
         val intent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             message.data["chatId"]?.let { putExtra("chatId", it) }
