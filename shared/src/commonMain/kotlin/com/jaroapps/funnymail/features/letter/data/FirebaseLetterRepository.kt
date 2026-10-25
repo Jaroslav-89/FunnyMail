@@ -22,8 +22,9 @@ import kotlin.time.Clock
 
 /**
  * Stores a drawing as a JSON string in chats/{chatId}/letters/{letterId}.
- * Reads are restricted to chat members. The client limits its query to seven days; automatic
- * server-side expiry and TTL deletion still require Firebase configuration.
+ * Firestore Security Rules enforce expiresAt at the seven-day boundary (with a five-minute
+ * client-clock tolerance). Configure Firestore TTL on collection group "letters", field expiresAt,
+ * to automatically remove expired documents.
  */
 class FirebaseLetterRepository(
     private val firestoreProvider: () -> FirebaseFirestore = {
@@ -38,13 +39,12 @@ class FirebaseLetterRepository(
     override fun observeLetters(chatId: String): Flow<List<Letter>> {
         require(chatId.isNotBlank()) { "Не выбран чат." }
 
-        // Limit the query window in the client. Membership is enforced by Firestore rules;
-        // server-controlled expiry and TTL cleanup remain a separate deployment task.
-        val oldestAllowedMillis = Clock.System.now().toEpochMilliseconds() - LETTER_TTL_MILLIS
-        val oldestAllowedTimestamp = Timestamp(
-            seconds = oldestAllowedMillis / 1_000L,
-            nanoseconds = ((oldestAllowedMillis % 1_000L) * 1_000_000L).toInt(),
-        )
+        // Query only unexpired documents. Security Rules independently compare expiresAt to
+        // the server's request.time so clients cannot read an expired letter by changing local time.
+        val nowMillis = Clock.System.now().toEpochMilliseconds()
+        // Firestore Rules use server request.time. Query slightly ahead of the device clock
+        // so the query's expiry constraint is safely stricter than the server-side read rule.
+        val queryLowerBoundTimestamp = (nowMillis + QUERY_CLOCK_SAFETY_MILLIS).toFirestoreTimestamp()
 
         return flow {
             emitAll(
@@ -52,7 +52,7 @@ class FirebaseLetterRepository(
                     .collection(CHATS_COLLECTION)
                     .document(chatId)
                     .collection(LETTERS_COLLECTION)
-                    .where("createdAt", greaterThan = oldestAllowedTimestamp)
+                    .where("expiresAt", greaterThan = queryLowerBoundTimestamp)
                     .snapshots
                     .map { snapshot ->
                         snapshot.documents
@@ -85,6 +85,7 @@ class FirebaseLetterRepository(
             "Рисунок слишком большой для отправки."
         }
 
+        val expiresAtMillis = Clock.System.now().toEpochMilliseconds() + LETTER_TTL_MILLIS
         val reference = firestoreProvider()
             .collection(CHATS_COLLECTION)
             .document(chatId)
@@ -93,6 +94,7 @@ class FirebaseLetterRepository(
                 FirestoreLetterDocument(
                     authorUserId = authorUserId,
                     drawingJson = drawingJson,
+                    expiresAt = expiresAtMillis.toFirestoreTimestamp(),
                 ),
             )
 
@@ -105,7 +107,8 @@ class FirebaseLetterRepository(
         documentId: String,
         chatId: String,
     ): Letter {
-        val createdAtMillis = createdAt.requireEpochMillis()
+        val createdAtMillis = createdAt.requireEpochMillis("createdAt")
+        val expiresAtMillis = expiresAt.requireEpochMillis("expiresAt")
         val drawing = drawingCodec.decode(drawingJson).getOrThrow()
         return Letter(
             id = documentId,
@@ -113,13 +116,18 @@ class FirebaseLetterRepository(
             authorUserId = authorUserId,
             drawing = drawing,
             createdAtEpochMillis = createdAtMillis,
-            expiresAtEpochMillis = createdAtMillis + LETTER_TTL_MILLIS,
+            expiresAtEpochMillis = expiresAtMillis,
         )
     }
 
-    private fun BaseTimestamp.requireEpochMillis(): Long =
+    private fun BaseTimestamp.requireEpochMillis(field: String): Long =
         (this as? Timestamp)?.toMilliseconds()?.toLong()
-            ?: error("Firestore не вернул серверное время для письма.")
+            ?: error("Firestore не вернул корректную метку времени $field для письма.")
+
+    private fun Long.toFirestoreTimestamp(): Timestamp = Timestamp(
+        seconds = this / 1_000L,
+        nanoseconds = ((this % 1_000L) * 1_000_000L).toInt(),
+    )
 
     private suspend fun <T> asResult(block: suspend () -> T): Result<T> =
         try {
@@ -135,12 +143,14 @@ class FirebaseLetterRepository(
         val authorUserId: String,
         val drawingJson: String,
         val createdAt: BaseTimestamp = Timestamp.ServerTimestamp,
+        val expiresAt: BaseTimestamp,
     )
 
     private companion object {
         const val CHATS_COLLECTION = "chats"
         const val LETTERS_COLLECTION = "letters"
         const val LETTER_TTL_MILLIS = 7L * 24L * 60L * 60L * 1_000L
+        const val QUERY_CLOCK_SAFETY_MILLIS = 6L * 60L * 1_000L
         const val MAX_DRAWING_JSON_BYTES = 256 * 1_024
     }
 }

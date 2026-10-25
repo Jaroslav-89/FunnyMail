@@ -64,15 +64,26 @@ service cloud.firestore {
 
     match /chats/{chatId}/letters/{letterId} {
       // Drawing data is stored as JSON text, not as an image or Cloud Storage object.
+      // The client supplies expiresAt, but the server request time constrains it to a
+      // five-minute window around seven days after this write.
       allow create: if isChatMember(chatId)
-        && request.resource.data.keys().hasOnly(['authorUserId', 'drawingJson', 'createdAt'])
+        && request.resource.data.keys().hasOnly([
+          'authorUserId', 'drawingJson', 'createdAt', 'expiresAt'
+        ])
         && request.resource.data.authorUserId == request.auth.uid
         && request.resource.data.drawingJson is string
         && request.resource.data.drawingJson.size() > 0
         && request.resource.data.drawingJson.size() <= 262144
-        && request.resource.data.createdAt == request.time;
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.expiresAt is timestamp
+        && request.resource.data.expiresAt
+          >= request.time + duration.value(6, 'd') + duration.value(23, 'h') + duration.value(55, 'm')
+        && request.resource.data.expiresAt
+          <= request.time + duration.value(7, 'd') + duration.value(5, 'm');
 
-      allow read: if isChatMember(chatId);
+      allow read: if isChatMember(chatId)
+        && resource.data.expiresAt is timestamp
+        && request.time < resource.data.expiresAt;
       allow update, delete: if false;
     }
 
