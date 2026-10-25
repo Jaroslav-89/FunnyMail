@@ -104,6 +104,10 @@ fun DrawingScreen(
     initialDrawingJson: String? = null,
 ) {
     val drawingCodec = remember { DrawingCodec() }
+    val drawSomethingMessage = stringResource(Res.string.draw_something)
+    val drawingEditsSavedMessage = stringResource(Res.string.drawing_edits_saved)
+    val drawingSavedLocallyMessage = stringResource(Res.string.drawing_saved_locally)
+    val drawingSentChatMessage = stringResource(Res.string.drawing_sent_chat)
     val initialDrawing = remember(initialDrawingJson) {
         initialDrawingJson?.let { drawingCodec.decode(it).getOrNull() }
     }
@@ -195,7 +199,7 @@ fun DrawingScreen(
     val saveDrawingAction: () -> Unit = {
         val json = currentDrawingJson
         if (json == null) {
-            statusMessage = "Сначала нарисуй что-нибудь на холсте."
+            statusMessage = drawSomethingMessage
             statusIsError = true
         } else if (!isSaving && !isCurrentDrawingSaved) {
             isSaving = true
@@ -204,9 +208,9 @@ fun DrawingScreen(
                 if (saveError == null) {
                     savedDrawingJson = json
                     statusMessage = if (initialDrawingJson != null) {
-                        "Изменения сохранены в галерее."
+                        drawingEditsSavedMessage
                     } else {
-                        "Рисунок сохранён в локальную галерею."
+                        drawingSavedLocallyMessage
                     }
                     statusIsError = false
                 } else {
@@ -220,14 +224,14 @@ fun DrawingScreen(
     val sendDrawingAction: () -> Unit = {
         val json = currentDrawingJson
         if (json == null) {
-            statusMessage = "Сначала нарисуй что-нибудь на холсте."
+            statusMessage = drawSomethingMessage
             statusIsError = true
         } else if (!isSending) {
             isSending = true
             onSendDrawing(json) { sendError ->
                 isSending = false
                 if (sendError == null) {
-                    statusMessage = "Рисунок отправлен в чат."
+                    statusMessage = drawingSentChatMessage
                     statusIsError = false
                 } else {
                     statusMessage = sendError
@@ -407,7 +411,7 @@ fun DrawingScreen(
             RoundToolButton(
                 onClick = {
                     if (currentDrawingJson == null) {
-                        statusMessage = "Сначала нарисуй что-нибудь на холсте."
+                        statusMessage = drawSomethingMessage
                         statusIsError = true
                     } else {
                         showFinishDialog = true
