@@ -30,7 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.runtime.Composable
@@ -269,7 +268,7 @@ fun LettersScreen(
                                 }
                             }
                         } else {
-                            Text(stringResource(Res.string.reading_drawing_failed), color = MaterialTheme.colorScheme.error)
+                            Text(readingDrawingFailedText, color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
