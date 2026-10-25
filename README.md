@@ -10,7 +10,7 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - Kotlin Serialization for drawing JSON
 - Koin for dependency injection
 - GitLive Firebase Kotlin SDK for shared Firebase Authentication
-- Cloud Firestore (repository adapters pending)
+- Cloud Firestore (chat and invite repository adapters implemented; Firestore rules must be published)
 - Room KMP for local-first letter storage (integration pending)
 
 **Storage rule:** drawing data is structured JSON stored directly in the Firestore letter document. Firebase Cloud Storage and PNG-based letter storage are not used.
@@ -36,7 +36,7 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [x] Native Sign in with Apple on iOS with nonce validation
 - [x] Firebase config checks that keep an unconfigured checkout launchable
 - [x] Auth, chat, invite and letter domain models/repository contracts
-- [ ] Firestore adapters for chats and invites
+- [x] Firestore adapters for chats and invites (`firestore.rules` must be published in the Firebase project)
 - [ ] Room KMP database and local-first repositories
 - [x] Shared drawing canvas with color palette, adjustable brush, eraser, undo and clear controls
 - [x] Drawing JSON validation and draft preview
@@ -57,6 +57,14 @@ Platform sign-in options are intentionally separate: Android offers email/passwo
 5. In Firebase Console, register the iOS app with the exact, case-sensitive bundle ID `com.jaroapps.funnymail.FunnyMail`. Download its `GoogleService-Info.plist` to `iosApp/iosApp/GoogleService-Info.plist` (the filename must not include a suffix such as `(2)`). In Xcode, select the file and confirm **Target Membership → iosApp**. The file is intentionally ignored by Git and must be added to each developer's local checkout. After adding it, stop and rebuild/reinstall the app so the plist is copied into the app bundle.
 6. In Firebase Console, enable **Apple** under **Authentication → Sign-in method** and configure the required Apple Team ID, Service ID, key ID and private key as requested by Firebase. In the Apple Developer portal, enable **Sign in with Apple** for the same App ID.
 7. In Xcode, open the app target's **Signing & Capabilities**, select your development team and add **Sign in with Apple**. The bundle identifier should remain `com.jaroapps.funnymail.FunnyMail`; the development Team ID is for signing and must not be appended to the bundle identifier. Apple Developer signing/provisioning must authorize the Apple sign-in entitlement.
+
+### Cloud Firestore setup
+
+1. Create a Cloud Firestore database in the same Firebase project used for Authentication.
+2. Publish the rules from `firestore.rules` in Firebase Console → Firestore Database → Rules. Until the rules are published, chat and invite writes will be rejected.
+3. The app creates `chats` and `chatInvites` documents. Invite validity lasts seven days from the server-assigned `createdAt` timestamp; the security rules use server `request.time`, not the device clock.
+4. Firestore document access is limited to signed-in users. Chat reads are limited to members, and joining requires a live invite created by a current member. Do not replace these rules with open read/write rules.
+5. Since Firestore adds a native iOS Firebase dependency, rerun the SwiftPM linkage generation commands below on macOS, commit generated linkage files if they change, and resolve package versions in Xcode before the iOS build.
 
 ### iOS Swift Package Manager integration
 
