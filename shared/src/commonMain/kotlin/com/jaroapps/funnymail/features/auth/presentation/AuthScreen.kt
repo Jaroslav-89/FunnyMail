@@ -56,34 +56,7 @@ import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.core.auth.NativeSocialSignIn
 import com.jaroapps.funnymail.core.ui.AppBackButton
 import org.koin.compose.viewmodel.koinViewModel
-import com.jaroapps.funnymail.resources.account_signin_hint
-import com.jaroapps.funnymail.resources.account_title
-import com.jaroapps.funnymail.resources.already_have_account
-import com.jaroapps.funnymail.resources.chat_display_name
-import com.jaroapps.funnymail.resources.check_username
-import com.jaroapps.funnymail.resources.continue_apple
-import com.jaroapps.funnymail.resources.continue_google
-import com.jaroapps.funnymail.resources.continue_with
-import com.jaroapps.funnymail.resources.create_account
-import com.jaroapps.funnymail.resources.dark_theme
-import com.jaroapps.funnymail.resources.dark_theme_description
-import com.jaroapps.funnymail.resources.email
-import com.jaroapps.funnymail.resources.firebase_unconfigured_message
-import com.jaroapps.funnymail.resources.login
-import com.jaroapps.funnymail.resources.name
-import com.jaroapps.funnymail.resources.name_fallback_hint
-import com.jaroapps.funnymail.resources.optional_name
-import com.jaroapps.funnymail.resources.password
-import com.jaroapps.funnymail.resources.register
-import com.jaroapps.funnymail.resources.save
-import com.jaroapps.funnymail.resources.saving
-import com.jaroapps.funnymail.resources.sign_out
-import com.jaroapps.funnymail.resources.signed_in_as
-import com.jaroapps.funnymail.resources.unique_username
-import com.jaroapps.funnymail.resources.username_available
-import com.jaroapps.funnymail.resources.username_hint
-import com.jaroapps.funnymail.resources.username_label
-import com.jaroapps.funnymail.resources.username_taken
+import com.jaroapps.funnymail.resources.Res
 
 @Composable
 fun AuthScreen(
@@ -94,7 +67,7 @@ fun AuthScreen(
 ) {
     val viewModel: AuthViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
-    val firebaseUnconfiguredMessage = stringResource(firebase_unconfigured_message)
+    val firebaseUnconfiguredMessage = stringResource(Res.string.firebase_unconfigured_message)
 
     var registrationName by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
@@ -124,7 +97,7 @@ fun AuthScreen(
         ) {
             AppBackButton(onClick = onBack)
             Text(
-                text = stringResource(account_title),
+                text = stringResource(Res.string.account_title),
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -135,9 +108,9 @@ fun AuthScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(stringResource(dark_theme), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(Res.string.dark_theme), style = MaterialTheme.typography.titleMedium)
                 Text(
-                    stringResource(dark_theme_description),
+                    stringResource(Res.string.dark_theme_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -155,7 +128,7 @@ fun AuthScreen(
 
         if (state.currentUser == null) {
             Text(
-                text = stringResource(account_signin_hint),
+                text = stringResource(Res.string.account_signin_hint),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -175,7 +148,7 @@ fun AuthScreen(
         }
 
         if (state.currentUser != null) {
-            Text(stringResource(signed_in_as), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(Res.string.signed_in_as), style = MaterialTheme.typography.titleMedium)
             Text(
                 text = state.currentUser?.chatDisplayName.orEmpty(),
                 style = MaterialTheme.typography.headlineSmall,
@@ -185,18 +158,18 @@ fun AuthScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Text(stringResource(chat_display_name), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(Res.string.chat_display_name), style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
                 value = customName,
                 onValueChange = { customName = it.take(40) },
-                label = { Text(stringResource(optional_name)) },
-                supportingText = { Text(stringResource(name_fallback_hint)) },
+                label = { Text(stringResource(Res.string.optional_name)) },
+                supportingText = { Text(stringResource(Res.string.name_fallback_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !state.isSavingProfile,
             )
 
-            Text(stringResource(unique_username), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(Res.string.unique_username), style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
                 value = username,
                 onValueChange = {
@@ -207,8 +180,8 @@ fun AuthScreen(
                     viewModel.resetUsernameCheck()
                 },
                 leadingIcon = { Text("@", style = MaterialTheme.typography.titleMedium) },
-                label = { Text(stringResource(username_label)) },
-                supportingText = { Text(stringResource(username_hint)) },
+                label = { Text(stringResource(Res.string.username_label)) },
+                supportingText = { Text(stringResource(Res.string.username_hint)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !state.isSavingProfile,
@@ -216,14 +189,14 @@ fun AuthScreen(
 
             if (state.usernameAvailability == false) {
                 Text(
-                    stringResource(username_taken),
+                    stringResource(Res.string.username_taken),
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
             if (state.usernameAvailability == true && !usernameUnchanged) {
                 Text(
-                    stringResource(username_available),
+                    stringResource(Res.string.username_available),
                     color = MaterialTheme.colorScheme.primary,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -258,10 +231,10 @@ fun AuthScreen(
                         modifier = Modifier.size(20.dp),
                         strokeWidth = 2.dp,
                     )
-                    state.isSavingProfile -> Text(stringResource(saving))
+                    state.isSavingProfile -> Text(stringResource(Res.string.saving))
                     normalizedUsername.isBlank() || usernameUnchanged ||
-                        state.usernameAvailability == true -> Text(stringResource(save))
-                    else -> Text(stringResource(check_username))
+                        state.usernameAvailability == true -> Text(stringResource(Res.string.save))
+                    else -> Text(stringResource(Res.string.check_username))
                 }
             }
 
@@ -270,14 +243,14 @@ fun AuthScreen(
                 enabled = !state.isSubmitting && !state.isSavingProfile,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(sign_out))
+                Text(stringResource(Res.string.sign_out))
             }
         } else {
             if (state.isRegistration) {
                 OutlinedTextField(
                     value = registrationName,
                     onValueChange = { registrationName = it },
-                    label = { Text(stringResource(name)) },
+                    label = { Text(stringResource(Res.string.name)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -286,7 +259,7 @@ fun AuthScreen(
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text(stringResource(email)) },
+                label = { Text(stringResource(Res.string.email)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -294,7 +267,7 @@ fun AuthScreen(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text(stringResource(password)) },
+                label = { Text(stringResource(Res.string.password)) },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
@@ -312,7 +285,7 @@ fun AuthScreen(
                 if (state.isSubmitting) CircularProgressIndicator(
                     modifier = Modifier.height(20.dp),
                     strokeWidth = 2.dp,
-                ) else Text(if (state.isRegistration) stringResource(create_account) else stringResource(login))
+                ) else Text(if (state.isRegistration) stringResource(Res.string.create_account) else stringResource(Res.string.login))
             }
 
             OutlinedButton(
@@ -320,11 +293,11 @@ fun AuthScreen(
                 enabled = !state.isSubmitting,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(if (state.isRegistration) stringResource(already_have_account) else stringResource(register))
+                Text(if (state.isRegistration) stringResource(Res.string.already_have_account) else stringResource(Res.string.register))
             }
 
             Text(
-                text = stringResource(continue_with),
+                text = stringResource(Res.string.continue_with),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp),
@@ -338,14 +311,14 @@ fun AuthScreen(
                         containerColor = Color(0xFF075B35),
                         contentColor = Color.White,
                     ),
-                ) { Text(stringResource(continue_google)) }
+                ) { Text(stringResource(Res.string.continue_google)) }
             }
             if (NativeSocialSignIn.supportsAppleSignIn) {
                 OutlinedButton(
                     onClick = viewModel::signInWithApple,
                     enabled = !state.isSubmitting && firebaseConfigured,
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(continue_apple)) }
+                ) { Text(stringResource(Res.string.continue_apple)) }
             }
         }
 
