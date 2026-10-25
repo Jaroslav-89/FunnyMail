@@ -224,7 +224,7 @@ private fun FunnyMailContent(
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (error: Exception) {
-                    reportResult(error.message ?: sendingDrawingFailedText)
+                    reportResult(sendingDrawingFailedText)
                 }
             }
         }
