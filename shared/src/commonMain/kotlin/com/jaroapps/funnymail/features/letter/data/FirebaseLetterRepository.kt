@@ -33,7 +33,7 @@ import kotlin.time.Clock
 class FirebaseLetterRepository(
     private val firestoreProvider: () -> FirebaseFirestore = {
         check(FirebaseRuntimeStatus.isConfigured) {
-            "Firebase не настроен. Добавьте файлы конфигурации платформы."
+            "Firebase is not configured. Add platform configuration files."
         }
         Firebase.firestore
     },
@@ -41,7 +41,7 @@ class FirebaseLetterRepository(
 ) : LetterRepository {
 
     override fun observeLetters(chatId: String): Flow<List<Letter>> {
-        require(chatId.isNotBlank()) { getString(Res.string.letter_chat_not_selected) }
+        require(chatId.isNotBlank()) { "No chat selected." }
 
         // Query only unexpired documents. Security Rules independently compare expiresAt to
         // the server's request.time so clients cannot read an expired letter by changing local time.
@@ -128,7 +128,7 @@ class FirebaseLetterRepository(
         letterId: String,
         requestingUserId: String,
     ): Result<Unit> = asResult {
-        require(chatId.isNotBlank()) { "Не выбран чат." }
+        require(chatId.isNotBlank()) { getString(Res.string.letter_chat_not_selected) }
         require(letterId.isNotBlank()) { getString(Res.string.letter_delete_drawing_not_selected) }
         require(requestingUserId.isNotBlank()) { getString(Res.string.letter_delete_login_required) }
 
@@ -171,7 +171,7 @@ class FirebaseLetterRepository(
 
     private fun BaseTimestamp.requireEpochMillis(field: String): Long =
         (this as? Timestamp)?.toMilliseconds()?.toLong()
-            ?: error("Firestore не вернул корректную метку времени $field для письма.")
+            ?: error("Firestore did not return a valid $field timestamp for the drawing.")
 
     private fun Long.toFirestoreTimestamp(): Timestamp = Timestamp(
         seconds = this / 1_000L,
