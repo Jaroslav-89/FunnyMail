@@ -17,16 +17,23 @@ internal fun DrawScope.drawDrawingStrokes(
     strokes: List<DrawingStroke>,
     canvasWidth: Int,
     canvasHeight: Int,
+    contentInsetFraction: Float = 0f,
 ) {
     val logicalWidth = canvasWidth.coerceAtLeast(1).toFloat()
     val logicalHeight = canvasHeight.coerceAtLeast(1).toFloat()
-    val scale = min(size.width / logicalWidth, size.height / logicalHeight)
+
+    // Preview surfaces clip to rounded corners, and strokes may touch the canvas edges.
+    // Reserve an inner margin so the artwork's top/bottom and edge strokes remain visible.
+    val inset = size.minDimension * contentInsetFraction.coerceIn(0f, 0.2f)
+    val availableWidth = (size.width - inset * 2f).coerceAtLeast(0f)
+    val availableHeight = (size.height - inset * 2f).coerceAtLeast(0f)
+    val scale = min(availableWidth / logicalWidth, availableHeight / logicalHeight)
     if (!scale.isFinite() || scale <= 0f) return
 
     val contentWidth = logicalWidth * scale
     val contentHeight = logicalHeight * scale
-    val offsetX = (size.width - contentWidth) / 2f
-    val offsetY = (size.height - contentHeight) / 2f
+    val offsetX = inset + (availableWidth - contentWidth) / 2f
+    val offsetY = inset + (availableHeight - contentHeight) / 2f
 
     strokes.forEach { stroke ->
         if (stroke.points.isEmpty()) return@forEach
