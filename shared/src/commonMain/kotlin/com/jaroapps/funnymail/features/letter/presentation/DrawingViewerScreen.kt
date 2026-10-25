@@ -27,7 +27,7 @@ import org.jetbrains.compose.resources.stringResource
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingStrokes
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingBackground
-import com.jaroapps.funnymail.resources.back_to_chat
+import com.jaroapps.funnymail.resources.Res
 
 /**
  * Read-only full-screen view of a drawing sent to a chat.
@@ -37,7 +37,7 @@ fun DrawingViewerScreen(
     drawing: DrawingDocument,
     onBack: () -> Unit,
 ) {
-    val backToChatDescription = stringResource(back_to_chat)
+    val backToChatDescription = stringResource(Res.string.back_to_chat)
     Box(
         modifier = Modifier
             .fillMaxSize()

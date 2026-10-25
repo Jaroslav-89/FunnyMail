@@ -50,17 +50,7 @@ import kotlinx.coroutines.flow.first
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
-import com.jaroapps.funnymail.resources.chat_not_selected
-import com.jaroapps.funnymail.resources.choose_chat_hint
-import com.jaroapps.funnymail.resources.drawing_unavailable
-import com.jaroapps.funnymail.resources.invite_creation_failure_message
-import com.jaroapps.funnymail.resources.invite_login_required
-import com.jaroapps.funnymail.resources.reading_drawing_failed_short
-import com.jaroapps.funnymail.resources.saving_drawing_failed
-import com.jaroapps.funnymail.resources.select_drawing_hint
-import com.jaroapps.funnymail.resources.send_drawing_login_required
-import com.jaroapps.funnymail.resources.send_drawing_open_chat_first
-import com.jaroapps.funnymail.resources.sending_drawing_failed
+import com.jaroapps.funnymail.resources.Res
 
 @Composable
 fun App() {
@@ -99,17 +89,17 @@ private fun FunnyMailContent(
 ) {
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
     var darkThemeEnabled by rememberSaveable { mutableStateOf(ThemePreferenceStorage.loadDarkTheme()) }
-    val inviteLoginRequiredText = stringResource(invite_login_required)
-    val inviteCreateFailedText = stringResource(invite_creation_failure_message)
-    val sendDrawingOpenChatFirstText = stringResource(send_drawing_open_chat_first)
-    val sendDrawingLoginRequiredText = stringResource(send_drawing_login_required)
-    val readingDrawingFailedText = stringResource(reading_drawing_failed_short)
-    val sendingDrawingFailedText = stringResource(sending_drawing_failed)
-    val savingDrawingFailedText = stringResource(saving_drawing_failed)
-    val chatNotSelectedText = stringResource(chat_not_selected)
-    val chooseChatHintText = stringResource(choose_chat_hint)
-    val drawingUnavailableText = stringResource(drawing_unavailable)
-    val selectDrawingHintText = stringResource(select_drawing_hint)
+    val inviteLoginRequiredText = stringResource(Res.string.invite_login_required)
+    val inviteCreateFailedText = stringResource(Res.string.invite_creation_failure_message)
+    val sendDrawingOpenChatFirstText = stringResource(Res.string.send_drawing_open_chat_first)
+    val sendDrawingLoginRequiredText = stringResource(Res.string.send_drawing_login_required)
+    val readingDrawingFailedText = stringResource(Res.string.reading_drawing_failed_short)
+    val sendingDrawingFailedText = stringResource(Res.string.sending_drawing_failed)
+    val savingDrawingFailedText = stringResource(Res.string.saving_drawing_failed)
+    val chatNotSelectedText = stringResource(Res.string.chat_not_selected)
+    val chooseChatHintText = stringResource(Res.string.choose_chat_hint)
+    val drawingUnavailableText = stringResource(Res.string.drawing_unavailable)
+    val selectDrawingHintText = stringResource(Res.string.select_drawing_hint)
     var selectedChat by remember { mutableStateOf<Chat?>(null) }
     var viewingDrawing by remember { mutableStateOf<DrawingDocument?>(null) }
     var editingDrawingId by remember { mutableStateOf<Long?>(null) }

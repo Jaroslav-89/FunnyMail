@@ -31,30 +31,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.jaroapps.funnymail.resources.chats_screen_tagline
-import com.jaroapps.funnymail.resources.chats_screen_description
-import com.jaroapps.funnymail.resources.chats_account_required
-import com.jaroapps.funnymail.resources.chats_account_description
-import com.jaroapps.funnymail.resources.chats_sign_in_register
-import com.jaroapps.funnymail.resources.chats_create_chat
-import com.jaroapps.funnymail.resources.chats_join_by_code
-import com.jaroapps.funnymail.resources.chats_join
-import com.jaroapps.funnymail.resources.chats_invite_help
-import com.jaroapps.funnymail.resources.chats_hide_code
-import com.jaroapps.funnymail.resources.chats_your_chats
-import com.jaroapps.funnymail.resources.chats_empty
-import com.jaroapps.funnymail.resources.chats_open_chat
-import com.jaroapps.funnymail.resources.chats_invite_friend
-import com.jaroapps.funnymail.resources.chats_working
-import com.jaroapps.funnymail.resources.chats_member_and_code
-import com.jaroapps.funnymail.resources.back
-import com.jaroapps.funnymail.resources.chat_list_title
-import com.jaroapps.funnymail.resources.new_chat
-import com.jaroapps.funnymail.resources.chat_title
-import com.jaroapps.funnymail.resources.max_title_length
-import com.jaroapps.funnymail.resources.invite_code
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import org.koin.compose.viewmodel.koinViewModel
+import com.jaroapps.funnymail.resources.Res
 
 @Composable
 fun ChatsScreen(
@@ -78,22 +57,22 @@ fun ChatsScreen(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = onBack) { Text(stringResource(back)) }
+            TextButton(onClick = onBack) { Text(stringResource(Res.string.back)) }
             Spacer(Modifier.weight(1f))
             Text(
-                text = stringResource(chat_list_title),
+                text = stringResource(Res.string.chat_list_title),
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
         }
 
         Text(
-            text = stringResource(chats_screen_tagline),
+            text = stringResource(Res.string.chats_screen_tagline),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold,
         )
         Text(
-            text = stringResource(chats_screen_description),
+            text = stringResource(Res.string.chats_screen_description),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -109,16 +88,16 @@ fun ChatsScreen(
                     modifier = Modifier.padding(18.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Text(stringResource(chats_account_required), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(Res.string.chats_account_required), style = MaterialTheme.typography.titleMedium)
                     Text(
-                        stringResource(chats_account_description),
+                        stringResource(Res.string.chats_account_description),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Button(
                         onClick = onOpenAccount,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(stringResource(chats_sign_in_register))
+                        Text(stringResource(Res.string.chats_sign_in_register))
                     }
                 }
             }
@@ -133,13 +112,13 @@ fun ChatsScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Text(stringResource(new_chat), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(Res.string.new_chat), style = MaterialTheme.typography.titleMedium)
                     OutlinedTextField(
                         value = chatTitle,
                         onValueChange = { chatTitle = it },
-                        label = { Text(stringResource(chat_title)) },
+                        label = { Text(stringResource(Res.string.chat_title)) },
                         singleLine = true,
-                        supportingText = { Text(stringResource(max_title_length)) },
+                        supportingText = { Text(stringResource(Res.string.max_title_length)) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                     Button(
@@ -150,7 +129,7 @@ fun ChatsScreen(
                         enabled = !state.isSubmitting && chatTitle.isNotBlank(),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(stringResource(chats_create_chat))
+                        Text(stringResource(Res.string.chats_create_chat))
                     }
                 }
             }
@@ -165,11 +144,11 @@ fun ChatsScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Text(stringResource(chats_join_by_code), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(Res.string.chats_join_by_code), style = MaterialTheme.typography.titleMedium)
                     OutlinedTextField(
                         value = inviteCode,
                         onValueChange = { inviteCode = it.trimStart() },
-                        label = { Text(stringResource(invite_code)) },
+                        label = { Text(stringResource(Res.string.invite_code)) },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -181,7 +160,7 @@ fun ChatsScreen(
                         enabled = !state.isSubmitting && inviteCode.isNotBlank(),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text(stringResource(chats_join))
+                        Text(stringResource(Res.string.chats_join))
                     }
                 }
             }
@@ -197,7 +176,7 @@ fun ChatsScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Text(stringResource(invite_code), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(Res.string.invite_code), style = MaterialTheme.typography.titleMedium)
                         SelectionContainer {
                             Text(
                                 invite.code,
@@ -206,21 +185,21 @@ fun ChatsScreen(
                             )
                         }
                         Text(
-                            stringResource(chats_invite_help),
+                            stringResource(Res.string.chats_invite_help),
                             style = MaterialTheme.typography.bodySmall,
                         )
                         TextButton(onClick = viewModel::dismissInvite) {
-                            Text(stringResource(chats_hide_code))
+                            Text(stringResource(Res.string.chats_hide_code))
                         }
                     }
                 }
             }
 
-            Text(stringResource(chats_your_chats), style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(Res.string.chats_your_chats), style = MaterialTheme.typography.titleLarge)
             when {
                 state.isLoading -> CircularProgressIndicator()
                 state.chats.isEmpty() -> Text(
-                    stringResource(chats_empty),
+                    stringResource(Res.string.chats_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -237,7 +216,7 @@ fun ChatsScreen(
                         ) {
                             Text(chat.title, style = MaterialTheme.typography.titleMedium)
                             Text(
-                                stringResource(chats_member_and_code, chat.memberIds.size, chat.id.take(6)),
+                                stringResource(Res.string.chats_member_and_code, chat.memberIds.size, chat.id.take(6)),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -245,14 +224,14 @@ fun ChatsScreen(
                                 onClick = { onOpenChat(chat) },
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text(stringResource(chats_open_chat))
+                                Text(stringResource(Res.string.chats_open_chat))
                             }
                             OutlinedButton(
                                 onClick = { viewModel.createInvite(chat.id) },
                                 enabled = !state.isSubmitting,
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text(stringResource(chats_invite_friend))
+                                Text(stringResource(Res.string.chats_invite_friend))
                             }
                         }
                     }
@@ -280,7 +259,7 @@ fun ChatsScreen(
             ) {
                 CircularProgressIndicator()
                 Spacer(Modifier.width(12.dp))
-                Text(stringResource(chats_working))
+                Text(stringResource(Res.string.chats_working))
             }
         }
     }
