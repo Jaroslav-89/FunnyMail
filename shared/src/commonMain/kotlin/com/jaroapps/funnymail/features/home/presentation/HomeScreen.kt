@@ -71,6 +71,9 @@ fun HomeScreen(
     val viewModel: ChatViewModel = koinViewModel()
     val chatRepository = koinInject<ChatRepository>()
     val state by viewModel.state.collectAsState()
+    val accountDescription = stringResource(Res.string.account_label)
+    val openChatMenuDescription = stringResource(Res.string.chat_menu_open)
+    val closeChatMenuDescription = stringResource(Res.string.chat_menu_close)
     val currentUserId = state.currentUser?.id
 
     var actionsExpanded by rememberSaveable { mutableStateOf(false) }
@@ -154,7 +157,7 @@ fun HomeScreen(
                     onClick = onOpenAccount,
                     modifier = Modifier
                         .size(48.dp)
-                        .semantics { contentDescription = "Аккаунт" },
+                        .semantics { contentDescription = accountDescription },
                 ) {
                     Surface(
                         shape = CircleShape,
