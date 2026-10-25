@@ -47,6 +47,7 @@ import com.jaroapps.funnymail.core.ui.EditPencilIcon
 import com.jaroapps.funnymail.core.ui.TrashCanIcon
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingStrokes
+import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingBackground
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.model.SavedDrawing
 import com.jaroapps.funnymail.features.drawing.domain.repository.LocalDrawingRepository
@@ -332,6 +333,7 @@ fun DrawingPreview(
             .background(Color.White)
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape),
     ) {
+        drawDrawingBackground(drawing.canvas)
         drawDrawingStrokes(
             strokes = drawing.strokes,
             canvasWidth = drawing.canvas.width,
