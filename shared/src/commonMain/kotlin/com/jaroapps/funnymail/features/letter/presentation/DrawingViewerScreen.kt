@@ -36,7 +36,7 @@ import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingBackgroun
 fun DrawingViewerScreen(
     drawing: DrawingDocument,
     onBack: () -> Unit,
- ) {
+) {
     val backToChatDescription = stringResource(Res.string.back_to_chat)
     Box(
         modifier = Modifier
@@ -44,7 +44,7 @@ fun DrawingViewerScreen(
             .background(Color.White),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
-        drawDrawingBackground(drawing.canvas)
+            drawDrawingBackground(drawing.canvas)
             drawDrawingStrokes(
                 strokes = drawing.strokes,
                 canvasWidth = drawing.canvas.width,
