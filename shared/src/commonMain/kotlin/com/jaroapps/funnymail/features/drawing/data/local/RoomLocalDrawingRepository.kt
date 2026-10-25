@@ -36,6 +36,17 @@ class RoomLocalDrawingRepository(
         )
     }
 
+    override suspend fun updateDrawing(id: Long, drawingJson: String) {
+        require(id > 0L) { "Некорректный идентификатор рисунка." }
+        val validation = drawingCodec.decode(drawingJson)
+        require(validation.isSuccess) {
+            validation.exceptionOrNull()?.message ?: "Не удалось проверить рисунок."
+        }
+
+        val updatedRows = dao.updateDrawingById(id, drawingJson)
+        check(updatedRows > 0) { "Сохранённый рисунок не найден." }
+    }
+
     override suspend fun deleteDrawing(id: Long) {
         dao.deleteById(id)
     }
