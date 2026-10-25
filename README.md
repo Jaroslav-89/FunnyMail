@@ -41,7 +41,8 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [x] Shared drawing canvas with color palette, adjustable brush, eraser, undo and clear controls
 - [x] Drawing JSON validation and draft preview
 - [x] Local draft persistence on Android (SharedPreferences) and iOS (NSUserDefaults)
-- [ ] Firestore letter adapters and sending letters to chats
+- [x] Firestore letter adapter, sending drawing drafts to chats, and live letter feed
+- [ ] Server-controlled letter expiry and automatic Firestore TTL cleanup
 - [ ] Offline synchronization
 - [x] Firestore Security Rules for chat membership and seven-day invite expiry (publish them to the Firebase project)
 - [ ] Firestore TTL cleanup and server-controlled expiry for letters
@@ -62,8 +63,8 @@ Platform sign-in options are intentionally separate: Android offers email/passwo
 ### Cloud Firestore setup
 
 1. Create a Cloud Firestore database in the same Firebase project used for Authentication.
-2. Publish the rules from `firestore.rules` in Firebase Console → Firestore Database → Rules. Until the rules are published, chat and invite writes will be rejected.
-3. The app creates `chats` and `chatInvites` documents. Invite validity lasts seven days from the server-assigned `createdAt` timestamp; the security rules use server `request.time`, not the device clock. Expired invite documents are denied but are not automatically deleted yet; TTL cleanup is still pending.
+2. Publish the rules from `firestore.rules` in Firebase Console → Firestore Database → Rules. Until the rules are published, chat, invite, and letter writes will be rejected.
+3. The app creates `chats` and `chatInvites` documents and stores sent drawings as JSON strings in `chats/{chatId}/letters/{letterId}`. Invite validity lasts seven days from the server-assigned `createdAt` timestamp; the security rules use server `request.time`, not the device clock. Expired invite documents are denied but are not automatically deleted yet; invite TTL cleanup is still pending. Letter lists query the last seven days on the client; server-controlled letter expiry and automatic TTL cleanup are not configured yet.
 4. Firestore document access is limited to signed-in users. Chat reads are limited to members, and joining requires a live invite created by a current member. Do not replace these rules with open read/write rules.
 5. Since Firestore adds a native iOS Firebase dependency, rerun the SwiftPM linkage generation commands below on macOS, commit generated linkage files if they change, and resolve package versions in Xcode before the iOS build.
 
@@ -109,7 +110,7 @@ For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run on an iOS simulator or 
 
 - Presentation and domain code depend on repository interfaces, not Firebase SDK types.
 - The repository layer should expose data through `Flow`, so the UI can react to local and remote changes.
-- The Firestore letter adapter must encode a drawing into a JSON string field in the letter document; it must not upload images or use Firebase Storage.
+- The Firestore letter adapter encodes a drawing into the `drawingJson` string field under `chats/{chatId}/letters/{letterId}`; it must not upload images or use Firebase Storage.
 - Letter creation/expiry timestamps and invite validation must be controlled by trusted backend logic, not only by the client clock.
 - The target retention period for letters is seven days, with Firestore TTL configured on the expiry field.
 - Client-side validation is not a substitute for Firestore Security Rules and server-side authorization.
