@@ -12,7 +12,7 @@ actual object ThemePreferenceStorage {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = DARK_THEME_KEY)
     }
 
-    actual fun updateSystemBars(darkThemeEnabled: Boolean) = Unit
+    actual fun updateSystemBars(darkThemeEnabled: Boolean, transparentStatusBar: Boolean) = Unit
 
     private const val DARK_THEME_KEY = "funnymail.darkThemeEnabled"
 }
