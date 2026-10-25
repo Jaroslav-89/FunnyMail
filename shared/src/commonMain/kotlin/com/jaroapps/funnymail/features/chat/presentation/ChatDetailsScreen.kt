@@ -85,7 +85,7 @@ fun ChatDetailsScreen(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 104.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Row(
