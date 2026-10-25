@@ -3,6 +3,9 @@ package com.jaroapps.funnymail.features.chat.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
+import com.jaroapps.funnymail.resources.Res
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.getString
 import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
@@ -76,12 +79,12 @@ class ChatViewModel(
 
     fun createChat(title: String) {
         val userId = _state.value.currentUser?.id ?: run {
-            showError("Сначала войдите в аккаунт.")
+            showError(Res.string.letter_login_required)
             return
         }
         if (_state.value.isSubmitting) return
         if (title.isBlank()) {
-            showError("Введите название чата.")
+            showError(Res.string.chat_enter_title)
             return
         }
 
@@ -100,7 +103,7 @@ class ChatViewModel(
                         it.copy(
                             isSubmitting = false,
                             lastCreatedChatId = chat.id,
-                            message = "Чат создан.",
+                            message = getString(Res.string.chat_created),
                             messageIsError = false,
                         )
                     }
@@ -125,7 +128,7 @@ class ChatViewModel(
                         it.copy(
                             isSubmitting = false,
                             activeInvite = invite,
-                            message = "Код приглашения готов. Его можно передать другу.",
+                            message = getString(Res.string.invite_code_ready),
                             messageIsError = false,
                         )
                     }
@@ -142,7 +145,7 @@ class ChatViewModel(
         }
         if (_state.value.isSubmitting) return
         if (code.isBlank()) {
-            showError("Введите код приглашения.")
+            showError(Res.string.enter_invite_code)
             return
         }
 
@@ -162,7 +165,7 @@ class ChatViewModel(
                             isSubmitting = false,
                             activeInvite = null,
                             lastJoinedChatId = chat.id,
-                            message = "Вы присоединились к чату «${chat.title}».",
+                            message = getString(Res.string.chat_joined, chat.title),
                             messageIsError = false,
                         )
                     }
@@ -182,32 +185,38 @@ class ChatViewModel(
 
     private fun handleFailure(error: Throwable) {
         if (error is CancellationException) throw error
-        _state.update {
-            it.copy(
-                isSubmitting = false,
-                message = error.toChatMessage(),
-                messageIsError = true,
-            )
+        viewModelScope.launch {
+            val localizedMessage = error.toChatMessage()
+            _state.update {
+                it.copy(
+                    isSubmitting = false,
+                    message = localizedMessage,
+                    messageIsError = true,
+                )
+            }
         }
     }
 
-    private fun showError(message: String) {
-        _state.update { it.copy(message = message, messageIsError = true) }
+    private fun showError(resource: StringResource) {
+        viewModelScope.launch {
+            val message = getString(resource)
+            _state.update { it.copy(message = message, messageIsError = true) }
+        }
     }
 
-    private fun Throwable.toChatMessage(): String {
+    private suspend fun Throwable.toChatMessage(): String {
         val details = message.orEmpty().lowercase()
         return when {
             "permission-denied" in details || "permission_denied" in details || "permission denied" in details ->
-                "Firestore отклонил операцию. Проверьте, что опубликованы правила из firestore.rules и код приглашения не истёк (срок — 7 дней)."
+                getString(Res.string.chat_permission_error)
             "firebase не настроен" in details || "firebase is not configured" in details ->
-                "Firebase не настроен. Добавьте конфигурационные файлы платформы."
+                getString(Res.string.firebase_not_configured)
             "не найдено" in details || "not found" in details ->
-                "Чат или приглашение не найдено либо недействительно."
+                getString(Res.string.chat_or_invite_not_found)
             "network" in details || "unavailable" in details ->
-                "Не удалось подключиться к серверу. Проверьте интернет."
+                getString(Res.string.network_connection_failed)
             else -> message?.takeIf { it.isNotBlank() }
-                ?: "Не удалось выполнить операцию. Проверьте настройки Firebase."
+                ?: getString(Res.string.chat_generic_operation_failed)
         }
     }
 }
