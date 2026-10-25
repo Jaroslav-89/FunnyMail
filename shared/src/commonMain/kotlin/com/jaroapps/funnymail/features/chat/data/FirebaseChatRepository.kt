@@ -2,6 +2,8 @@ package com.jaroapps.funnymail.features.chat.data
 
 import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
+import com.jaroapps.funnymail.resources.Res
+import org.jetbrains.compose.resources.getString
 import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
 import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import dev.gitlive.firebase.Firebase
@@ -30,14 +32,14 @@ import kotlin.time.Clock
 class FirebaseChatRepository(
     private val firestoreProvider: () -> FirebaseFirestore = {
         check(FirebaseRuntimeStatus.isConfigured) {
-            "Firebase не настроен. Добавьте файлы конфигурации платформы."
+            "Firebase is not configured. Add platform configuration files."
         }
         Firebase.firestore
     },
 ) : ChatRepository {
 
     override fun observeChats(userId: String): Flow<List<Chat>> {
-        require(userId.isNotBlank()) { "Для загрузки чатов нужен аккаунт." }
+        require(userId.isNotBlank()) { "Sign in to load chats." }
         return firestoreProvider()
             .collection(CHATS_COLLECTION)
             .where("memberIds", arrayContains = userId)
@@ -87,11 +89,11 @@ class FirebaseChatRepository(
         creatorUserId: String,
     ): Result<Chat> = asResult {
         val normalizedTitle = title.trim()
-        require(normalizedTitle.isNotEmpty()) { "Введите название чата." }
+        require(normalizedTitle.isNotEmpty()) { getString(Res.string.chat_enter_title) }
         require(normalizedTitle.length <= MAX_CHAT_TITLE_LENGTH) {
-            "Название чата не должно превышать $MAX_CHAT_TITLE_LENGTH символов."
+            getString(Res.string.chat_title_too_long, MAX_CHAT_TITLE_LENGTH)
         }
-        require(creatorUserId.isNotBlank()) { "Для создания чата нужно войти в аккаунт." }
+        require(creatorUserId.isNotBlank()) { getString(Res.string.chat_create_login_required) }
 
         val reference = firestoreProvider()
             .collection(CHATS_COLLECTION)
@@ -114,17 +116,17 @@ class FirebaseChatRepository(
         updatedByUserId: String,
     ): Result<Chat> = asResult {
         val normalizedTitle = title.trim()
-        require(chatId.isNotBlank()) { "Не выбран чат." }
-        require(updatedByUserId.isNotBlank()) { "Для изменения чата нужно войти в аккаунт." }
-        require(normalizedTitle.isNotEmpty()) { "Введите название чата." }
+        require(chatId.isNotBlank()) { getString(Res.string.chat_not_selected_error) }
+        require(updatedByUserId.isNotBlank()) { getString(Res.string.chat_update_login_required) }
+        require(normalizedTitle.isNotEmpty()) { getString(Res.string.chat_enter_title) }
         require(normalizedTitle.length <= MAX_CHAT_TITLE_LENGTH) {
-            "Название чата не должно превышать $MAX_CHAT_TITLE_LENGTH символов."
+            getString(Res.string.chat_title_too_long, MAX_CHAT_TITLE_LENGTH)
         }
 
         val chatReference = firestoreProvider().collection(CHATS_COLLECTION).document(chatId)
         val current = chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
         require(current.creatorUserId == updatedByUserId) {
-            "Изменять название чата может только его создатель."
+            getString(Res.string.chat_title_creator_only)
         }
 
         chatReference.update(
@@ -141,16 +143,16 @@ class FirebaseChatRepository(
         updatedByUserId: String,
     ): Result<Chat> = asResult {
         val normalizedDescription = description.trim()
-        require(chatId.isNotBlank()) { "Не выбран чат." }
-        require(updatedByUserId.isNotBlank()) { "Для изменения чата нужно войти в аккаунт." }
+        require(chatId.isNotBlank()) { getString(Res.string.chat_not_selected_error) }
+        require(updatedByUserId.isNotBlank()) { getString(Res.string.chat_update_login_required) }
         require(normalizedDescription.length <= MAX_CHAT_DESCRIPTION_LENGTH) {
-            "Описание чата не должно превышать $MAX_CHAT_DESCRIPTION_LENGTH символов."
+            getString(Res.string.chat_description_too_long, MAX_CHAT_DESCRIPTION_LENGTH)
         }
 
         val chatReference = firestoreProvider().collection(CHATS_COLLECTION).document(chatId)
         val current = chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
         require(current.creatorUserId == updatedByUserId) {
-            "Изменять описание чата может только его создатель."
+            getString(Res.string.chat_description_creator_only)
         }
 
         chatReference.update(
@@ -165,16 +167,16 @@ class FirebaseChatRepository(
         maxLettersCount: Int?,
         updatedByUserId: String,
     ): Result<Chat> = asResult {
-        require(chatId.isNotBlank()) { "Не выбран чат." }
-        require(updatedByUserId.isNotBlank()) { "Для изменения настроек чата нужно войти в аккаунт." }
+        require(chatId.isNotBlank()) { getString(Res.string.chat_not_selected_error) }
+        require(updatedByUserId.isNotBlank()) { getString(Res.string.chat_settings_login_required) }
         require(maxLettersCount == null || maxLettersCount in 1..MAX_CHAT_LETTERS_LIMIT) {
-            "Лимит рисунков должен быть от 1 до $MAX_CHAT_LETTERS_LIMIT или отключён."
+            getString(Res.string.chat_drawing_limit_range, MAX_CHAT_LETTERS_LIMIT)
         }
 
         val reference = firestoreProvider().collection(CHATS_COLLECTION).document(chatId)
         val current = reference.get().data<FirestoreChatDocument>().toDomain(chatId)
         require(current.creatorUserId == updatedByUserId) {
-            "Изменять лимит рисунков может только создатель чата."
+            getString(Res.string.chat_limit_creator_only)
         }
         reference.update(
             "maxLettersCount" to maxLettersCount,
@@ -187,13 +189,13 @@ class FirebaseChatRepository(
         chatId: String,
         requestingUserId: String,
     ): Result<Unit> = asResult {
-        require(chatId.isNotBlank()) { "Не выбран чат." }
-        require(requestingUserId.isNotBlank()) { "Для очистки чата нужно войти в аккаунт." }
+        require(chatId.isNotBlank()) { getString(Res.string.chat_not_selected_error) }
+        require(requestingUserId.isNotBlank()) { getString(Res.string.chat_cleanup_login_required) }
 
         val firestore = firestoreProvider()
         val chatReference = firestore.collection(CHATS_COLLECTION).document(chatId)
         val chat = chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
-        require(requestingUserId in chat.memberIds) { "Очистка доступна только участникам чата." }
+        require(requestingUserId in chat.memberIds) { getString(Res.string.chat_cleanup_members_only) }
         if (chat.maxLettersCount != null) {
             chatReference.collection(CLEANUP_REQUESTS_COLLECTION).add(
                 FirestoreCleanupRequestDocument(requestedByUserId = requestingUserId),
@@ -203,8 +205,8 @@ class FirebaseChatRepository(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeUnreadCount(chatId: String, userId: String): Flow<Int> {
-        require(chatId.isNotBlank()) { "Не выбран чат." }
-        require(userId.isNotBlank()) { "Для подсчёта непрочитанных сообщений нужен аккаунт." }
+        require(chatId.isNotBlank()) { getString(Res.string.chat_not_selected_error) }
+        require(userId.isNotBlank()) { "Sign in to count unread messages." }
 
         val chatReference = firestoreProvider().collection(CHATS_COLLECTION).document(chatId)
         val readAtFlow = chatReference.collection(READS_COLLECTION).document(userId).snapshots.map { document ->
@@ -244,8 +246,8 @@ class FirebaseChatRepository(
     }
 
     override suspend fun markChatAsRead(chatId: String, userId: String): Result<Unit> = asResult {
-        require(chatId.isNotBlank()) { "Не выбран чат." }
-        require(userId.isNotBlank()) { "Для отметки о прочтении нужен аккаунт." }
+        require(chatId.isNotBlank()) { getString(Res.string.chat_not_selected_error) }
+        require(userId.isNotBlank()) { getString(Res.string.chat_mark_read_login_required) }
 
         firestoreProvider()
             .collection(CHATS_COLLECTION)
@@ -260,19 +262,19 @@ class FirebaseChatRepository(
         requestingUserId: String,
         memberUserId: String,
     ): Result<Chat> = asResult {
-        require(chatId.isNotBlank()) { "Не выбран чат." }
-        require(requestingUserId.isNotBlank()) { "Сначала войдите в аккаунт." }
-        require(memberUserId.isNotBlank()) { "Пользователь не найден." }
-        require(memberUserId != requestingUserId) { "Вы уже состоите в этом чате." }
+        require(chatId.isNotBlank()) { getString(Res.string.chat_not_selected_error) }
+        require(requestingUserId.isNotBlank()) { getString(Res.string.letter_login_required) }
+        require(memberUserId.isNotBlank()) { getString(Res.string.chat_user_not_found) }
+        require(memberUserId != requestingUserId) { getString(Res.string.chat_already_member) }
 
         val firestore = firestoreProvider()
         val chatReference = firestore.collection(CHATS_COLLECTION).document(chatId)
         val current = chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
-        require(requestingUserId in current.memberIds) { "Вы больше не состоите в этом чате." }
-        require(memberUserId !in current.memberIds) { "Пользователь уже состоит в этом чате." }
+        require(requestingUserId in current.memberIds) { getString(Res.string.chat_not_member_anymore) }
+        require(memberUserId !in current.memberIds) { getString(Res.string.chat_target_already_member) }
         require(
             firestore.collection("publicProfiles").document(memberUserId).get().exists,
-        ) { "Пользователь не найден." }
+        ) { getString(Res.string.chat_user_not_found) }
 
         chatReference.update(
             "memberIds" to FieldValue.arrayUnion(memberUserId),
@@ -286,17 +288,17 @@ class FirebaseChatRepository(
         requestingUserId: String,
         memberUserId: String,
     ): Result<Chat> = asResult {
-        require(chatId.isNotBlank()) { "Не выбран чат." }
-        require(requestingUserId.isNotBlank()) { "Для управления участниками нужно войти в аккаунт." }
-        require(memberUserId.isNotBlank()) { "Не выбран участник." }
+        require(chatId.isNotBlank()) { getString(Res.string.chat_not_selected_error) }
+        require(requestingUserId.isNotBlank()) { getString(Res.string.chat_members_manage_login_required) }
+        require(memberUserId.isNotBlank()) { getString(Res.string.chat_member_not_selected) }
 
         val chatReference = firestoreProvider().collection(CHATS_COLLECTION).document(chatId)
         val current = chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
         require(current.creatorUserId == requestingUserId) {
-            "Удалять участников может только создатель чата."
+            getString(Res.string.chat_remove_member_creator_only)
         }
-        require(memberUserId != current.creatorUserId) { "Создателя нельзя удалить из чата." }
-        require(memberUserId in current.memberIds) { "Участник уже не состоит в чате." }
+        require(memberUserId != current.creatorUserId) { getString(Res.string.chat_cannot_remove_creator) }
+        require(memberUserId in current.memberIds) { getString(Res.string.chat_member_already_left) }
 
         chatReference.update(
             "memberIds" to FieldValue.arrayRemove(memberUserId),
@@ -309,14 +311,14 @@ class FirebaseChatRepository(
         chatId: String,
         userId: String,
     ): Result<Unit> = asResult {
-        require(chatId.isNotBlank()) { "Не выбран чат." }
-        require(userId.isNotBlank()) { "Для выхода из чата нужно войти в аккаунт." }
+        require(chatId.isNotBlank()) { getString(Res.string.chat_not_selected_error) }
+        require(userId.isNotBlank()) { getString(Res.string.chat_leave_login_required) }
 
         val chatReference = firestoreProvider().collection(CHATS_COLLECTION).document(chatId)
         val current = chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
-        require(userId in current.memberIds) { "Вы уже не состоите в этом чате." }
+        require(userId in current.memberIds) { getString(Res.string.chat_already_left) }
         require(userId != current.creatorUserId) {
-            "Создатель не может выйти из чата. Вместо этого удалите чат."
+            getString(Res.string.chat_creator_cannot_leave)
         }
 
         chatReference.update(
@@ -329,14 +331,14 @@ class FirebaseChatRepository(
         chatId: String,
         requestingUserId: String,
     ): Result<Unit> = asResult {
-        require(chatId.isNotBlank()) { "Не выбран чат." }
-        require(requestingUserId.isNotBlank()) { "Для удаления чата нужно войти в аккаунт." }
+        require(chatId.isNotBlank()) { getString(Res.string.chat_not_selected_error) }
+        require(requestingUserId.isNotBlank()) { getString(Res.string.chat_delete_login_required) }
 
         val firestore = firestoreProvider()
         val chatReference = firestore.collection(CHATS_COLLECTION).document(chatId)
         val current = chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
         require(current.creatorUserId == requestingUserId) {
-            "Удалять чат может только его создатель."
+            getString(Res.string.chat_delete_creator_only)
         }
 
         // Firestore does not cascade-delete subcollections, so remove each letter first.
@@ -349,8 +351,8 @@ class FirebaseChatRepository(
         chatId: String,
         createdByUserId: String,
     ): Result<ChatInvite> = asResult {
-        require(chatId.isNotBlank()) { "Не выбран чат." }
-        require(createdByUserId.isNotBlank()) { "Для создания приглашения нужно войти в аккаунт." }
+        require(chatId.isNotBlank()) { getString(Res.string.chat_not_selected_error) }
+        require(createdByUserId.isNotBlank()) { getString(Res.string.chat_invite_login_required) }
 
         val reference = firestoreProvider()
             .collection(INVITES_COLLECTION)
@@ -377,8 +379,8 @@ class FirebaseChatRepository(
         userId: String,
     ): Result<Chat> = asResult {
         val normalizedCode = inviteCode.trim()
-        require(normalizedCode.isNotEmpty()) { "Введите код приглашения." }
-        require(userId.isNotBlank()) { "Для вступления в чат нужно войти в аккаунт." }
+        require(normalizedCode.isNotEmpty()) { getString(Res.string.chat_invite_code_required) }
+        require(userId.isNotBlank()) { getString(Res.string.chat_join_login_required) }
 
         val firestore = firestoreProvider()
         val inviteSnapshot = firestore
@@ -386,7 +388,7 @@ class FirebaseChatRepository(
             .document(normalizedCode)
             .get()
         require(inviteSnapshot.exists) {
-            "Приглашение не найдено или уже недействительно."
+            getString(Res.string.chat_invite_invalid)
         }
 
         val invite = inviteSnapshot.data<FirestoreInviteDocument>()
@@ -427,7 +429,7 @@ class FirebaseChatRepository(
 
     private fun BaseTimestamp.requireEpochMillis(field: String): Long =
         (this as? Timestamp)?.toMilliseconds()?.toLong()
-            ?: error("Firestore не вернул серверное время для поля $field.")
+            ?: error(getString(Res.string.firestore_server_time_missing, field))
 
     private suspend fun <T> asResult(block: suspend () -> T): Result<T> =
         try {
