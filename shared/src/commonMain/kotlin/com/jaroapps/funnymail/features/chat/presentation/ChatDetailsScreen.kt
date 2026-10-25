@@ -385,8 +385,13 @@ fun ChatDetailsScreen(
                                     if (user.username.isNotBlank()) {
                                         Text("@${user.username}", color = MaterialTheme.colorScheme.primary)
                                     }
-                                    Text(user.email, style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    if (user.email.isNotBlank()) {
+                                        Text(
+                                            user.email,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                     Button(
                                         onClick = {
                                             val currentUserId = state.currentUser?.id
