@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.core.app.NotificationManagerCompat
 import com.jaroapps.funnymail.core.auth.NativeSocialSignIn
 import com.jaroapps.funnymail.core.storage.DrawingDraftStorage
 import com.jaroapps.funnymail.core.storage.ThemePreferenceStorage
@@ -46,7 +47,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        LauncherBadge.setUnread(this, unread = false)
+        // Keep the red icon marker while any unread-message notification remains active.
+        val hasActiveMessageNotifications =
+            NotificationManagerCompat.from(this).activeNotifications.isNotEmpty()
+        LauncherBadge.setUnread(this, unread = hasActiveMessageNotifications)
     }
 
     private fun createChatNotificationChannel() {
