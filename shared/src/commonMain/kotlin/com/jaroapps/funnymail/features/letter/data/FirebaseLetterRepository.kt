@@ -135,7 +135,9 @@ class FirebaseLetterRepository(
             .document(chatId)
             .collection(LETTERS_COLLECTION)
             .document(letterId)
-        val letter = reference.get().data<FirestoreLetterDocument>()
+        val letterSnapshot = reference.get()
+        if (!letterSnapshot.exists) return@asResult Unit
+        val letter = letterSnapshot.data<FirestoreLetterDocument>()
         val chat = firestoreProvider()
             .collection(CHATS_COLLECTION)
             .document(chatId)
