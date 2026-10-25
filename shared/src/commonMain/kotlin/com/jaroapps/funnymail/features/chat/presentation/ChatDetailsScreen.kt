@@ -28,12 +28,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,6 +48,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,9 +71,14 @@ import com.jaroapps.funnymail.core.ui.PersonPlusIcon
 import com.jaroapps.funnymail.core.ui.PaperPlusIcon
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
+import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
+import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
+import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.letter.domain.model.Letter
 import com.jaroapps.funnymail.features.letter.presentation.DrawingPreview
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -81,16 +89,26 @@ fun ChatDetailsScreen(
     onCreateDrawing: () -> Unit,
     onOpenDrawings: () -> Unit,
     onViewDrawing: (DrawingDocument) -> Unit,
+    onChatUpdated: (Chat) -> Unit,
     onCreateInvite: (String, (ChatInvite?, String?) -> Unit) -> Unit,
 ) {
     val viewModel: ChatDetailsViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
+    val authRepository = koinInject<AuthRepository>()
+    val chatRepository = koinInject<ChatRepository>()
+    val coroutineScope = rememberCoroutineScope()
     val lettersListState = rememberLazyListState()
     var actionsExpanded by rememberSaveable { mutableStateOf(false) }
     var showInviteDialog by rememberSaveable { mutableStateOf(false) }
     var isCreatingInvite by remember { mutableStateOf(false) }
     var generatedInvite by remember { mutableStateOf<ChatInvite?>(null) }
     var inviteError by remember { mutableStateOf<String?>(null) }
+    var userSearchQuery by rememberSaveable(chat.id) { mutableStateOf("") }
+    var foundUser by remember { mutableStateOf<UserProfile?>(null) }
+    var searchMessage by remember { mutableStateOf<String?>(null) }
+    var isSearchingUser by remember { mutableStateOf(false) }
+    var isAddingUser by remember { mutableStateOf(false) }
+    var authorNames by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
 
     DisposableEffect(chat.id) {
         viewModel.observeLetters(chat.id)
@@ -101,6 +119,20 @@ fun ChatDetailsScreen(
         if (state.letters.isNotEmpty()) {
             lettersListState.animateScrollToItem(state.letters.lastIndex)
         }
+    }
+
+    LaunchedEffect(state.letters, state.currentUser?.id, state.currentUser?.customName, state.currentUser?.username) {
+        val userIds = state.letters.map { it.authorUserId }.distinct()
+        val names = mutableMapOf<String, String>()
+        userIds.forEach { authorId ->
+            val profile = if (authorId == state.currentUser?.id) {
+                state.currentUser
+            } else {
+                authRepository.getPublicProfile(authorId).getOrNull()
+            }
+            if (profile != null) names[authorId] = profile.chatDisplayName
+        }
+        authorNames = names
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -196,6 +228,7 @@ fun ChatDetailsScreen(
                                 ChatLetterCard(
                                     letter = letter,
                                     currentUserId = state.currentUser?.id,
+                                    authorDisplayName = authorNames[letter.authorUserId],
                                     onClick = { onViewDrawing(letter.drawing) },
                                 )
                             }
@@ -284,11 +317,115 @@ fun ChatDetailsScreen(
 
         if (showInviteDialog) {
             AlertDialog(
-                onDismissRequest = { if (!isCreatingInvite) showInviteDialog = false },
-                title = { Text("Пригласить пользователя") },
+                onDismissRequest = {
+                    if (!isCreatingInvite && !isSearchingUser && !isAddingUser) showInviteDialog = false
+                },
+                title = { Text("Добавить пользователя в чат") },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Создайте код и передайте его человеку, которого хотите пригласить.")
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("Найдите пользователя по точному email или уникальному нику.")
+                        OutlinedTextField(
+                            value = userSearchQuery,
+                            onValueChange = {
+                                userSearchQuery = it
+                                foundUser = null
+                                searchMessage = null
+                            },
+                            label = { Text("Email или @ник") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Button(
+                            onClick = {
+                                if (!isSearchingUser && userSearchQuery.isNotBlank()) {
+                                    isSearchingUser = true
+                                    foundUser = null
+                                    searchMessage = null
+                                    coroutineScope.launch {
+                                        authRepository.findUser(userSearchQuery).fold(
+                                            onSuccess = { result ->
+                                                foundUser = result
+                                                searchMessage = when {
+                                                    result == null -> "Пользователь не найден."
+                                                    result.id in chat.memberIds -> "Этот пользователь уже состоит в чате."
+                                                    result.id == state.currentUser?.id -> "Вы уже состоите в этом чате."
+                                                    else -> null
+                                                }
+                                                isSearchingUser = false
+                                            },
+                                            onFailure = { error ->
+                                                searchMessage = error.message ?: "Не удалось выполнить поиск."
+                                                isSearchingUser = false
+                                            },
+                                        )
+                                    }
+                                }
+                            },
+                            enabled = !isSearchingUser && userSearchQuery.isNotBlank(),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            if (isSearchingUser) CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                            ) else Text("Найти пользователя")
+                        }
+
+                        foundUser?.let { user ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                ),
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    Text(user.chatDisplayName, style = MaterialTheme.typography.titleMedium)
+                                    if (user.username.isNotBlank()) {
+                                        Text("@${user.username}", color = MaterialTheme.colorScheme.primary)
+                                    }
+                                    Text(user.email, style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Button(
+                                        onClick = {
+                                            val currentUserId = state.currentUser?.id
+                                            if (currentUserId != null && !isAddingUser &&
+                                                user.id !in chat.memberIds && user.id != currentUserId
+                                            ) {
+                                                isAddingUser = true
+                                                searchMessage = null
+                                                coroutineScope.launch {
+                                                    chatRepository.addMember(chat.id, currentUserId, user.id).fold(
+                                                        onSuccess = { updatedChat ->
+                                                            onChatUpdated(updatedChat)
+                                                            searchMessage = "Пользователь добавлен в чат."
+                                                            isAddingUser = false
+                                                        },
+                                                        onFailure = { error ->
+                                                            searchMessage = error.message ?: "Не удалось добавить пользователя."
+                                                            isAddingUser = false
+                                                        },
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        enabled = !isAddingUser && user.id !in chat.memberIds &&
+                                            user.id != state.currentUser?.id,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        if (isAddingUser) CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp,
+                                        ) else Text(if (user.id in chat.memberIds) "Уже в чате" else "Добавить в чат")
+                                    }
+                                }
+                            }
+                        }
+                        searchMessage?.let { Text(it, color = if (it == "Пользователь добавлен в чат.") {
+                            MaterialTheme.colorScheme.primary
+                        } else MaterialTheme.colorScheme.error) }
+
                         OutlinedButton(
                             onClick = {
                                 if (!isCreatingInvite) {
@@ -304,24 +441,19 @@ fun ChatDetailsScreen(
                             enabled = !isCreatingInvite,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
-                            if (isCreatingInvite) {
-                                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                            } else Text("Создать код приглашения")
+                            if (isCreatingInvite) CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                            ) else Text("Создать код приглашения")
                         }
                         generatedInvite?.let { invite ->
                             Text("Код приглашения", style = MaterialTheme.typography.titleSmall)
                             SelectionContainer {
-                                Text(
-                                    text = invite.code,
-                                    style = MaterialTheme.typography.headlineSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
+                                Text(invite.code, style = MaterialTheme.typography.headlineSmall,
+                                    color = MaterialTheme.colorScheme.primary)
                             }
-                            Text(
-                                "Код действует 7 дней.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            Text("Код действует 7 дней.", style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         inviteError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     }
@@ -338,6 +470,7 @@ fun ChatDetailsScreen(
 private fun ChatLetterCard(
     letter: Letter,
     currentUserId: String?,
+    authorDisplayName: String?,
     onClick: () -> Unit,
 ) {
     Card(
@@ -349,7 +482,7 @@ private fun ChatLetterCard(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(
-                text = if (letter.authorUserId == currentUserId) "Вы отправили" else "Письмо от участника",
+                text = if (letter.authorUserId == currentUserId) "Вы отправили" else authorDisplayName ?: "Письмо от участника",
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary,
             )
