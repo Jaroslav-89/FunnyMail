@@ -1,5 +1,9 @@
 package com.jaroapps.funnymail.features.chat.presentation
 
+import org.jetbrains.compose.resources.stringResource
+
+import com.jaroapps.funnymail.resources.Res
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -217,7 +221,7 @@ fun ChatDetailsScreen(
             }
             state.letters.isEmpty() -> {
                 Text(
-                    text = "Пока нет писем. Отправьте рисунок в чат.",
+                    text = stringResource(Res.string.empty_chat_letters),
                     modifier = Modifier.align(Alignment.Center).padding(horizontal = 28.dp),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -404,10 +408,10 @@ fun ChatDetailsScreen(
                 onDismissRequest = {
                     if (!isCreatingInvite && !isSearchingUser && !isAddingUser) showInviteDialog = false
                 },
-                title = { Text("Добавить пользователя в чат") },
+                title = { Text(stringResource(Res.string.add_user_to_chat)) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Найдите пользователя по точному email или уникальному нику.")
+                        Text(stringResource(Res.string.find_user_hint))
                         OutlinedTextField(
                             value = userSearchQuery,
                             onValueChange = {
@@ -415,7 +419,7 @@ fun ChatDetailsScreen(
                                 foundUser = null
                                 searchMessage = null
                             },
-                            label = { Text("Email или @ник") },
+                            label = { Text(stringResource(Res.string.email_or_username)) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
@@ -451,7 +455,7 @@ fun ChatDetailsScreen(
                             if (isSearchingUser) CircularProgressIndicator(
                                 modifier = Modifier.size(18.dp),
                                 strokeWidth = 2.dp,
-                            ) else Text("Найти пользователя")
+                            ) else Text(stringResource(Res.string.find_user))
                         }
 
                         foundUser?.let { user ->
@@ -467,7 +471,7 @@ fun ChatDetailsScreen(
                                 ) {
                                     Text(user.chatDisplayName, style = MaterialTheme.typography.titleMedium)
                                     if (user.username.isNotBlank()) {
-                                        Text("@${user.username}", color = MaterialTheme.colorScheme.primary)
+                                        Text(stringResource(Res.string.username_at, user.username), color = MaterialTheme.colorScheme.primary)
                                     }
                                     if (user.email.isNotBlank()) {
                                         Text(
@@ -506,7 +510,7 @@ fun ChatDetailsScreen(
                                         if (isAddingUser) CircularProgressIndicator(
                                             modifier = Modifier.size(18.dp),
                                             strokeWidth = 2.dp,
-                                        ) else Text(if (user.id in chat.memberIds) "Уже в чате" else "Добавить в чат")
+                                        ) else Text(if (user.id in chat.memberIds) stringResource(Res.string.already_in_chat) else stringResource(Res.string.add_to_chat))
                                     }
                                 }
                             }
@@ -533,22 +537,22 @@ fun ChatDetailsScreen(
                             if (isCreatingInvite) CircularProgressIndicator(
                                 modifier = Modifier.size(18.dp),
                                 strokeWidth = 2.dp,
-                            ) else Text("Создать код приглашения")
+                            ) else Text(stringResource(Res.string.invite_create_code))
                         }
                         generatedInvite?.let { invite ->
-                            Text("Код приглашения", style = MaterialTheme.typography.titleSmall)
+                            Text(stringResource(Res.string.invite_code), style = MaterialTheme.typography.titleSmall)
                             SelectionContainer {
                                 Text(invite.code, style = MaterialTheme.typography.headlineSmall,
                                     color = MaterialTheme.colorScheme.primary)
                             }
-                            Text("Код действует 7 дней.", style = MaterialTheme.typography.bodySmall,
+                            Text(stringResource(Res.string.invite_code_expires), style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         inviteError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     }
                 },
                 confirmButton = {
-                    TextButton(onClick = { showInviteDialog = false }) { Text("Готово") }
+                    TextButton(onClick = { showInviteDialog = false }) { Text(stringResource(Res.string.done)) }
                 },
             )
         }
