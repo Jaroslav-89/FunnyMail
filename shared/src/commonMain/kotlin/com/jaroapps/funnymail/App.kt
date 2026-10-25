@@ -18,6 +18,8 @@ import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import com.jaroapps.funnymail.core.navigation.AppDestination
 import com.jaroapps.funnymail.core.storage.DrawingDraftStorage
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
+import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
+import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import com.jaroapps.funnymail.features.chat.presentation.ChatDetailsScreen
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.repository.LocalDrawingRepository
@@ -74,8 +76,31 @@ private fun FunnyMailContent(
     var selectedChat by remember { mutableStateOf<Chat?>(null) }
     val localDrawingRepository = koinInject<LocalDrawingRepository>()
     val authRepository = koinInject<AuthRepository>()
+    val chatRepository = koinInject<ChatRepository>()
     val letterRepository = koinInject<LetterRepository>()
     val coroutineScope = rememberCoroutineScope()
+
+    val createInviteForChat: (String, (ChatInvite?, String?) -> Unit) -> Unit = { chatId, reportResult ->
+        coroutineScope.launch {
+            try {
+                val user = authRepository.currentUser.first()
+                if (user == null) {
+                    reportResult(null, "Войдите в аккаунт, чтобы приглашать друзей.")
+                } else {
+                    chatRepository.createInvite(chatId, user.id).fold(
+                        onSuccess = { invite -> reportResult(invite, null) },
+                        onFailure = { error ->
+                            reportResult(null, error.message ?: "Не удалось создать приглашение.")
+                        },
+                    )
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                reportResult(null, error.message ?: "Не удалось создать приглашение.")
+            }
+        }
+    }
 
     val sendDrawingToChat: (String, (String?) -> Unit) -> Unit = { json, reportResult ->
         val chatId = selectedChat?.id
@@ -175,6 +200,7 @@ private fun FunnyMailContent(
                                 onDraftSent = onClearDraft,
                                 onCreateDrawing = { destination = AppDestination.Drawing },
                                 onOpenDrawings = { destination = AppDestination.Letters },
+                                onCreateInvite = createInviteForChat,
                             )
                         }
                     }
