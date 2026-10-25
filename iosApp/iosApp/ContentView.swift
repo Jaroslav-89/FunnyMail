@@ -12,7 +12,8 @@ struct ComposeView: UIViewControllerRepresentable {
 
 struct ContentView: View {
     var body: some View {
-        // Keep Compose inside the iOS safe area so controls remain below the status bar.
+        // Let Compose handle system-bar insets through Scaffold to avoid a duplicate top gap.
         ComposeView()
+            .ignoresSafeArea()
     }
 }
