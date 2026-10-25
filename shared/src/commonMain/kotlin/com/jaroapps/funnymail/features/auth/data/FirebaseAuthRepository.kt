@@ -1,5 +1,6 @@
 package com.jaroapps.funnymail.features.auth.data
 
+import com.jaroapps.funnymail.getDeviceLanguageCode
 import com.jaroapps.funnymail.core.auth.NativeSocialSignIn
 import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
@@ -377,7 +378,12 @@ class FirebaseAuthRepository(
 
     private fun generatedName(): String {
         val number = Random.nextInt(1_000, 10_000)
-        return "Пользователь#$number"
+        val prefix = if (getDeviceLanguageCode().startsWith("en", ignoreCase = true)) {
+            "User"
+        } else {
+            "Пользователь"
+        }
+        return "$prefix#$number"
     }
 
     private suspend fun <T> authResult(block: suspend () -> T): Result<T> =
