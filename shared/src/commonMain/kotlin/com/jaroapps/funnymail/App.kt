@@ -24,6 +24,7 @@ import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
 import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import com.jaroapps.funnymail.features.chat.presentation.ChatDetailsScreen
+import com.jaroapps.funnymail.features.chat.presentation.ChatEditScreen
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.repository.LocalDrawingRepository
@@ -109,6 +110,7 @@ private fun FunnyMailContent(
             AppDestination.Home -> Unit
             AppDestination.Auth,
             AppDestination.ChatDetail -> destination = AppDestination.Home
+            AppDestination.ChatEdit -> destination = AppDestination.ChatDetail
             AppDestination.Drawing -> closeDrawing()
             AppDestination.Letters -> destination = AppDestination.ChatDetail
             AppDestination.DrawingViewer -> {
@@ -254,9 +256,8 @@ private fun FunnyMailContent(
                         } else {
                             ChatDetailsScreen(
                                 chat = chat,
-                                draftJson = draftJson,
                                 onBack = { destination = AppDestination.Home },
-                                onDraftSent = onClearDraft,
+                                onEditChat = { destination = AppDestination.ChatEdit },
                                 onCreateDrawing = {
                                     editingDrawingId = null
                                     editingDrawingJson = null
@@ -271,6 +272,28 @@ private fun FunnyMailContent(
                                 onViewDrawing = { drawing ->
                                     viewingDrawing = drawing
                                     destination = AppDestination.DrawingViewer
+                                },
+                                onCreateInvite = createInviteForChat,
+                            )
+                        }
+                    }
+                    AppDestination.ChatEdit -> {
+                        val chat = selectedChat
+                        if (chat == null) {
+                            PlaceholderScreen(
+                                title = "Чат не выбран",
+                                description = "Вернитесь к списку чатов и выберите чат.",
+                                onBack = { destination = AppDestination.Home },
+                            )
+                        } else {
+                            ChatEditScreen(
+                                chat = chat,
+                                currentUserId = signedInUser?.id,
+                                onBack = { destination = AppDestination.ChatDetail },
+                                onChatUpdated = { updatedChat -> selectedChat = updatedChat },
+                                onChatRemoved = {
+                                    selectedChat = null
+                                    destination = AppDestination.Home
                                 },
                                 onCreateInvite = createInviteForChat,
                             )
