@@ -1,5 +1,9 @@
 package com.jaroapps.funnymail.features.home.presentation
 
+import org.jetbrains.compose.resources.stringResource
+
+import com.jaroapps.funnymail.resources.Res
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -97,7 +101,7 @@ fun HomeScreen(
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = "FunnyMail",
+                text = stringResource(Res.string.app_name),
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -116,7 +120,7 @@ fun HomeScreen(
             verticalArrangement = Arrangement.Center,
         ) {
             Text(
-                text = "FunnyMail",
+                text = stringResource(Res.string.app_name),
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -125,7 +129,7 @@ fun HomeScreen(
                 onClick = onAuthorize,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("Авторизоваться")
+                Text(stringResource(Res.string.sign_in))
             }
         }
         return
@@ -141,7 +145,7 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "FunnyMail",
+                    text = stringResource(Res.string.app_name),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.headlineLarge,
                     color = Color(0xFFF5A800),
@@ -165,7 +169,7 @@ fun HomeScreen(
             }
 
             Text(
-                text = "Ваши чаты",
+                text = stringResource(Res.string.chat_list_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -185,11 +189,11 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(
-                            "Пока нет чатов",
+                            stringResource(Res.string.no_chats_title),
                             style = MaterialTheme.typography.titleMedium,
                         )
                         Text(
-                            "Нажмите «+», чтобы создать чат или вступить в существующий по коду.",
+                            stringResource(Res.string.no_chats_hint),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium,
                         )
@@ -330,16 +334,16 @@ fun HomeScreen(
                     viewModel.clearMessage()
                 }
             },
-            title = { Text("Новый чат") },
+            title = { Text(stringResource(Res.string.new_chat)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Придумайте название для чата.")
+                    Text(stringResource(Res.string.create_chat_prompt))
                     OutlinedTextField(
                         value = chatTitle,
                         onValueChange = { chatTitle = it },
-                        label = { Text("Название чата") },
+                        label = { Text(stringResource(Res.string.chat_title)) },
                         singleLine = true,
-                        supportingText = { Text("До 80 символов") },
+                        supportingText = { Text(stringResource(Res.string.max_title_length)) },
                         enabled = !state.isSubmitting,
                     )
                     if (state.messageIsError && state.message != null) {
@@ -353,7 +357,7 @@ fun HomeScreen(
                     enabled = !state.isSubmitting && chatTitle.isNotBlank(),
                 ) {
                     if (state.isSubmitting) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    else Text("Создать")
+                    else Text(stringResource(Res.string.create))
                 }
             },
             dismissButton = {
@@ -363,7 +367,7 @@ fun HomeScreen(
                         viewModel.clearMessage()
                     },
                     enabled = !state.isSubmitting,
-                ) { Text("Отмена") }
+                ) { Text(stringResource(Res.string.cancel)) }
             },
         )
     }
@@ -376,14 +380,14 @@ fun HomeScreen(
                     viewModel.clearMessage()
                 }
             },
-            title = { Text("Вступить в чат") },
+            title = { Text(stringResource(Res.string.join_chat)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Введите код приглашения.")
+                    Text(stringResource(Res.string.enter_invite_code))
                     OutlinedTextField(
                         value = inviteCode,
                         onValueChange = { inviteCode = it.trimStart() },
-                        label = { Text("Код приглашения") },
+                        label = { Text(stringResource(Res.string.invite_code)) },
                         singleLine = true,
                         enabled = !state.isSubmitting,
                     )
@@ -398,7 +402,7 @@ fun HomeScreen(
                     enabled = !state.isSubmitting && inviteCode.isNotBlank(),
                 ) {
                     if (state.isSubmitting) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                    else Text("Вступить")
+                    else Text(stringResource(Res.string.join))
                 }
             },
             dismissButton = {
@@ -408,7 +412,7 @@ fun HomeScreen(
                         viewModel.clearMessage()
                     },
                     enabled = !state.isSubmitting,
-                ) { Text("Отмена") }
+                ) { Text(stringResource(Res.string.cancel)) }
             },
         )
     }
