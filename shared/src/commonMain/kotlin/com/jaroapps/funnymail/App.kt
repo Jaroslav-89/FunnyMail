@@ -11,6 +11,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import com.jaroapps.funnymail.core.di.appModule
 import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
@@ -19,13 +20,16 @@ import com.jaroapps.funnymail.core.storage.DrawingDraftStorage
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import com.jaroapps.funnymail.features.chat.presentation.ChatDetailsScreen
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
+import com.jaroapps.funnymail.features.drawing.domain.repository.LocalDrawingRepository
 import com.jaroapps.funnymail.features.auth.presentation.AuthScreen
 import com.jaroapps.funnymail.features.chat.presentation.ChatsScreen
 import com.jaroapps.funnymail.features.drawing.presentation.DrawingScreen
 import com.jaroapps.funnymail.features.home.presentation.HomeScreen
 import com.jaroapps.funnymail.features.letter.presentation.LettersScreen
 import com.jaroapps.funnymail.features.placeholder.presentation.PlaceholderScreen
+import kotlinx.coroutines.launch
 import org.koin.compose.KoinApplication
+import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
 
 @Composable
@@ -72,6 +76,8 @@ private fun FunnyMailContent(
 ) {
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
     var selectedChat by remember { mutableStateOf<Chat?>(null) }
+    val localDrawingRepository = koinInject<LocalDrawingRepository>()
+    val coroutineScope = rememberCoroutineScope()
 
     MaterialTheme {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
@@ -94,9 +100,19 @@ private fun FunnyMailContent(
                     )
                     AppDestination.Drawing -> DrawingScreen(
                         onBack = { destination = AppDestination.Home },
-                        onPrepared = { json ->
-                            onDraftPrepared(json)
-                            destination = AppDestination.Home
+                        onPrepared = { json, reportSaveResult ->
+                            coroutineScope.launch {
+                                try {
+                                    localDrawingRepository.saveDrawing(json)
+                                    onDraftPrepared(json)
+                                    reportSaveResult(null)
+                                    destination = AppDestination.Home
+                                } catch (error: Exception) {
+                                    reportSaveResult(
+                                        error.message ?: "Не удалось сохранить рисунок в галерею.",
+                                    )
+                                }
+                            }
                         },
                     )
                     AppDestination.Letters -> LettersScreen(

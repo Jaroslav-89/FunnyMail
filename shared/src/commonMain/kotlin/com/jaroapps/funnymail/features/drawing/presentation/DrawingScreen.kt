@@ -55,7 +55,7 @@ private val DrawingPalette = listOf(
 @Composable
 fun DrawingScreen(
     onBack: () -> Unit,
-    onPrepared: (String) -> Unit,
+    onPrepared: (String, (String?) -> Unit) -> Unit,
 ) {
     var strokes by remember { mutableStateOf<List<DrawingStroke>>(emptyList()) }
     var activePoints by remember { mutableStateOf<List<List<Double>>>(emptyList()) }
@@ -80,7 +80,7 @@ fun DrawingScreen(
             TextButton(onClick = onBack) { Text("← Назад") }
             Spacer(Modifier.weight(1f))
             Text(
-                text = "Новое письмо",
+                text = "Новый рисунок",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -272,7 +272,15 @@ fun DrawingScreen(
                     )
                     DrawingCodec().encode(document).fold(
                         onSuccess = { json ->
-                            onPrepared(json)
+                            onPrepared(json) { saveError ->
+                                if (saveError == null) {
+                                    statusMessage = "Рисунок сохранён в локальную галерею."
+                                    statusIsError = false
+                                } else {
+                                    statusMessage = saveError
+                                    statusIsError = true
+                                }
+                            }
                         },
                         onFailure = { error ->
                             statusMessage = error.message ?: "Не удалось подготовить рисунок."
@@ -283,7 +291,7 @@ fun DrawingScreen(
             },
             modifier = Modifier.fillMaxWidth(),
         ) {
-            Text("Подготовить черновик")
+            Text("Сохранить рисунок")
         }
     }
 }
