@@ -15,15 +15,18 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
+import com.jaroapps.funnymail.resources.Res
+import org.jetbrains.compose.resources.stringResource
 
 /** Consistent back button used by the app's screen headers. */
 @Composable
 fun AppBackButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    description: String = "Назад",
+    description: String? = null,
     keepLightAppearance: Boolean = false,
 ) {
+    val defaultDescription = stringResource(Res.string.back)
     Box(
         modifier = modifier
             .size(48.dp)
@@ -37,7 +40,7 @@ fun AppBackButton(
                 CircleShape,
             )
             .clickable(onClick = onClick)
-            .semantics { contentDescription = description },
+            .semantics { contentDescription = description ?: defaultDescription },
         contentAlignment = Alignment.Center,
     ) {
         BackArrowGlyph(color = if (keepLightAppearance) Color(0xFF202124) else MaterialTheme.colorScheme.onSurface)
