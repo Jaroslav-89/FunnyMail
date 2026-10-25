@@ -79,6 +79,7 @@
     <string name="description_not_set">Описание не задано.</string>
     <string name="max_drawings_title">Максимум рисунков в чате</string>
     <string name="drawing_limit_label">Лимит рисунков</string>
+    <string name="drawing_limit_value">Лимит рисунков в чате: %1$d</string>
     <string name="drawing_limit_hint">Пусто — отключить лимит. Допустимо от 1 до 500 рисунков.</string>
     <string name="drawing_limit_readonly">Лимит установлен создателем чата</string>
     <string name="limit_disabled">Лимит рисунков отключён.</string>
