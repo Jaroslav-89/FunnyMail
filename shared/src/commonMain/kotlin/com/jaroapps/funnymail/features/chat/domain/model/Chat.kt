@@ -12,4 +12,5 @@ data class Chat(
     val lastMessageAtEpochMillis: Long? = null,
     /** Creator of the chat; for legacy chats the first member is treated as creator. */
     val creatorUserId: String = memberIds.firstOrNull().orEmpty(),
+    val description: String = "",
 )

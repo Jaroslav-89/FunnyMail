@@ -115,9 +115,15 @@ fun ChatDetailsScreen(
         onDispose { viewModel.stopObserving(chat.id) }
     }
 
-    LaunchedEffect(state.letters.size, state.isLoading) {
+    LaunchedEffect(chat.id, state.letters.size, state.letters.lastOrNull()?.id, state.isLoading) {
         if (state.letters.isNotEmpty()) {
-            lettersListState.animateScrollToItem(state.letters.lastIndex)
+            lettersListState.scrollToItem(state.letters.lastIndex)
+        }
+    }
+
+    LaunchedEffect(chat.id, state.letters.size, state.currentUser?.id) {
+        state.currentUser?.id?.let { userId ->
+            chatRepository.markChatAsRead(chat.id, userId)
         }
     }
 
@@ -521,9 +527,8 @@ private fun ChatHeaderIconButton(
 ) {
     Box(
         modifier = Modifier.size(48.dp)
-            .shadow(4.dp, CircleShape)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.surface)
+            .background(Color.Transparent)
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
             .clickable(onClick = onClick)
             .semantics { contentDescription = description },
