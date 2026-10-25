@@ -23,6 +23,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.core.ui.AppBackButton
+import com.jaroapps.funnymail.resources.Res
+import org.jetbrains.compose.resources.stringResource
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingStrokes
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingBackground
@@ -34,7 +36,8 @@ import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingBackgroun
 fun DrawingViewerScreen(
     drawing: DrawingDocument,
     onBack: () -> Unit,
-) {
+ ) {
+    val backToChatDescription = stringResource(Res.string.back_to_chat)
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -53,7 +56,7 @@ fun DrawingViewerScreen(
         AppBackButton(
             onClick = onBack,
             modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
-            description = "Назад в чат",
+            description = backToChatDescription,
             keepLightAppearance = true,
         )
     }
