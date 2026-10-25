@@ -18,10 +18,10 @@ import com.jaroapps.funnymail.core.navigation.AppDestination
 import com.jaroapps.funnymail.core.storage.DrawingDraftStorage
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.auth.presentation.AuthScreen
+import com.jaroapps.funnymail.features.chat.presentation.ChatsScreen
 import com.jaroapps.funnymail.features.drawing.presentation.DrawingScreen
 import com.jaroapps.funnymail.features.home.presentation.HomeScreen
 import com.jaroapps.funnymail.features.letter.presentation.LettersScreen
-import com.jaroapps.funnymail.features.placeholder.presentation.PlaceholderScreen
 import org.koin.compose.KoinApplication
 import org.koin.dsl.koinConfiguration
 
@@ -100,10 +100,9 @@ private fun FunnyMailContent(
                         onBack = { destination = AppDestination.Home },
                         onClearDraft = onClearDraft,
                     )
-                    AppDestination.Chats -> PlaceholderScreen(
-                        title = "Чаты",
-                        description = "Здесь появятся ваши чаты и приглашения.",
+                    AppDestination.Chats -> ChatsScreen(
                         onBack = { destination = AppDestination.Home },
+                        onOpenAccount = { destination = AppDestination.Auth },
                     )
                 }
             }
