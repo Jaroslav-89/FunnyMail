@@ -19,6 +19,8 @@ import com.jaroapps.funnymail.core.di.appModule
 import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import com.jaroapps.funnymail.core.navigation.AppDestination
 import com.jaroapps.funnymail.core.navigation.PlatformBackHandler
+import com.jaroapps.funnymail.core.notifications.registerPushToken
+import com.jaroapps.funnymail.core.notifications.unregisterPushToken
 import com.jaroapps.funnymail.core.storage.DrawingDraftStorage
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
@@ -87,6 +89,30 @@ private fun FunnyMailContent(
     val localDrawingRepository = koinInject<LocalDrawingRepository>()
     val authRepository = koinInject<AuthRepository>()
     val signedInUser by authRepository.currentUser.collectAsState(initial = null)
+    var pushTokenUserId by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(signedInUser?.id, firebaseConfigured) {
+        val nextUserId = signedInUser?.id
+        val previousUserId = pushTokenUserId
+        if (previousUserId != null && previousUserId != nextUserId) {
+            try {
+                unregisterPushToken(previousUserId)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // Token cleanup is best-effort; the server also removes invalid tokens.
+            }
+        }
+        if (nextUserId != null && firebaseConfigured) {
+            try {
+                registerPushToken(nextUserId)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                // Keep sign-in and chat access available if push permissions are denied.
+            }
+        }
+        pushTokenUserId = nextUserId
+    }
     var returnHomeAfterSignIn by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(signedInUser?.id, destination, returnHomeAfterSignIn) {
         if (returnHomeAfterSignIn && signedInUser != null && destination == AppDestination.Auth) {
