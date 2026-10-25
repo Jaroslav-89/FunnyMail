@@ -21,3 +21,5 @@ node_modules/
 # Firebase app configuration is generated per Firebase project and kept local.
 androidApp/google-services.json
 iosApp/iosApp/GoogleService-Info.plist
+# Firebase iOS configuration files (including duplicate downloads)
+iosApp/GoogleService-Info*.plist
