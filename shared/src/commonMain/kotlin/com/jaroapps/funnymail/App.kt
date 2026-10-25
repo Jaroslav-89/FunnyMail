@@ -314,6 +314,7 @@ private fun FunnyMailContent(
                             ThemePreferenceStorage.saveDarkTheme(enabled)
                         },
                         onBack = { destination = AppDestination.Home },
+                        onProfileSaved = { destination = AppDestination.Home },
                     )
                     AppDestination.Drawing -> DrawingScreen(
                         initialDrawingJson = editingDrawingJson,

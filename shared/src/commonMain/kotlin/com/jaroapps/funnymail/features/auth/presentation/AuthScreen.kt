@@ -94,6 +94,7 @@ fun AuthScreen(
     darkThemeEnabled: Boolean,
     onDarkThemeEnabledChange: (Boolean) -> Unit,
     onBack: () -> Unit,
+    onProfileSaved: () -> Unit,
 ) {
     val viewModel: AuthViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
@@ -256,7 +257,7 @@ fun AuthScreen(
                     ) {
                         viewModel.checkUsername(normalizedUsername)
                     } else {
-                        viewModel.saveUserProfile(customName, normalizedUsername)
+                        viewModel.saveUserProfile(customName, normalizedUsername, onProfileSaved)
                     }
                 },
                 enabled = !state.isCheckingUsername && !state.isSavingProfile,
@@ -286,6 +287,10 @@ fun AuthScreen(
                 onClick = viewModel::signOut,
                 enabled = !state.isSubmitting && !state.isSavingProfile,
                 modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFFD93025),
+                    contentColor = Color.White,
+                ),
             ) {
                 Text(stringResource(Res.string.sign_out))
             }

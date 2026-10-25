@@ -32,7 +32,7 @@
     <string name="saving">Сохраняем…</string>
     <string name="save">Сохранить</string>
     <string name="check_username">Проверить на уникальность</string>
-    <string name="sign_out">Выйти</string>
+    <string name="sign_out">Выйти из аккаунта</string>
     <string name="name">Имя</string>
     <string name="email">Email</string>
     <string name="password">Пароль</string>

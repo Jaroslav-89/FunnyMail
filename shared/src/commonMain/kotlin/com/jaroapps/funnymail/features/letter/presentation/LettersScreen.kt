@@ -134,7 +134,7 @@ fun LettersScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().padding(top = 68.dp),
             contentPadding = PaddingValues(start = 12.dp, top = 0.dp, end = 12.dp, bottom = 72.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {

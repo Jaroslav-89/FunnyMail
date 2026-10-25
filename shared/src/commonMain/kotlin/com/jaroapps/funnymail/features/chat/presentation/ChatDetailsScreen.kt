@@ -276,7 +276,7 @@ fun ChatDetailsScreen(
                 LazyColumn(
                     state = lettersListState,
                     reverseLayout = true,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().padding(top = 68.dp),
                     contentPadding = PaddingValues(
                         start = 16.dp,
                         top = 0.dp,

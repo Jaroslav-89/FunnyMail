@@ -32,7 +32,7 @@
     <string name="saving">Saving…</string>
     <string name="save">Save</string>
     <string name="check_username">Check availability</string>
-    <string name="sign_out">Sign out</string>
+    <string name="sign_out">Sign out of account</string>
     <string name="name">Name</string>
     <string name="email">Email</string>
     <string name="password">Password</string>
