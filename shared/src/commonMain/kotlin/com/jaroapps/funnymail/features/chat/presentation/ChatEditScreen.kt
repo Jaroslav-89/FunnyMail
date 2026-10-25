@@ -57,6 +57,7 @@ import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import com.jaroapps.funnymail.features.letter.domain.repository.LetterRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import org.koin.compose.koinInject
 import com.jaroapps.funnymail.resources.add_to_chat
@@ -165,6 +166,16 @@ fun ChatEditScreen(
     }
     val creatorId = chat.creatorUserId.ifBlank { chat.memberIds.firstOrNull().orEmpty() }
     val isCreator = currentUserId != null && currentUserId == creatorId
+    var observedMaxLettersCount by remember(chat.id) { mutableStateOf(chat.maxLettersCount) }
+
+    LaunchedEffect(chat.id, currentUserId) {
+        val userId = currentUserId ?: return@LaunchedEffect
+        repository.observeChats(userId).collect { chats ->
+            chats.firstOrNull { it.id == chat.id }?.let { latestChat ->
+                observedMaxLettersCount = latestChat.maxLettersCount
+            }
+        }
+    }
 
     var title by rememberSaveable(chat.id) { mutableStateOf(chat.title) }
     var description by rememberSaveable(chat.id) { mutableStateOf(chat.description) }
@@ -302,11 +313,11 @@ fun ChatEditScreen(
                 }
             }
 
-            if (isCreator || chat.maxLettersCount != null) {
-                Text(stringResource(Res.string.max_drawings_title), style = MaterialTheme.typography.titleMedium)
+            if (isCreator || observedMaxLettersCount != null) {
                 val parsedLimit = maxLettersText.toIntOrNull()
                 val normalizedLimit = if (maxLettersText.isBlank()) null else parsedLimit
                 if (isCreator) {
+                    Text(stringResource(Res.string.max_drawings_title), style = MaterialTheme.typography.titleMedium)
                     OutlinedTextField(
                         value = maxLettersText,
                         onValueChange = { value -> maxLettersText = value.filter { it.isDigit() }.take(3) },
@@ -371,25 +382,27 @@ fun ChatEditScreen(
                             normalizedLimit != chat.maxLettersCount,
                     ) { Text(if (busy) stringResource(Res.string.saving) else stringResource(Res.string.save_drawing_limit)) }
                 } else {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                    observedMaxLettersCount?.let { limit ->
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
                         ) {
-                            Text(
-                                text = chat.maxLettersCount.toString(),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                stringResource(Res.string.drawing_limit_readonly),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            Column(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Text(
+                                    text = stringResource(Res.string.drawing_limit_value, limit),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    stringResource(Res.string.drawing_limit_readonly),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
