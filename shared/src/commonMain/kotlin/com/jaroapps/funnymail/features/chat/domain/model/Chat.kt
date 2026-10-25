@@ -13,4 +13,6 @@ data class Chat(
     /** Creator of the chat; for legacy chats the first member is treated as creator. */
     val creatorUserId: String = memberIds.firstOrNull().orEmpty(),
     val description: String = "",
+    /** Null disables automatic retention by drawing count. */
+    val maxLettersCount: Int? = null,
 )
