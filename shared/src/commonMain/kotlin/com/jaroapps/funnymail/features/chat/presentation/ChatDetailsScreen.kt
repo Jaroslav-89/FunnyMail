@@ -24,6 +24,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -45,13 +47,18 @@ fun ChatDetailsScreen(
     val draft: DrawingDocument? = remember(draftJson) {
         draftJson?.let { DrawingCodec().decode(it).getOrNull() }
     }
+    var handledSentLetterId by remember { mutableStateOf(state.lastSentLetterId) }
 
     DisposableEffect(chat.id) {
         viewModel.observeLetters(chat.id)
         onDispose { viewModel.stopObserving(chat.id) }
     }
-    LaunchedEffect(state.draftSent) {
-        if (state.draftSent) onDraftSent()
+    LaunchedEffect(state.lastSentLetterId) {
+        val sentLetterId = state.lastSentLetterId
+        if (sentLetterId != null && sentLetterId != handledSentLetterId) {
+            handledSentLetterId = sentLetterId
+            onDraftSent()
+        }
     }
 
     Column(
