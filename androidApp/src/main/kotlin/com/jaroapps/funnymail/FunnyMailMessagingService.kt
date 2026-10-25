@@ -84,6 +84,6 @@ class FunnyMailMessagingService : FirebaseMessagingService() {
     }.getOrNull()
 
     private companion object {
-        const val CHANNEL_ID = "new_chat_messages"
+        const val CHANNEL_ID = "new_chat_messages_v2"
     }
 }
