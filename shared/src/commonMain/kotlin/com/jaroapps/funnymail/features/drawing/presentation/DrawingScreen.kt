@@ -755,6 +755,7 @@ fun DrawingScreen(
                             saveDrawingAction()
                         },
                         enabled = !isSaving && !isCurrentDrawingSaved,
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF202124)),
                     ) {
                         Text(
                             when {
