@@ -29,11 +29,11 @@ fun AppBackButton(
             .size(48.dp)
             .clip(CircleShape)
             .background(
-                if (keepLightAppearance) Color.White else MaterialTheme.colorScheme.surfaceVariant,
+                if (keepLightAppearance) Color(0xFFF5F5F5) else MaterialTheme.colorScheme.surfaceVariant,
             )
             .border(
                 1.dp,
-                if (keepLightAppearance) Color(0xFFE8EAED) else MaterialTheme.colorScheme.outlineVariant,
+                if (keepLightAppearance) Color(0xFFDADCE0) else MaterialTheme.colorScheme.outlineVariant,
                 CircleShape,
             )
             .clickable(onClick = onClick)
