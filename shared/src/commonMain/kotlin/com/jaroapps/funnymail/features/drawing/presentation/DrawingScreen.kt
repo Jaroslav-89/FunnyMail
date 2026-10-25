@@ -41,17 +41,20 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
+import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingStrokes
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingCanvas
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
+import kotlin.math.roundToInt
 
 private val DrawingPalette = listOf(
     "#202124",
@@ -96,9 +99,10 @@ fun DrawingScreen(
     var showFinishDialog by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var statusIsError by remember { mutableStateOf(false) }
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
     val drawingCodec = remember { DrawingCodec() }
-    val currentDrawingJson = remember(strokes) {
+    val currentDrawingJson = remember(strokes, canvasHeight) {
         if (strokes.isEmpty()) {
             null
         } else {
@@ -106,7 +110,7 @@ fun DrawingScreen(
                 DrawingDocument(
                     canvas = DrawingCanvas(
                         width = 1000,
-                        height = 1000,
+                        height = canvasHeight,
                         backgroundColor = "#FFFFFF",
                     ),
                     strokes = strokes,
@@ -116,6 +120,11 @@ fun DrawingScreen(
     }
     val isCurrentDrawingSaved = currentDrawingJson != null && currentDrawingJson == savedDrawingJson
     val paintColor = if (eraserEnabled) "#FFFFFF" else selectedColor
+    val canvasHeight = if (canvasSize.width > 0 && canvasSize.height > 0) {
+        (1000f * canvasSize.height / canvasSize.width).roundToInt().coerceIn(1, 4096)
+    } else {
+        1000
+    }
 
     val saveDrawingAction: () -> Unit = {
         val json = currentDrawingJson
@@ -166,7 +175,8 @@ fun DrawingScreen(
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .pointerInput(paintColor, brushWidth) {
+                .onSizeChanged { canvasSize = it }
+                .pointerInput(paintColor, brushWidth, canvasSize.width, canvasSize.height) {
                     fun normalizedPoint(x: Float, y: Float): List<Double> {
                         val canvasWidth = size.width.toFloat().coerceAtLeast(1f)
                         val canvasHeight = size.height.toFloat().coerceAtLeast(1f)
@@ -202,16 +212,20 @@ fun DrawingScreen(
                     )
                 },
         ) {
-            strokes.forEach { stroke -> drawDrawingStroke(stroke) }
-            if (activePoints.isNotEmpty()) {
-                drawDrawingStroke(
-                    DrawingStroke(
-                        color = paintColor,
-                        width = brushWidth,
-                        points = activePoints,
-                    ),
+            val visibleStrokes = if (activePoints.isEmpty()) {
+                strokes
+            } else {
+                strokes + DrawingStroke(
+                    color = paintColor,
+                    width = brushWidth,
+                    points = activePoints,
                 )
             }
+            drawDrawingStrokes(
+                strokes = visibleStrokes,
+                canvasWidth = 1000,
+                canvasHeight = canvasHeight,
+            )
         }
 
         if (strokes.isEmpty() && activePoints.isEmpty()) {
@@ -613,39 +627,6 @@ private fun DrawingToolGlyph(
                 drawPath(check, color, style = stroke)
             }
         }
-    }
-}
-
-private fun DrawScope.drawDrawingStroke(stroke: DrawingStroke) {
-    val color = stroke.color.toDrawingColor()
-    val lineWidth = (stroke.width * size.minDimension / 1000f)
-        .coerceAtLeast(1f)
-    if (stroke.points.size == 1) {
-        val point = stroke.points.first()
-        drawCircle(
-            color = color,
-            radius = lineWidth / 2f,
-            center = Offset(
-                x = (point[0] * size.width).toFloat(),
-                y = (point[1] * size.height).toFloat(),
-            ),
-        )
-    } else {
-        val path = Path()
-        stroke.points.forEachIndexed { index, point ->
-            val x = (point[0] * size.width).toFloat()
-            val y = (point[1] * size.height).toFloat()
-            if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
-        }
-        drawPath(
-            path = path,
-            color = color,
-            style = Stroke(
-                width = lineWidth,
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round,
-            ),
-        )
     }
 }
 
