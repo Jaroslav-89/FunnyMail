@@ -72,6 +72,13 @@ fun LettersScreen(
     val drawings by drawingsFlow.collectAsState(initial = emptyList())
     val coroutineScope = rememberCoroutineScope()
     val drawingCodec = remember { DrawingCodec() }
+    val drawingRemovedDeviceText = stringResource(Res.string.drawing_removed_device)
+    val deleteDrawingFailedText = stringResource(Res.string.delete_drawing_failed)
+    val drawingSentCurrentChatText = stringResource(Res.string.drawing_sent_current_chat)
+    val readingSavedDrawingFailedText = stringResource(Res.string.reading_saved_drawing_failed)
+    val draftAddedGalleryText = stringResource(Res.string.draft_added_gallery)
+    val draftAddFailedText = stringResource(Res.string.draft_add_failed)
+    val readingDrawingFailedText = stringResource(Res.string.reading_drawing_failed)
     var selectedDrawingId by remember { mutableStateOf<Long?>(null) }
     var sendingDrawingId by remember { mutableStateOf<Long?>(null) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
@@ -93,9 +100,9 @@ fun LettersScreen(
                 repository.deleteDrawing(savedDrawing.id)
                 if (draftJson == savedDrawing.drawingJson) onClearDraft()
                 if (selectedDrawingId == savedDrawing.id) selectedDrawingId = null
-                statusMessage = "Рисунок удалён с устройства."
+                statusMessage = drawingRemovedDeviceText
             } catch (error: Exception) {
-                statusMessage = error.message ?: "Не удалось удалить рисунок."
+                statusMessage = error.message ?: deleteDrawingFailedText
             }
         }
     }
@@ -106,7 +113,7 @@ fun LettersScreen(
         onSendDrawing(savedDrawing.drawingJson) { error ->
             sendingDrawingId = null
             statusMessage = if (error == null) {
-                "Рисунок отправлен в текущий чат."
+                drawingSentCurrentChatText
             } else {
                 error
             }
@@ -154,7 +161,7 @@ fun LettersScreen(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                 )
             } else {
-                Text("Не удалось прочитать сохранённый рисунок.", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(Res.string.reading_saved_drawing_failed), color = MaterialTheme.colorScheme.error)
             }
             OutlinedButton(
                 onClick = { selectedDrawingId = null },
@@ -208,9 +215,9 @@ fun LettersScreen(
                                         coroutineScope.launch {
                                             try {
                                                 repository.saveDrawing(draftJson)
-                                                statusMessage = "Черновик добавлен в галерею."
+                                                statusMessage = draftAddedGalleryText
                                             } catch (error: Exception) {
-                                                statusMessage = error.message ?: "Не удалось добавить черновик."
+                                                statusMessage = error.message ?: draftAddFailedText
                                             }
                                         }
                                     },
@@ -263,7 +270,7 @@ fun LettersScreen(
                                 )
                                 DrawingPreview(document, Modifier.fillMaxWidth().height(180.dp))
                             } else {
-                                Text("Не удалось прочитать рисунок. Его можно удалить.", color = MaterialTheme.colorScheme.error)
+                                Text(stringResource(Res.string.reading_drawing_failed), color = MaterialTheme.colorScheme.error)
                             }
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
