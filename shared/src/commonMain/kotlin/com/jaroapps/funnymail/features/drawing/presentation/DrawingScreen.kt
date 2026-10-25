@@ -947,18 +947,41 @@ private fun ColorWheel(
         )
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(Color.White, Color.Transparent),
+                colorStops = arrayOf(
+                    0f to Color.White,
+                    0.30f to Color.White,
+                    0.65f to Color.Transparent,
+                    1f to Color.Transparent,
+                ),
                 center = center,
                 radius = radius,
             ),
             radius = radius,
             center = center,
         )
-        val (hue, saturation) = selectedColor.toWheelHueSaturation()
+        drawCircle(
+            brush = Brush.radialGradient(
+                colorStops = arrayOf(
+                    0f to Color.Transparent,
+                    0.65f to Color.Transparent,
+                    1f to Color.Black,
+                ),
+                center = center,
+                radius = radius,
+            ),
+            radius = radius,
+            center = center,
+        )
+        val (hue, saturation, value) = selectedColor.toWheelHsv()
+        val normalizedRadius = if (value < 0.999f) {
+            0.65f + (1f - value) * 0.35f
+        } else {
+            saturation * 0.65f
+        }
         val angle = (hue * PI.toFloat() / 180f)
         val selectedPoint = Offset(
-            x = center.x + cos(angle) * radius * saturation,
-            y = center.y + sin(angle) * radius * saturation,
+            x = center.x + cos(angle) * radius * normalizedRadius,
+            y = center.y + sin(angle) * radius * normalizedRadius,
         )
         drawCircle(Color.White, radius = 8.dp.toPx(), center = selectedPoint)
         drawCircle(Color.Black, radius = 5.dp.toPx(), center = selectedPoint)
@@ -971,10 +994,20 @@ private fun colorAtWheelPoint(x: Float, y: Float, width: Float, height: Float): 
     val dx = x - centerX
     val dy = y - centerY
     val maximumRadius = min(width, height) / 2f
-    val saturation = (sqrt(dx * dx + dy * dy) / maximumRadius).coerceIn(0f, 1f)
+    val normalizedRadius = (sqrt(dx * dx + dy * dy) / maximumRadius).coerceIn(0f, 1f)
+    val saturation = if (normalizedRadius <= 0.65f) {
+        (normalizedRadius / 0.65f).coerceIn(0f, 1f)
+    } else {
+        1f
+    }
+    val value = if (normalizedRadius <= 0.65f) {
+        1f
+    } else {
+        ((1f - normalizedRadius) / 0.35f).coerceIn(0f, 1f)
+    }
     val hue = ((atan2(dy.toDouble(), dx.toDouble()) * 180.0 / PI) + 360.0) % 360.0
     val sector = hue / 60.0
-    val chroma = saturation.toDouble()
+    val chroma = value.toDouble() * saturation.toDouble()
     val xComponent = chroma * (1.0 - abs((sector % 2.0) - 1.0))
     val components = when {
         sector < 1.0 -> Triple(chroma, xComponent, 0.0)
@@ -984,14 +1017,14 @@ private fun colorAtWheelPoint(x: Float, y: Float, width: Float, height: Float): 
         sector < 5.0 -> Triple(xComponent, 0.0, chroma)
         else -> Triple(chroma, 0.0, xComponent)
     }
-    val minimum = 1.0 - chroma
+    val minimum = value.toDouble() - chroma
     fun toHex(value: Double): String = (value.coerceIn(0.0, 1.0) * 255.0)
         .toInt().coerceIn(0, 255).toString(16).uppercase().padStart(2, '0')
     return "#" + toHex(components.first + minimum) +
         toHex(components.second + minimum) + toHex(components.third + minimum)
 }
 
-private fun String.toWheelHueSaturation(): Pair<Float, Float> {
+private fun String.toWheelHsv(): Triple<Float, Float, Float> {
     val rgb = removePrefix("#").toLongOrNull(16) ?: 0L
     val red = ((rgb shr 16) and 0xFF).toFloat() / 255f
     val green = ((rgb shr 8) and 0xFF).toFloat() / 255f
@@ -1006,7 +1039,7 @@ private fun String.toWheelHueSaturation(): Pair<Float, Float> {
         else -> 60f * (((red - green) / delta) + 4f)
     }.let { if (it < 0f) it + 360f else it }
     val saturation = if (maximum == 0f) 0f else delta / maximum
-    return hue to saturation
+    return Triple(hue, saturation, maximum)
 }
 
 fun DrawScope.drawDrawingBackground(canvas: DrawingCanvas) {
