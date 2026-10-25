@@ -1,6 +1,8 @@
 package com.jaroapps.funnymail
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
@@ -68,36 +70,42 @@ private fun FunnyMailContent(
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
 
     MaterialTheme {
-        Scaffold(modifier = Modifier.fillMaxSize()) { _ ->
-            when (destination) {
-                AppDestination.Home -> HomeScreen(
-                    onCreateLetter = { destination = AppDestination.Drawing },
-                    onOpenLetters = { destination = AppDestination.Letters },
-                    onOpenChats = { destination = AppDestination.Chats },
-                    onOpenAccount = { destination = AppDestination.Auth },
-                    hasDraft = hasDraft,
-                )
-                AppDestination.Auth -> AuthScreen(
-                    firebaseConfigured = firebaseConfigured,
-                    onBack = { destination = AppDestination.Home },
-                )
-                AppDestination.Drawing -> DrawingScreen(
-                    onBack = { destination = AppDestination.Home },
-                    onPrepared = { json ->
-                        onDraftPrepared(json)
-                        destination = AppDestination.Home
-                    },
-                )
-                AppDestination.Letters -> LettersScreen(
-                    draftJson = draftJson,
-                    onBack = { destination = AppDestination.Home },
-                    onClearDraft = onClearDraft,
-                )
-                AppDestination.Chats -> PlaceholderScreen(
-                    title = "Чаты",
-                    description = "Здесь появятся ваши чаты и приглашения.",
-                    onBack = { destination = AppDestination.Home },
-                )
+        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                when (destination) {
+                    AppDestination.Home -> HomeScreen(
+                        onCreateLetter = { destination = AppDestination.Drawing },
+                        onOpenLetters = { destination = AppDestination.Letters },
+                        onOpenChats = { destination = AppDestination.Chats },
+                        onOpenAccount = { destination = AppDestination.Auth },
+                        hasDraft = hasDraft,
+                    )
+                    AppDestination.Auth -> AuthScreen(
+                        firebaseConfigured = firebaseConfigured,
+                        onBack = { destination = AppDestination.Home },
+                    )
+                    AppDestination.Drawing -> DrawingScreen(
+                        onBack = { destination = AppDestination.Home },
+                        onPrepared = { json ->
+                            onDraftPrepared(json)
+                            destination = AppDestination.Home
+                        },
+                    )
+                    AppDestination.Letters -> LettersScreen(
+                        draftJson = draftJson,
+                        onBack = { destination = AppDestination.Home },
+                        onClearDraft = onClearDraft,
+                    )
+                    AppDestination.Chats -> PlaceholderScreen(
+                        title = "Чаты",
+                        description = "Здесь появятся ваши чаты и приглашения.",
+                        onBack = { destination = AppDestination.Home },
+                    )
+                }
             }
         }
     }
