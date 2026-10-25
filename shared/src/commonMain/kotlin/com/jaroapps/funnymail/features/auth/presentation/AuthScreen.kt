@@ -27,6 +27,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -56,6 +58,8 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun AuthScreen(
     firebaseConfigured: Boolean,
+    darkThemeEnabled: Boolean,
+    onDarkThemeEnabledChange: (Boolean) -> Unit,
     onBack: () -> Unit,
 ) {
     val viewModel: AuthViewModel = koinViewModel()
@@ -104,6 +108,29 @@ fun AuthScreen(
                 text = "Аккаунт",
                 style = MaterialTheme.typography.headlineLarge,
                 color = MaterialTheme.colorScheme.primary,
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text("Темная тема", style = MaterialTheme.typography.titleMedium)
+                Text(
+                    "Более тёмное оформление приложения",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(
+                checked = darkThemeEnabled,
+                onCheckedChange = onDarkThemeEnabledChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color(0xFFF5A800),
+                    checkedTrackColor = Color(0xFFF5A800).copy(alpha = 0.38f),
+                    checkedBorderColor = Color(0xFFF5A800),
+                ),
             )
         }
 

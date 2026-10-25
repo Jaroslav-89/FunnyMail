@@ -16,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import com.jaroapps.funnymail.core.auth.NativeSocialSignIn
 import com.jaroapps.funnymail.core.storage.DrawingDraftStorage
+import com.jaroapps.funnymail.core.storage.ThemePreferenceStorage
 import com.jaroapps.funnymail.features.drawing.data.local.LocalDrawingDatabaseBuilder
 
 class MainActivity : ComponentActivity() {
@@ -35,6 +36,7 @@ class MainActivity : ComponentActivity() {
         }
         NativeSocialSignIn.attachPlatformContext(this)
         DrawingDraftStorage.attachPlatformContext(this)
+        ThemePreferenceStorage.attachPlatformContext(this)
         LocalDrawingDatabaseBuilder.attachPlatformContext(this)
 
         setContent {
@@ -52,6 +54,7 @@ class MainActivity : ComponentActivity() {
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description = "Уведомления о новых сообщениях в чатах FunnyMail"
+                setShowBadge(true)
             },
         )
     }

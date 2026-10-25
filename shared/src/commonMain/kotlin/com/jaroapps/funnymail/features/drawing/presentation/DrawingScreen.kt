@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -24,6 +25,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -52,8 +57,14 @@ import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingCanvas
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 private val DrawingPalette = listOf(
     "#202124",
@@ -98,10 +109,33 @@ fun DrawingScreen(
     var isSaving by remember { mutableStateOf(false) }
     var isSending by remember { mutableStateOf(false) }
     var activePoints by remember { mutableStateOf<List<List<Double>>>(emptyList()) }
-    var selectedColor by remember { mutableStateOf(DrawingPalette.first()) }
+    var selectedColor by remember(initialDrawingJson) { mutableStateOf("#000000") }
     var brushWidth by remember { mutableStateOf(12f) }
     var eraserEnabled by remember { mutableStateOf(false) }
     var activePopup by remember { mutableStateOf<DrawingPopup?>(null) }
+    var backgroundMode by remember(initialDrawingJson) {
+        mutableStateOf(initialDrawing?.canvas?.backgroundMode ?: "SOLID")
+    }
+    var backgroundColor by remember(initialDrawingJson) {
+        mutableStateOf(initialDrawing?.canvas?.backgroundColor ?: "#FFFFFF")
+    }
+    var gradientDirection by remember(initialDrawingJson) {
+        mutableStateOf(initialDrawing?.canvas?.gradientDirection ?: "TOP_TO_BOTTOM")
+    }
+    var gradientStartColor by remember(initialDrawingJson) {
+        mutableStateOf(initialDrawing?.canvas?.gradientStartColor ?: "#00AA00")
+    }
+    var gradientEndColor by remember(initialDrawingJson) {
+        mutableStateOf(initialDrawing?.canvas?.gradientEndColor ?: "#F5A800")
+    }
+    var showLineColorDialog by remember { mutableStateOf(false) }
+    var showBackgroundDialog by remember { mutableStateOf(false) }
+    var backgroundPickerTab by remember { mutableStateOf("SOLID") }
+    var pendingBackgroundColor by remember { mutableStateOf("#FFFFFF") }
+    var pendingGradientDirection by remember { mutableStateOf("TOP_TO_BOTTOM") }
+    var pendingGradientStartColor by remember { mutableStateOf("#00AA00") }
+    var pendingGradientEndColor by remember { mutableStateOf("#F5A800") }
+    var pendingGradientEndpoint by remember { mutableStateOf(0) }
     var showFinishDialog by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var statusIsError by remember { mutableStateOf(false) }
@@ -116,8 +150,21 @@ fun DrawingScreen(
         mutableStateOf(initialDrawing != null)
     }
     var isDrawingGestureActive by remember { mutableStateOf(false) }
-    val paintColor = if (eraserEnabled) "#FFFFFF" else selectedColor
-    val currentDrawingJson = remember(strokes, canvasWidth, canvasHeight) {
+    val paintColor = if (eraserEnabled) {
+        if (backgroundMode == "GRADIENT") gradientStartColor else backgroundColor
+    } else {
+        selectedColor
+    }
+    val currentDrawingJson = remember(
+        strokes,
+        canvasWidth,
+        canvasHeight,
+        backgroundMode,
+        backgroundColor,
+        gradientDirection,
+        gradientStartColor,
+        gradientEndColor,
+    ) {
         if (strokes.isEmpty()) {
             null
         } else {
@@ -126,7 +173,11 @@ fun DrawingScreen(
                     canvas = DrawingCanvas(
                         width = canvasWidth,
                         height = canvasHeight,
-                        backgroundColor = "#FFFFFF",
+                        backgroundColor = backgroundColor,
+                        backgroundMode = backgroundMode,
+                        gradientDirection = gradientDirection,
+                        gradientStartColor = gradientStartColor,
+                        gradientEndColor = gradientEndColor,
                     ),
                     strokes = strokes,
                 ),
@@ -262,6 +313,17 @@ fun DrawingScreen(
                     )
                 },
         ) {
+            drawDrawingBackground(
+                DrawingCanvas(
+                    width = canvasWidth,
+                    height = canvasHeight,
+                    backgroundColor = backgroundColor,
+                    backgroundMode = backgroundMode,
+                    gradientDirection = gradientDirection,
+                    gradientStartColor = gradientStartColor,
+                    gradientEndColor = gradientEndColor,
+                ),
+            )
             val visibleStrokes = if (activePoints.isEmpty()) {
                 strokes
             } else {
@@ -381,78 +443,24 @@ fun DrawingScreen(
 
         Row(
             modifier = Modifier
+                .fillMaxWidth()
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.Bottom,
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(9.dp),
+            RoundToolButton(
+                onClick = {
+                    activePopup = null
+                    showLineColorDialog = true
+                },
             ) {
-                AnimatedVisibility(
-                    visible = activePopup == DrawingPopup.Colors,
-                    enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
-                    exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom),
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .shadow(5.dp, RoundedCornerShape(28.dp))
-                            .clip(RoundedCornerShape(28.dp))
-                            .background(Color.White)
-                            .border(1.dp, Color(0xFFE8EAED), RoundedCornerShape(28.dp))
-                            .padding(horizontal = 8.dp, vertical = 9.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    ) {
-                        DrawingPalette.forEach { colorHex ->
-                            val selected = !eraserEnabled && selectedColor == colorHex
-                            Box(
-                                modifier = Modifier
-                                    .size(26.dp)
-                                    .clip(CircleShape)
-                                    .background(colorHex.toDrawingColor())
-                                    .border(
-                                        width = if (selected) 3.dp else 1.dp,
-                                        color = if (selected) Color(0xFF202124) else Color(0xFFDADCE0),
-                                        shape = CircleShape,
-                                    )
-                                    .clickable {
-                                        selectedColor = colorHex
-                                        eraserEnabled = false
-                                        activePopup = null
-                                        statusMessage = null
-                                    },
-                            )
-                        }
-
-                        TextButton(
-                            onClick = {
-                                eraserEnabled = true
-                                activePopup = null
-                                statusMessage = null
-                            },
-                            modifier = Modifier
-                                .height(36.dp)
-                                .clip(CircleShape)
-                                .background(Color.White)
-                                .border(
-                                    width = if (eraserEnabled) 2.dp else 1.dp,
-                                    color = if (eraserEnabled) Color(0xFF202124) else Color(0xFFDADCE0),
-                                    shape = CircleShape,
-                                ),
-                        ) {
-                            Text("Ластик", color = Color(0xFF202124), fontSize = 11.sp)
-                        }
-                    }
-                }
-
-                ColorToolButton(
-                    selectedColor = selectedColor,
-                    eraserEnabled = eraserEnabled,
-                    onClick = {
-                        activePopup = if (activePopup == DrawingPopup.Colors) null else DrawingPopup.Colors
-                    },
+                Box(
+                    modifier = Modifier
+                        .size(27.dp)
+                        .clip(CircleShape)
+                        .background(selectedColor.toDrawingColor())
+                        .border(1.dp, Color(0xFFE8EAED), CircleShape),
                 )
             }
 
@@ -520,7 +528,206 @@ fun DrawingScreen(
                     )
                 }
             }
+
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .shadow(4.dp, RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color.White)
+                    .border(1.dp, Color(0xFFE8EAED), RoundedCornerShape(10.dp))
+                    .clickable {
+                        backgroundPickerTab = backgroundMode
+                        pendingBackgroundColor = backgroundColor
+                        pendingGradientDirection = gradientDirection
+                        pendingGradientStartColor = gradientStartColor
+                        pendingGradientEndColor = gradientEndColor
+                        pendingGradientEndpoint = 0
+                        showBackgroundDialog = true
+                        activePopup = null
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(27.dp)
+                        .clip(RoundedCornerShape(5.dp))
+                        .background(
+                            if (backgroundMode == "GRADIENT") {
+                                Brush.linearGradient(
+                                    listOf(gradientStartColor.toDrawingColor(), gradientEndColor.toDrawingColor()),
+                                )
+                            } else {
+                                SolidColor(backgroundColor.toDrawingColor())
+                            },
+                        )
+                        .border(1.dp, Color(0xFFE8EAED), RoundedCornerShape(5.dp)),
+                )
+            }
         }
+    }
+
+    if (showLineColorDialog) {
+        AlertDialog(
+            onDismissRequest = { showLineColorDialog = false },
+            title = { Text("Цвет линии") },
+            text = {
+                ColorWheel(
+                    selectedColor = selectedColor,
+                    onColorSelected = {
+                        selectedColor = it
+                        eraserEnabled = false
+                        statusMessage = null
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showLineColorDialog = false }) { Text("Готово") }
+            },
+        )
+    }
+
+    if (showBackgroundDialog) {
+        AlertDialog(
+            onDismissRequest = { showBackgroundDialog = false },
+            title = { Text("Фон рисунка") },
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        listOf("SOLID" to "Однотонный", "GRADIENT" to "Градиент").forEach { (tab, label) ->
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(18.dp))
+                                    .background(
+                                        if (backgroundPickerTab == tab) Color(0xFFF5A800)
+                                        else MaterialTheme.colorScheme.surfaceVariant,
+                                    )
+                                    .clickable { backgroundPickerTab = tab }
+                                    .padding(horizontal = 8.dp, vertical = 10.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    label,
+                                    color = if (backgroundPickerTab == tab) Color(0xFF202124)
+                                    else MaterialTheme.colorScheme.onSurface,
+                                    style = MaterialTheme.typography.labelLarge,
+                                )
+                            }
+                        }
+                    }
+
+                    if (backgroundPickerTab == "SOLID") {
+                        ColorWheel(
+                            selectedColor = pendingBackgroundColor,
+                            onColorSelected = { pendingBackgroundColor = it },
+                        )
+                    } else {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            listOf(
+                                "LEFT_TO_RIGHT" to "→",
+                                "TOP_TO_BOTTOM" to "↓",
+                                "TOP_LEFT_TO_BOTTOM_RIGHT" to "↘",
+                                "TOP_RIGHT_TO_BOTTOM_LEFT" to "↙",
+                            ).forEach { (direction, glyph) ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(39.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(
+                                            if (pendingGradientDirection == direction) Color(0xFFF5A800)
+                                            else MaterialTheme.colorScheme.surfaceVariant,
+                                        )
+                                        .border(
+                                            1.dp,
+                                            if (pendingGradientDirection == direction) Color(0xFFF5A800)
+                                            else MaterialTheme.colorScheme.outlineVariant,
+                                            RoundedCornerShape(8.dp),
+                                        )
+                                        .clickable { pendingGradientDirection = direction },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        glyph,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = if (pendingGradientDirection == direction) Color(0xFF202124)
+                                        else MaterialTheme.colorScheme.onSurface,
+                                    )
+                                }
+                            }
+                        }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(pendingGradientStartColor.toDrawingColor())
+                                    .border(
+                                        if (pendingGradientEndpoint == 0) 3.dp else 1.dp,
+                                        if (pendingGradientEndpoint == 0) Color(0xFF202124)
+                                        else MaterialTheme.colorScheme.outlineVariant,
+                                        RoundedCornerShape(8.dp),
+                                    )
+                                    .clickable { pendingGradientEndpoint = 0 },
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(pendingGradientEndColor.toDrawingColor())
+                                    .border(
+                                        if (pendingGradientEndpoint == 1) 3.dp else 1.dp,
+                                        if (pendingGradientEndpoint == 1) Color(0xFF202124)
+                                        else MaterialTheme.colorScheme.outlineVariant,
+                                        RoundedCornerShape(8.dp),
+                                    )
+                                    .clickable { pendingGradientEndpoint = 1 },
+                            )
+                        }
+                        ColorWheel(
+                            selectedColor = if (pendingGradientEndpoint == 0) {
+                                pendingGradientStartColor
+                            } else {
+                                pendingGradientEndColor
+                            },
+                            onColorSelected = { color ->
+                                if (pendingGradientEndpoint == 0) pendingGradientStartColor = color
+                                else pendingGradientEndColor = color
+                            },
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        backgroundMode = backgroundPickerTab
+                        backgroundColor = pendingBackgroundColor
+                        gradientDirection = pendingGradientDirection
+                        gradientStartColor = pendingGradientStartColor
+                        gradientEndColor = pendingGradientEndColor
+                        showBackgroundDialog = false
+                        statusMessage = null
+                    },
+                ) { Text("Готово", color = MaterialTheme.colorScheme.primary) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBackgroundDialog = false }) { Text("Отмена") }
+            },
+        )
     }
 
     if (showFinishDialog) {
@@ -695,4 +902,125 @@ private fun String.toDrawingColor(): Color {
         blue = (rgb and 0xFF).toFloat() / 255f,
         alpha = 1f,
     )
+}
+
+@Composable
+private fun ColorWheel(
+    selectedColor: String,
+    onColorSelected: (String) -> Unit,
+) {
+    Canvas(
+        modifier = Modifier
+            .size(238.dp)
+            .pointerInput(onColorSelected) {
+                detectTapGestures { point ->
+                    onColorSelected(colorAtWheelPoint(point.x, point.y, size.width.toFloat(), size.height.toFloat()))
+                }
+            },
+    ) {
+        val radius = size.minDimension / 2f
+        val center = Offset(size.width / 2f, size.height / 2f)
+        drawCircle(
+            brush = Brush.sweepGradient(
+                colors = listOf(
+                    Color.Red,
+                    Color.Yellow,
+                    Color.Green,
+                    Color.Cyan,
+                    Color.Blue,
+                    Color.Magenta,
+                    Color.Red,
+                ),
+                center = center,
+            ),
+            radius = radius,
+            center = center,
+        )
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color.White, Color.Transparent),
+                center = center,
+                radius = radius,
+            ),
+            radius = radius,
+            center = center,
+        )
+        val (hue, saturation) = selectedColor.toWheelHueSaturation()
+        val angle = (hue * PI.toFloat() / 180f)
+        val selectedPoint = Offset(
+            x = center.x + cos(angle) * radius * saturation,
+            y = center.y + sin(angle) * radius * saturation,
+        )
+        drawCircle(Color.White, radius = 8.dp.toPx(), center = selectedPoint)
+        drawCircle(Color.Black, radius = 5.dp.toPx(), center = selectedPoint)
+    }
+}
+
+private fun colorAtWheelPoint(x: Float, y: Float, width: Float, height: Float): String {
+    val centerX = width / 2f
+    val centerY = height / 2f
+    val dx = x - centerX
+    val dy = y - centerY
+    val maximumRadius = min(width, height) / 2f
+    val saturation = (sqrt(dx * dx + dy * dy) / maximumRadius).coerceIn(0f, 1f)
+    val hue = ((atan2(dy.toDouble(), dx.toDouble()) * 180.0 / PI) + 360.0) % 360.0
+    val sector = hue / 60.0
+    val chroma = saturation.toDouble()
+    val xComponent = chroma * (1.0 - abs((sector % 2.0) - 1.0))
+    val components = when {
+        sector < 1.0 -> Triple(chroma, xComponent, 0.0)
+        sector < 2.0 -> Triple(xComponent, chroma, 0.0)
+        sector < 3.0 -> Triple(0.0, chroma, xComponent)
+        sector < 4.0 -> Triple(0.0, xComponent, chroma)
+        sector < 5.0 -> Triple(xComponent, 0.0, chroma)
+        else -> Triple(chroma, 0.0, xComponent)
+    }
+    val minimum = 1.0 - chroma
+    fun toHex(value: Double): String = (value.coerceIn(0.0, 1.0) * 255.0)
+        .toInt().coerceIn(0, 255).toString(16).uppercase().padStart(2, '0')
+    return "#" + toHex(components.first + minimum) +
+        toHex(components.second + minimum) + toHex(components.third + minimum)
+}
+
+private fun String.toWheelHueSaturation(): Pair<Float, Float> {
+    val rgb = removePrefix("#").toLongOrNull(16) ?: 0L
+    val red = ((rgb shr 16) and 0xFF).toFloat() / 255f
+    val green = ((rgb shr 8) and 0xFF).toFloat() / 255f
+    val blue = (rgb and 0xFF).toFloat() / 255f
+    val maximum = maxOf(red, green, blue)
+    val minimum = minOf(red, green, blue)
+    val delta = maximum - minimum
+    val hue = when {
+        delta == 0f -> 0f
+        maximum == red -> 60f * (((green - blue) / delta) % 6f)
+        maximum == green -> 60f * (((blue - red) / delta) + 2f)
+        else -> 60f * (((red - green) / delta) + 4f)
+    }.let { if (it < 0f) it + 360f else it }
+    val saturation = if (maximum == 0f) 0f else delta / maximum
+    return hue to saturation
+}
+
+fun DrawScope.drawDrawingBackground(canvas: DrawingCanvas) {
+    val brush = if (canvas.backgroundMode.equals("GRADIENT", ignoreCase = true)) {
+        val start = when (canvas.gradientDirection.uppercase()) {
+            "LEFT_TO_RIGHT" -> Offset(0f, size.height / 2f)
+            "TOP_LEFT_TO_BOTTOM_RIGHT" -> Offset.Zero
+            "TOP_RIGHT_TO_BOTTOM_LEFT" -> Offset(size.width, 0f)
+            else -> Offset(size.width / 2f, 0f)
+        }
+        val end = when (canvas.gradientDirection.uppercase()) {
+            "LEFT_TO_RIGHT" -> Offset(size.width, size.height / 2f)
+            "TOP_LEFT_TO_BOTTOM_RIGHT" -> Offset(size.width, size.height)
+            "TOP_RIGHT_TO_BOTTOM_LEFT" -> Offset(0f, size.height)
+            else -> Offset(size.width / 2f, size.height)
+        }
+        Brush.linearGradient(
+            colors = listOf(canvas.gradientStartColor.toDrawingColor(), canvas.gradientEndColor.toDrawingColor()),
+            start = start,
+            end = end,
+        )
+    } else {
+        SolidColor(canvas.backgroundColor.toDrawingColor())
+    }
+    drawRect(brush = brush)
 }

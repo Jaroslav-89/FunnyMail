@@ -120,9 +120,9 @@ fun ChatDetailsScreen(
         onDispose { viewModel.stopObserving(chat.id) }
     }
 
-    LaunchedEffect(chat.id, state.letters.size, state.letters.lastOrNull()?.id, state.isLoading) {
+    LaunchedEffect(chat.id, state.letters.lastOrNull()?.id, state.isLoading) {
         if (state.letters.isNotEmpty()) {
-            lettersListState.scrollToItem(state.letters.lastIndex)
+            lettersListState.scrollToItem(0)
         }
     }
 
@@ -165,137 +165,136 @@ fun ChatDetailsScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
+        when {
+            state.isLoading && state.letters.isEmpty() -> {
+                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+            }
+            state.letters.isEmpty() -> {
+                Text(
+                    text = "Пока нет писем. Отправьте рисунок в чат.",
+                    modifier = Modifier.align(Alignment.Center).padding(horizontal = 28.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            else -> {
+                LazyColumn(
+                    state = lettersListState,
+                    reverseLayout = true,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 16.dp,
+                        top = 68.dp,
+                        end = 16.dp,
+                        bottom = 100.dp,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    items(state.letters.asReversed(), key = { it.id }) { letter ->
+                        ChatLetterCard(
+                            letter = letter,
+                            currentUserId = state.currentUser?.id,
+                            authorDisplayName = authorNames[letter.authorUserId],
+                            onClick = { onViewDrawing(letter.drawing) },
+                            onDelete = {
+                                val userId = state.currentUser?.id
+                                if (userId != null) {
+                                    coroutineScope.launch {
+                                        letterRepository.deleteLetter(chat.id, letter.id, userId).fold(
+                                            onSuccess = { drawingActionMessage = "Ваш рисунок удалён из чата." },
+                                            onFailure = { error ->
+                                                drawingActionMessage = error.message ?: "Не удалось удалить рисунок."
+                                            },
+                                        )
+                                    }
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ChatHeaderIconButton(onClick = onBack, description = "Назад") {
+                BackArrowGlyph(color = MaterialTheme.colorScheme.onSurface)
+            }
+
+            Surface(
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
             ) {
-                ChatHeaderIconButton(onClick = onBack, description = "Назад") {
-                    BackArrowGlyph(color = MaterialTheme.colorScheme.onSurface)
-                }
-
-                Surface(
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = chat.title,
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = chat.memberIds.size.toString(),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        AccountPersonIcon(
-                            modifier = Modifier.padding(start = 3.dp).size(18.dp),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-
-                ChatHeaderIconButton(onClick = onEditChat, description = "Редактировать чат") {
-                    EditPencilIcon(
-                        modifier = Modifier.size(22.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-
-                ChatHeaderIconButton(
-                    onClick = {
-                        generatedInvite = null
-                        inviteError = null
-                        showInviteDialog = true
-                    },
-                    description = "Добавить пользователя в чат",
-                ) {
-                    PersonPlusIcon(
-                        modifier = Modifier.size(23.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-            }
-
-            Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
-                when {
-                    state.isLoading && state.letters.isEmpty() -> {
-                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                    }
-                    state.letters.isEmpty() -> {
-                        Text(
-                            text = "Пока нет писем. Отправьте рисунок в чат.",
-                            modifier = Modifier.align(Alignment.Center).padding(horizontal = 28.dp),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    else -> {
-                        LazyColumn(
-                            state = lettersListState,
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(
-                                start = 16.dp,
-                                top = 8.dp,
-                                end = 16.dp,
-                                bottom = 100.dp,
-                            ),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            items(state.letters, key = { it.id }) { letter ->
-                                ChatLetterCard(
-                                    letter = letter,
-                                    currentUserId = state.currentUser?.id,
-                                    authorDisplayName = authorNames[letter.authorUserId],
-                                    onClick = { onViewDrawing(letter.drawing) },
-                                    onDelete = {
-                                        val userId = state.currentUser?.id
-                                        if (userId != null) {
-                                            coroutineScope.launch {
-                                                letterRepository.deleteLetter(chat.id, letter.id, userId).fold(
-                                                    onSuccess = { drawingActionMessage = "Ваш рисунок удалён из чата." },
-                                                    onFailure = { error ->
-                                                        drawingActionMessage = error.message ?: "Не удалось удалить рисунок."
-                                                    },
-                                                )
-                                            }
-                                        }
-                                    },
-                                )
-                            }
-                        }
-                    }
-                }
-
-                (drawingActionMessage ?: state.message)?.let { message ->
                     Text(
-                        text = message,
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(12.dp)
-                            .background(
-                                color = if (state.messageIsError) MaterialTheme.colorScheme.errorContainer
-                                else MaterialTheme.colorScheme.secondaryContainer,
-                                shape = RoundedCornerShape(14.dp),
-                            )
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        color = if (state.messageIsError) MaterialTheme.colorScheme.onErrorContainer
-                        else MaterialTheme.colorScheme.onSecondaryContainer,
-                        style = MaterialTheme.typography.bodySmall,
+                        text = chat.title,
+                        modifier = Modifier.weight(1f),
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = chat.memberIds.size.toString(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    AccountPersonIcon(
+                        modifier = Modifier.padding(start = 3.dp).size(18.dp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
+
+            ChatHeaderIconButton(onClick = onEditChat, description = "Редактировать чат") {
+                EditPencilIcon(
+                    modifier = Modifier.size(22.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
+            ChatHeaderIconButton(
+                onClick = {
+                    generatedInvite = null
+                    inviteError = null
+                    showInviteDialog = true
+                },
+                description = "Добавить пользователя в чат",
+            ) {
+                PersonPlusIcon(
+                    modifier = Modifier.size(23.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+
+        (drawingActionMessage ?: state.message)?.let { message ->
+            Text(
+                text = message,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 86.dp, start = 12.dp, end = 12.dp)
+                    .background(
+                        color = if (state.messageIsError) MaterialTheme.colorScheme.errorContainer
+                        else MaterialTheme.colorScheme.secondaryContainer,
+                        shape = RoundedCornerShape(14.dp),
+                    )
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                color = if (state.messageIsError) MaterialTheme.colorScheme.onErrorContainer
+                else MaterialTheme.colorScheme.onSecondaryContainer,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
 
         Column(
@@ -566,7 +565,7 @@ private fun ChatHeaderIconButton(
     Box(
         modifier = Modifier.size(48.dp)
             .clip(CircleShape)
-            .background(Color.Transparent)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
             .clickable(onClick = onClick)
             .semantics { contentDescription = description },

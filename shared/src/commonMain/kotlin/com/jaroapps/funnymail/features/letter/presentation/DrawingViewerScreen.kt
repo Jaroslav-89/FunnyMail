@@ -24,6 +24,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingStrokes
+import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingBackground
 
 /**
  * Read-only full-screen view of a drawing sent to a chat.
@@ -39,6 +40,7 @@ fun DrawingViewerScreen(
             .background(Color.White),
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
+        drawDrawingBackground(drawing.canvas)
             drawDrawingStrokes(
                 strokes = drawing.strokes,
                 canvasWidth = drawing.canvas.width,

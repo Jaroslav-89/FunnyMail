@@ -36,8 +36,11 @@ class FunnyMailMessagingService : FirebaseMessagingService() {
             )
         }
 
+        val nextUnreadCount = (NotificationManagerCompat.from(this).activeNotifications.size + 1)
+            .coerceAtLeast(1)
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
+            .setNumber(nextUnreadCount)
             .setLargeIcon(applicationIconBitmap())
             .setColor(ContextCompat.getColor(this, R.color.funnymail_brand_yellow))
             .setContentTitle(title)
@@ -64,6 +67,7 @@ class FunnyMailMessagingService : FirebaseMessagingService() {
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description = "Уведомления о новых рисунках и сообщениях в чатах FunnyMail"
+                setShowBadge(true)
             },
         )
     }

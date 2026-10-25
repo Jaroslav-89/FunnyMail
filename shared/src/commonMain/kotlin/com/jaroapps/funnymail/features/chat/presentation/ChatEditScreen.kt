@@ -117,61 +117,71 @@ fun ChatEditScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text("Название чата", style = MaterialTheme.typography.titleMedium)
-            OutlinedTextField(
-                value = title,
-                onValueChange = { title = it.take(80) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = isCreator && !busy,
-                singleLine = true,
-                label = { Text("Название") },
-                supportingText = {
-                    Text(if (isCreator) "До 80 символов" else "Изменять название может только создатель")
-                },
-            )
-            Button(
-                onClick = {
-                    val userId = currentUserId
-                    val normalized = title.trim()
-                    if (userId != null && normalized.isNotEmpty() && !busy) {
-                        busy = true
-                        message = null
-                        scope.launch {
-                            repository.updateChatTitle(chat.id, normalized, userId).fold(
-                                onSuccess = {
-                                    busy = false
-                                    onChatUpdated(it)
-                                    message = "Название чата сохранено."
-                                    messageIsError = false
-                                },
-                                onFailure = {
-                                    busy = false
-                                    message = it.message ?: "Не удалось изменить название чата."
-                                    messageIsError = true
-                                },
-                            )
+            if (isCreator) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it.take(80) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !busy,
+                    singleLine = true,
+                    label = { Text("Название") },
+                    supportingText = { Text("До 80 символов") },
+                )
+                Button(
+                    onClick = {
+                        val userId = currentUserId
+                        val normalized = title.trim()
+                        if (userId != null && normalized.isNotEmpty() && !busy) {
+                            busy = true
+                            message = null
+                            scope.launch {
+                                repository.updateChatTitle(chat.id, normalized, userId).fold(
+                                    onSuccess = {
+                                        busy = false
+                                        onChatUpdated(it)
+                                        message = "Название чата сохранено."
+                                        messageIsError = false
+                                    },
+                                    onFailure = {
+                                        busy = false
+                                        message = it.message ?: "Не удалось изменить название чата."
+                                        messageIsError = true
+                                    },
+                                )
+                            }
                         }
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = isCreator && !busy && title.trim().isNotEmpty() && title.trim() != chat.title,
-            ) { Text(if (busy) "Сохраняем…" else "Сохранить название") }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !busy && title.trim().isNotEmpty() && title.trim() != chat.title,
+                ) { Text(if (busy) "Сохраняем…" else "Сохранить название") }
+            } else {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                ) {
+                    Text(
+                        text = chat.title,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 15.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
+            }
 
             Text("Описание чата", style = MaterialTheme.typography.titleMedium)
-            OutlinedTextField(
-                value = description,
-                onValueChange = { description = it.take(120) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !busy,
-                readOnly = !isCreator,
-                singleLine = false,
-                minLines = 3,
-                maxLines = 10,
-                label = { Text("Описание") },
-                supportingText = {
-                    Text(if (isCreator) "${description.length}/120 символов" else "Изменять описание может только создатель")
-                },
-            )
             if (isCreator) {
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it.take(120) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !busy,
+                    singleLine = false,
+                    minLines = 3,
+                    maxLines = 10,
+                    label = { Text("Описание") },
+                    supportingText = { Text("${description.length}/120 символов") },
+                )
                 Button(
                     onClick = {
                         val userId = currentUserId
@@ -200,6 +210,19 @@ fun ChatEditScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !busy && description.trim().length <= 120 && description.trim() != chat.description,
                 ) { Text(if (busy) "Сохраняем…" else "Сохранить описание") }
+            } else {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                ) {
+                    Text(
+                        text = chat.description.ifBlank { "Описание не задано." },
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                }
             }
 
             Text("Максимум рисунков в чате", style = MaterialTheme.typography.titleMedium)
