@@ -27,7 +27,11 @@ fun PlaceholderScreen(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
-        Text(title, style = MaterialTheme.typography.headlineMedium)
+        Text(
+            title,
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
         Text(
             description,
             style = MaterialTheme.typography.bodyLarge,

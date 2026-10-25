@@ -332,9 +332,10 @@ fun ChatDetailsScreen(
                     Text(
                         text = activeChat.title,
                         modifier = Modifier.weight(1f),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(

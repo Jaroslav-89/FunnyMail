@@ -84,14 +84,15 @@ fun ChatsScreen(
             Text(
                 text = stringResource(Res.string.chat_list_title),
                 style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.primary,
+                color = MaterialTheme.colorScheme.onSurface,
             )
         }
 
         Text(
             text = stringResource(Res.string.chats_screen_tagline),
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
             text = stringResource(Res.string.chats_screen_description),
