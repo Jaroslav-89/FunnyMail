@@ -38,6 +38,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.core.ui.EditPencilIcon
 import com.jaroapps.funnymail.core.ui.TrashCanIcon
@@ -278,19 +282,21 @@ fun LettersScreen(
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(
                 onClick = onBack,
-                modifier = Modifier.size(48.dp).background(Color.Transparent, CircleShape)
+                modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.surface, CircleShape)
                     .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
             ) {
-                Text("←", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                DrawingsBackArrowGlyph(color = MaterialTheme.colorScheme.onSurface)
             }
             Surface(
                 shape = RoundedCornerShape(24.dp),
-                color = Color.Transparent,
+                color = MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp)),
             ) {
                 Text(
@@ -331,6 +337,28 @@ fun DrawingPreview(
             canvasWidth = drawing.canvas.width,
             canvasHeight = drawing.canvas.height,
             contentInsetFraction = 0.06f,
+        )
+    }
+}
+
+@Composable
+private fun DrawingsBackArrowGlyph(color: Color) {
+    Canvas(Modifier.size(23.dp)) {
+        val arrow = Path().apply {
+            moveTo(size.width * 0.78f, size.height * 0.50f)
+            lineTo(size.width * 0.22f, size.height * 0.50f)
+            moveTo(size.width * 0.45f, size.height * 0.23f)
+            lineTo(size.width * 0.18f, size.height * 0.50f)
+            lineTo(size.width * 0.45f, size.height * 0.77f)
+        }
+        drawPath(
+            path = arrow,
+            color = color,
+            style = Stroke(
+                width = size.minDimension * 0.095f,
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round,
+            ),
         )
     }
 }
