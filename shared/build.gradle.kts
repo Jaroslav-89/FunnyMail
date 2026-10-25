@@ -77,6 +77,7 @@ kotlin {
             implementation(libs.koin.compose.viewmodel)
             implementation(libs.firebase.auth)
             implementation(libs.firebase.firestore)
+            implementation(libs.firebase.messaging)
             implementation(libs.androidx.room3.runtime)
             implementation(libs.androidx.sqlite.bundled)
         }
