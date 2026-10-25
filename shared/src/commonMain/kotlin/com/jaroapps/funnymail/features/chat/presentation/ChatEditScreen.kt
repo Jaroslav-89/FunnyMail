@@ -75,6 +75,25 @@ fun ChatEditScreen(
     val letterRepository = koinInject<LetterRepository>()
     val authRepository = koinInject<AuthRepository>()
     val scope = rememberCoroutineScope()
+    val chatTitleSavedMessage = stringResource(Res.string.chat_title_saved)
+    val chatTitleSaveFailedMessage = stringResource(Res.string.chat_title_save_failed)
+    val chatDescriptionSavedMessage = stringResource(Res.string.chat_description_saved)
+    val chatDescriptionSaveFailedMessage = stringResource(Res.string.chat_description_save_failed)
+    val chatDescriptionMissingText = stringResource(Res.string.chat_description_missing)
+    val drawingLimitCleanupFailedMessage = stringResource(Res.string.drawing_limit_cleanup_failed)
+    val drawingLimitDisableSuccessMessage = stringResource(Res.string.drawing_limit_disable_success)
+    val drawingLimitSaveSuccessMessage = stringResource(Res.string.drawing_limit_save_success)
+    val drawingLimitSaveFailedMessage = stringResource(Res.string.drawing_limit_save_failed)
+    val userNotFoundText = stringResource(Res.string.user_not_found)
+    val userAlreadyMemberText = stringResource(Res.string.user_already_member)
+    val youAlreadyMemberText = stringResource(Res.string.you_already_member)
+    val userSearchFailedText = stringResource(Res.string.user_search_failed)
+    val userAddedText = stringResource(Res.string.user_added)
+    val addUserFailedText = stringResource(Res.string.user_add_failed)
+    val memberRemovedMessage = stringResource(Res.string.member_removed)
+    val memberRemoveFailedMessage = stringResource(Res.string.member_remove_failed)
+    val leaveChatFailedMessage = stringResource(Res.string.leave_chat_failed)
+    val deleteChatFailedMessage = stringResource(Res.string.delete_chat_failed)
     var memberProfiles by remember { mutableStateOf<Map<String, UserProfile>>(emptyMap()) }
     LaunchedEffect(chat.memberIds) {
         val profiles = mutableMapOf<String, UserProfile>()
@@ -121,7 +140,7 @@ fun ChatEditScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !busy,
                     singleLine = true,
-                    label = { Text("Название") },
+                    label = { Text(stringResource(Res.string.chat_title_label)) },
                     supportingText = { Text(stringResource(Res.string.max_title_length)) },
                 )
                 Button(
@@ -136,12 +155,12 @@ fun ChatEditScreen(
                                     onSuccess = {
                                         busy = false
                                         onChatUpdated(it)
-                                        message = "Название чата сохранено."
+                                        message = chatTitleSavedMessage
                                         messageIsError = false
                                     },
                                     onFailure = {
                                         busy = false
-                                        message = it.message ?: "Не удалось изменить название чата."
+                                        message = it.message ?: chatTitleSaveFailedMessage
                                         messageIsError = true
                                     },
                                 )
@@ -192,12 +211,12 @@ fun ChatEditScreen(
                                         busy = false
                                         description = updatedChat.description
                                         onChatUpdated(updatedChat)
-                                        message = "Описание чата сохранено."
+                                        message = chatDescriptionSavedMessage
                                         messageIsError = false
                                     },
                                     onFailure = { error ->
                                         busy = false
-                                        message = error.message ?: "Не удалось изменить описание чата."
+                                        message = error.message ?: chatDescriptionSaveFailedMessage
                                         messageIsError = true
                                     },
                                 )
@@ -214,7 +233,7 @@ fun ChatEditScreen(
                     color = MaterialTheme.colorScheme.surfaceVariant,
                 ) {
                     Text(
-                        text = chat.description.ifBlank { "Описание не задано." },
+                        text = chat.description.ifBlank { chatDescriptionMissingText },
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurface,
@@ -273,15 +292,15 @@ fun ChatEditScreen(
                                         }
                                         busy = false
                                         message = when {
-                                            cleanupFailed -> "Лимит сохранён, но не все старые рисунки удалось удалить."
-                                            newLimit == null -> "Лимит рисунков отключён."
-                                            else -> "Лимит сохранён. Лишние старые рисунки удалены."
+                                            cleanupFailed -> drawingLimitCleanupFailedMessage
+                                            newLimit == null -> drawingLimitDisableSuccessMessage
+                                            else -> drawingLimitSaveSuccessMessage
                                         }
                                         messageIsError = cleanupFailed
                                     } else {
                                         busy = false
                                         message = updateResult.exceptionOrNull()?.message
-                                            ?: "Не удалось изменить лимит рисунков."
+                                            ?: drawingLimitSaveFailedMessage
                                         messageIsError = true
                                     }
                                 }
@@ -345,16 +364,16 @@ fun ChatEditScreen(
                                 Spacer(Modifier.width(10.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(
-                                        text = if (memberId == currentUserId) "Вы" else {
+                                        text = if (memberId == currentUserId) stringResource(Res.string.you) else {
                                             memberProfiles[memberId]?.chatDisplayName
-                                                ?: "Участник чата"
+                                                ?: stringResource(Res.string.chat_member)
                                         },
                                         style = MaterialTheme.typography.bodyLarge,
                                     )
                                     Text(
                                         text = when {
-                                            memberId == creatorId -> "Создатель чата"
-                                            else -> "Участник"
+                                            memberId == creatorId -> stringResource(Res.string.chat_creator)
+                                            else -> stringResource(Res.string.member)
                                         },
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -467,15 +486,15 @@ fun ChatEditScreen(
                                         onSuccess = { result ->
                                             foundUser = result
                                             searchMessage = when {
-                                                result == null -> "Пользователь не найден."
-                                                result.id in chat.memberIds -> "Этот пользователь уже состоит в чате."
-                                                result.id == currentUserId -> "Вы уже состоите в этом чате."
+                                                result == null -> userNotFoundText
+                                                result.id in chat.memberIds -> userAlreadyMemberText
+                                                result.id == currentUserId -> youAlreadyMemberText
                                                 else -> null
                                             }
                                             isSearchingUser = false
                                         },
                                         onFailure = { error ->
-                                            searchMessage = error.message ?: "Не удалось выполнить поиск."
+                                            searchMessage = error.message ?: userSearchFailedText
                                             isSearchingUser = false
                                         },
                                     )
@@ -513,11 +532,11 @@ fun ChatEditScreen(
                                                 repository.addMember(chat.id, userId, user.id).fold(
                                                     onSuccess = { updatedChat ->
                                                         onChatUpdated(updatedChat)
-                                                        searchMessage = "Пользователь добавлен в чат."
+                                                        searchMessage = userAddedText
                                                         isAddingUser = false
                                                     },
                                                     onFailure = { error ->
-                                                        searchMessage = error.message ?: "Не удалось добавить пользователя."
+                                                        searchMessage = error.message ?: addUserFailedText
                                                         isAddingUser = false
                                                     },
                                                 )
@@ -534,7 +553,7 @@ fun ChatEditScreen(
                         }
                     }
                     searchMessage?.let {
-                        Text(it, color = if (it == "Пользователь добавлен в чат.")
+                        Text(it, color = if (it == userAddedText)
                             MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
                     }
 
@@ -593,12 +612,12 @@ fun ChatEditScreen(
                                         busy = false
                                         memberToRemove = null
                                         onChatUpdated(it)
-                                        message = "Участник удалён из чата."
+                                        message = memberRemovedMessage
                                         messageIsError = false
                                     },
                                     onFailure = {
                                         busy = false
-                                        message = it.message ?: "Не удалось удалить участника."
+                                        message = it.message ?: memberRemoveFailedMessage
                                         messageIsError = true
                                     },
                                 )
@@ -628,7 +647,7 @@ fun ChatEditScreen(
                                     onSuccess = { onChatRemoved() },
                                     onFailure = {
                                         busy = false
-                                        message = it.message ?: "Не удалось выйти из чата."
+                                        message = it.message ?: leaveChatFailedMessage
                                         messageIsError = true
                                         confirmLeave = false
                                     },
@@ -659,7 +678,7 @@ fun ChatEditScreen(
                                     onSuccess = { onChatRemoved() },
                                     onFailure = {
                                         busy = false
-                                        message = it.message ?: "Не удалось удалить чат."
+                                        message = it.message ?: deleteChatFailedMessage
                                         messageIsError = true
                                         confirmDelete = false
                                     },
