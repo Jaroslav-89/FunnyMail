@@ -14,6 +14,7 @@ import dev.gitlive.firebase.firestore.firestore
 import dev.gitlive.firebase.firestore.toMilliseconds
 import dev.gitlive.firebase.firestore.where
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
@@ -158,6 +159,7 @@ class FirebaseChatRepository(
         chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun observeUnreadCount(chatId: String, userId: String): Flow<Int> {
         require(chatId.isNotBlank()) { "Не выбран чат." }
         require(userId.isNotBlank()) { "Для подсчёта непрочитанных сообщений нужен аккаунт." }
