@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 
 data class ChatUiState(
     val currentUser: UserProfile? = null,
+    val isAuthLoaded: Boolean = false,
     val chats: List<Chat> = emptyList(),
     val isLoading: Boolean = false,
     val isSubmitting: Boolean = false,
@@ -42,6 +43,7 @@ class ChatViewModel(
                 _state.update {
                     it.copy(
                         currentUser = user,
+                        isAuthLoaded = true,
                         chats = emptyList(),
                         isLoading = user != null,
                         activeInvite = null,
