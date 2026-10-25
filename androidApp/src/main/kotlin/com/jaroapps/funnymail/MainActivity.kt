@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
             NotificationChannel(
-                "new_chat_messages",
+                "new_chat_messages_v2",
                 "Новые сообщения в чатах",
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
