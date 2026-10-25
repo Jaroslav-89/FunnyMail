@@ -327,7 +327,7 @@ fun LettersScreen(
                     text = stringResource(Res.string.open_my_drawings),
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
                     style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
             Spacer(Modifier.weight(1f))
