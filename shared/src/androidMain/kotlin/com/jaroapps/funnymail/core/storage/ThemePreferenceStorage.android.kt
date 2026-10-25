@@ -23,8 +23,6 @@ actual object ThemePreferenceStorage {
             ?.apply()
     }
 
-    private companion object {
-        const val PREFERENCES_NAME = "funnymail_preferences"
-        const val DARK_THEME_KEY = "dark_theme_enabled"
-    }
+    private const val PREFERENCES_NAME = "funnymail_preferences"
+    private const val DARK_THEME_KEY = "dark_theme_enabled"
 }
