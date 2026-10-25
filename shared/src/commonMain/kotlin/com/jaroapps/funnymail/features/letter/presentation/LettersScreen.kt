@@ -1,5 +1,9 @@
 package com.jaroapps.funnymail.features.letter.presentation
 
+import org.jetbrains.compose.resources.stringResource
+
+import com.jaroapps.funnymail.resources.Res
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -156,7 +160,7 @@ fun LettersScreen(
                 onClick = { selectedDrawingId = null },
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text("К галерее")
+                Text(stringResource(Res.string.back_to_gallery))
             }
             }
         } else {
@@ -173,9 +177,9 @@ fun LettersScreen(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
                         ) {
                             Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Пока нет рисунков", style = MaterialTheme.typography.titleMedium)
+                                Text(stringResource(Res.string.empty_drawings_title), style = MaterialTheme.typography.titleMedium)
                                 Text(
-                                    "Создай рисунок и нажми «Сохранить рисунок». Он появится здесь и останется на этом устройстве.",
+                                    stringResource(Res.string.empty_drawings_hint),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 )
@@ -192,10 +196,10 @@ fun LettersScreen(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
                         ) {
                             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Text("Черновик не в галерее", style = MaterialTheme.typography.titleMedium)
+                                Text(stringResource(Res.string.draft_not_in_gallery), style = MaterialTheme.typography.titleMedium)
                                 DrawingPreview(draft, Modifier.fillMaxWidth().height(180.dp))
                                 Text(
-                                    "Можно добавить ранее сохранённый черновик в локальную библиотеку.",
+                                    stringResource(Res.string.draft_add_hint),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
                                 )
@@ -211,7 +215,7 @@ fun LettersScreen(
                                         }
                                     },
                                     modifier = Modifier.fillMaxWidth(),
-                                ) { Text("Сохранить в галерею") }
+                                ) { Text(stringResource(Res.string.save_to_gallery)) }
                             }
                         }
                     }
@@ -268,13 +272,13 @@ fun LettersScreen(
                                 OutlinedButton(
                                     onClick = { selectedDrawingId = savedDrawing.id },
                                     modifier = Modifier.weight(1f),
-                                ) { Text("Просмотреть") }
+                                ) { Text(stringResource(Res.string.view)) }
                                 Button(
                                     onClick = { sendDrawing(savedDrawing) },
                                     enabled = document != null && sendingDrawingId == null,
                                     modifier = Modifier.weight(1f),
                                 ) {
-                                    Text(if (sendingDrawingId == savedDrawing.id) "Отправляем…" else "Отправить")
+                                    Text(if (sendingDrawingId == savedDrawing.id) stringResource(Res.string.sending) else stringResource(Res.string.send_to_chat))
                                 }
                             }
                         }
@@ -295,7 +299,7 @@ fun LettersScreen(
                 modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp)),
             ) {
                 Text(
-                    text = "Мои рисунки",
+                    text = stringResource(Res.string.open_my_drawings),
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.primary,
