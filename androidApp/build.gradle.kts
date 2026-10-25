@@ -25,8 +25,8 @@ dependencies {
     implementation(platform(libs.firebase.android.bom))
     implementation(libs.firebase.android.messaging)
 
-    implementation(libs.compose.uiToolingPreview)
-    debugImplementation(libs.compose.uiTooling)
+    implementation(libs.composeUiToolingPreview)
+    debugImplementation(libs.composeUiTooling)
 }
 
 android {
