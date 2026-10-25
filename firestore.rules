@@ -179,9 +179,11 @@ service cloud.firestore {
       allow get: if signedIn();
       allow list: if false;
       allow create: if signedIn()
+        && username.matches('^[a-z0-9_]{3,20}$')
         && request.auth.uid == request.resource.data.userId
         && !exists(/databases/$(database)/documents/usernames/$(username));
       allow update: if signedIn()
+        && username.matches('^[a-z0-9_]{3,20}$')
         && request.auth.uid == resource.data.userId
         && request.auth.uid == request.resource.data.userId;
       allow delete: if signedIn() && request.auth.uid == resource.data.userId;
@@ -191,9 +193,13 @@ service cloud.firestore {
       allow get: if signedIn();
       allow list: if false;
       allow create: if signedIn()
+        && request.auth.token.email is string
+        && email == request.auth.token.email.lower()
         && request.auth.uid == request.resource.data.userId
         && !exists(/databases/$(database)/documents/emailLookup/$(email));
       allow update: if signedIn()
+        && request.auth.token.email is string
+        && email == request.auth.token.email.lower()
         && request.auth.uid == resource.data.userId
         && request.auth.uid == request.resource.data.userId;
       allow delete: if signedIn() && request.auth.uid == resource.data.userId;
