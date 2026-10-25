@@ -198,7 +198,7 @@ class AuthViewModel(
         }
     }
 
-    fun saveUserProfile(customName: String, username: String) {
+    fun saveUserProfile(customName: String, username: String, onSaved: () -> Unit) {
         val userId = _state.value.currentUser?.id ?: return
         if (_state.value.isSavingProfile || _state.value.isCheckingUsername) return
         if (username.isNotBlank() && !USERNAME_REGEX.matches(username)) {
@@ -219,6 +219,7 @@ class AuthViewModel(
                             messageIsError = false,
                         )
                     }
+                    onSaved()
                 },
                 onFailure = { error ->
                     val usernameAlreadyTaken =
