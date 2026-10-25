@@ -97,7 +97,7 @@ class AuthViewModel(
         if (_state.value.isCheckingUsername || _state.value.isSavingProfile) return
         if (!USERNAME_REGEX.matches(username)) {
             _state.update {
-                it.copy(usernameAvailability = false, message = "Ник должен содержать 3–20 символов: латинские буквы, цифры или _.", messageIsError = true)
+                it.copy(usernameAvailability = null, message = "Ник должен содержать 3–20 символов: латинские буквы, цифры или _.", messageIsError = true)
             }
             return
         }
@@ -110,8 +110,8 @@ class AuthViewModel(
                         it.copy(
                             isCheckingUsername = false,
                             usernameAvailability = available,
-                            message = if (available) null else "Этот ник уже занят, выберите другой ник.",
-                            messageIsError = !available,
+                            message = null,
+                            messageIsError = false,
                         )
                     }
                 },
@@ -155,9 +155,10 @@ class AuthViewModel(
                     _state.update {
                         it.copy(
                             isSavingProfile = false,
-                            usernameAvailability = null,
-                            message = error.message ?: "Не удалось сохранить профиль.",
-                            messageIsError = true,
+                            usernameAvailability = if (error.message?.contains("Этот ник уже занят") == true) false else null,
+                            message = if (error.message?.contains("Этот ник уже занят") == true) null
+                                else error.message ?: "Не удалось сохранить профиль.",
+                            messageIsError = error.message?.contains("Этот ник уже занят") != true,
                         )
                     }
                 },
