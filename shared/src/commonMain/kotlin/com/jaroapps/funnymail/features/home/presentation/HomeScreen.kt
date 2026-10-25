@@ -228,7 +228,7 @@ fun HomeScreen(
                                             fontWeight = FontWeight.SemiBold,
                                         )
                                         Text(
-                                            text = "${chat.memberIds.size} участн.",
+                                            text = stringResource(Res.string.chat_member_count, chat.memberIds.size),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
