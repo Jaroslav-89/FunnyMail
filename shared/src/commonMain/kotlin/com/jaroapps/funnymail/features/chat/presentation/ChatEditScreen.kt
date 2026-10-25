@@ -1,8 +1,5 @@
 package com.jaroapps.funnymail.features.chat.presentation
 
-import org.jetbrains.compose.resources.stringResource
-
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
@@ -37,29 +33,24 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.core.ui.AccountPersonIcon
 import com.jaroapps.funnymail.core.ui.AppBackButton
-import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
-import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
 import com.jaroapps.funnymail.core.ui.PersonPlusIcon
 import com.jaroapps.funnymail.core.ui.TrashCanIcon
+import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
+import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
 import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import com.jaroapps.funnymail.features.letter.domain.repository.LetterRepository
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.first
-import org.koin.compose.koinInject
+import com.jaroapps.funnymail.resources.Res
 import com.jaroapps.funnymail.resources.add_to_chat
 import com.jaroapps.funnymail.resources.add_user_to_chat
 import com.jaroapps.funnymail.resources.already_in_chat
@@ -89,6 +80,7 @@ import com.jaroapps.funnymail.resources.drawing_limit_label
 import com.jaroapps.funnymail.resources.drawing_limit_readonly
 import com.jaroapps.funnymail.resources.drawing_limit_save_failed
 import com.jaroapps.funnymail.resources.drawing_limit_save_success
+import com.jaroapps.funnymail.resources.drawing_limit_value
 import com.jaroapps.funnymail.resources.email_or_username
 import com.jaroapps.funnymail.resources.find_user
 import com.jaroapps.funnymail.resources.find_user_hint
@@ -122,7 +114,11 @@ import com.jaroapps.funnymail.resources.user_search_failed
 import com.jaroapps.funnymail.resources.username_at
 import com.jaroapps.funnymail.resources.you
 import com.jaroapps.funnymail.resources.you_already_member
-import com.jaroapps.funnymail.resources.Res
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
 
 @Composable
 fun ChatEditScreen(
@@ -179,7 +175,11 @@ fun ChatEditScreen(
 
     var title by rememberSaveable(chat.id) { mutableStateOf(chat.title) }
     var description by rememberSaveable(chat.id) { mutableStateOf(chat.description) }
-    var maxLettersText by rememberSaveable(chat.id) { mutableStateOf(chat.maxLettersCount?.toString().orEmpty()) }
+    var maxLettersText by rememberSaveable(chat.id) {
+        mutableStateOf(
+            chat.maxLettersCount?.toString().orEmpty()
+        )
+    }
     var busy by remember { mutableStateOf(false) }
     var creatingInvite by remember { mutableStateOf(false) }
     var invite by remember { mutableStateOf<ChatInvite?>(null) }
@@ -204,7 +204,10 @@ fun ChatEditScreen(
                 .padding(top = 76.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text(stringResource(Res.string.chat_title), style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(Res.string.chat_title),
+                style = MaterialTheme.typography.titleMedium
+            )
             if (isCreator) {
                 OutlinedTextField(
                     value = title,
@@ -257,7 +260,10 @@ fun ChatEditScreen(
                 }
             }
 
-            Text(stringResource(Res.string.chat_description_title), style = MaterialTheme.typography.titleMedium)
+            Text(
+                stringResource(Res.string.chat_description_title),
+                style = MaterialTheme.typography.titleMedium
+            )
             if (isCreator) {
                 OutlinedTextField(
                     value = description,
@@ -268,7 +274,14 @@ fun ChatEditScreen(
                     minLines = 3,
                     maxLines = 10,
                     label = { Text(stringResource(Res.string.description_label)) },
-                    supportingText = { Text(stringResource(Res.string.description_length, description.length)) },
+                    supportingText = {
+                        Text(
+                            stringResource(
+                                Res.string.description_length,
+                                description.length
+                            )
+                        )
+                    },
                 )
                 Button(
                     onClick = {
@@ -317,10 +330,15 @@ fun ChatEditScreen(
                 val parsedLimit = maxLettersText.toIntOrNull()
                 val normalizedLimit = if (maxLettersText.isBlank()) null else parsedLimit
                 if (isCreator) {
-                    Text(stringResource(Res.string.max_drawings_title), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(Res.string.max_drawings_title),
+                        style = MaterialTheme.typography.titleMedium
+                    )
                     OutlinedTextField(
                         value = maxLettersText,
-                        onValueChange = { value -> maxLettersText = value.filter { it.isDigit() }.take(3) },
+                        onValueChange = { value ->
+                            maxLettersText = value.filter { it.isDigit() }.take(3)
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !busy,
                         singleLine = true,
@@ -344,18 +362,27 @@ fun ChatEditScreen(
                                     if (updateResult.isSuccess) {
                                         val updatedChat = updateResult.getOrThrow()
                                         onChatUpdated(updatedChat)
-                                        maxLettersText = updatedChat.maxLettersCount?.toString().orEmpty()
+                                        maxLettersText =
+                                            updatedChat.maxLettersCount?.toString().orEmpty()
                                         var cleanupFailed = false
                                         val newLimit = updatedChat.maxLettersCount
                                         if (newLimit != null) {
                                             try {
-                                                val currentLetters = letterRepository.observeLetters(chat.id).first()
-                                                val excessLetters = (currentLetters.size - newLimit).coerceAtLeast(0)
-                                                currentLetters.take(excessLetters).forEach { letter ->
-                                                    if (letterRepository.deleteLetter(chat.id, letter.id, userId).isFailure) {
-                                                        cleanupFailed = true
+                                                val currentLetters =
+                                                    letterRepository.observeLetters(chat.id).first()
+                                                val excessLetters =
+                                                    (currentLetters.size - newLimit).coerceAtLeast(0)
+                                                currentLetters.take(excessLetters)
+                                                    .forEach { letter ->
+                                                        if (letterRepository.deleteLetter(
+                                                                chat.id,
+                                                                letter.id,
+                                                                userId
+                                                            ).isFailure
+                                                        ) {
+                                                            cleanupFailed = true
+                                                        }
                                                     }
-                                                }
                                             } catch (cancelled: CancellationException) {
                                                 throw cancelled
                                             } catch (_: Exception) {
@@ -379,7 +406,7 @@ fun ChatEditScreen(
                         },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = !busy && (maxLettersText.isBlank() || parsedLimit in 1..500) &&
-                            normalizedLimit != chat.maxLettersCount,
+                                normalizedLimit != chat.maxLettersCount,
                     ) { Text(if (busy) stringResource(Res.string.saving) else stringResource(Res.string.save_drawing_limit)) }
                 } else {
                     observedMaxLettersCount?.let { limit ->
@@ -415,9 +442,14 @@ fun ChatEditScreen(
             ) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(Res.string.members), modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.titleMedium)
-                        Text(chat.memberIds.size.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            stringResource(Res.string.members), modifier = Modifier.weight(1f),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                        Text(
+                            chat.memberIds.size.toString(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         AccountPersonIcon(
                             modifier = Modifier.padding(start = 4.dp).size(18.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -430,10 +462,14 @@ fun ChatEditScreen(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                AccountPersonIcon(Modifier.size(26.dp), color = MaterialTheme.colorScheme.primary)
+                                AccountPersonIcon(
+                                    Modifier.size(26.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
                                 Spacer(Modifier.width(10.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(
@@ -453,7 +489,10 @@ fun ChatEditScreen(
                                     )
                                 }
                                 if (isCreator && memberId != creatorId) {
-                                    IconButton(onClick = { memberToRemove = memberId }, enabled = !busy) {
+                                    IconButton(
+                                        onClick = { memberToRemove = memberId },
+                                        enabled = !busy
+                                    ) {
                                         TrashCanIcon(color = MaterialTheme.colorScheme.error)
                                     }
                                 }
@@ -480,8 +519,10 @@ fun ChatEditScreen(
                 Text(stringResource(Res.string.invite_users))
             }
             message?.let {
-                Text(it, color = if (messageIsError) MaterialTheme.colorScheme.error
-                    else MaterialTheme.colorScheme.primary)
+                Text(
+                    it, color = if (messageIsError) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.primary
+                )
             }
 
             if (isCreator) {
@@ -584,7 +625,10 @@ fun ChatEditScreen(
                         enabled = !isSearchingUser && userSearchQuery.isNotBlank(),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        if (isSearchingUser) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        if (isSearchingUser) CircularProgressIndicator(
+                            Modifier.size(18.dp),
+                            strokeWidth = 2.dp
+                        )
                         else Text(stringResource(Res.string.find_user))
                     }
 
@@ -593,12 +637,25 @@ fun ChatEditScreen(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                         ) {
-                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(user.chatDisplayName, style = MaterialTheme.typography.titleMedium)
-                                if (user.username.isNotBlank()) Text(stringResource(Res.string.username_at, user.username), color = MaterialTheme.colorScheme.primary)
+                            Column(
+                                Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    user.chatDisplayName,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                if (user.username.isNotBlank()) Text(
+                                    stringResource(
+                                        Res.string.username_at,
+                                        user.username
+                                    ), color = MaterialTheme.colorScheme.primary
+                                )
                                 if (user.email.isNotBlank()) {
-                                    Text(user.email, style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(
+                                        user.email, style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
                                 }
                                 Button(
                                     onClick = {
@@ -626,15 +683,24 @@ fun ChatEditScreen(
                                     enabled = !isAddingUser && user.id !in chat.memberIds && user.id != currentUserId,
                                     modifier = Modifier.fillMaxWidth(),
                                 ) {
-                                    if (isAddingUser) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                                    else Text(if (user.id in chat.memberIds) stringResource(Res.string.already_in_chat) else stringResource(Res.string.add_to_chat))
+                                    if (isAddingUser) CircularProgressIndicator(
+                                        Modifier.size(18.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                    else Text(
+                                        if (user.id in chat.memberIds) stringResource(Res.string.already_in_chat) else stringResource(
+                                            Res.string.add_to_chat
+                                        )
+                                    )
                                 }
                             }
                         }
                     }
                     searchMessage?.let {
-                        Text(it, color = if (it == userAddedText)
-                            MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                        Text(
+                            it, color = if (it == userAddedText)
+                                MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                        )
                     }
 
                     OutlinedButton(
@@ -652,24 +718,37 @@ fun ChatEditScreen(
                         enabled = !creatingInvite,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        if (creatingInvite) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        if (creatingInvite) CircularProgressIndicator(
+                            Modifier.size(18.dp),
+                            strokeWidth = 2.dp
+                        )
                         else Text(stringResource(Res.string.invite_create_code))
                     }
                     invite?.let { currentInvite ->
-                        Text(stringResource(Res.string.invite_code), style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            stringResource(Res.string.invite_code),
+                            style = MaterialTheme.typography.titleSmall
+                        )
                         SelectionContainer {
-                            Text(currentInvite.code, style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.primary)
+                            Text(
+                                currentInvite.code, style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
-                        Text(stringResource(Res.string.invite_code_expires), style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            stringResource(Res.string.invite_code_expires),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     inviteError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showInviteDialog = false },
-                    enabled = !creatingInvite && !isSearchingUser && !isAddingUser) { Text(stringResource(Res.string.done)) }
+                TextButton(
+                    onClick = { showInviteDialog = false },
+                    enabled = !creatingInvite && !isSearchingUser && !isAddingUser
+                ) { Text(stringResource(Res.string.done)) }
             },
         )
     }
@@ -678,7 +757,14 @@ fun ChatEditScreen(
         AlertDialog(
             onDismissRequest = { if (!busy) memberToRemove = null },
             title = { Text(stringResource(Res.string.remove_member_question)) },
-            text = { Text(stringResource(Res.string.remove_member_description, targetId.take(12))) },
+            text = {
+                Text(
+                    stringResource(
+                        Res.string.remove_member_description,
+                        targetId.take(12)
+                    )
+                )
+            },
             confirmButton = {
                 TextButton(
                     enabled = !busy,
@@ -704,9 +790,19 @@ fun ChatEditScreen(
                             }
                         }
                     },
-                ) { Text(stringResource(Res.string.remove), color = MaterialTheme.colorScheme.error) }
+                ) {
+                    Text(
+                        stringResource(Res.string.remove),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             },
-            dismissButton = { TextButton(onClick = { memberToRemove = null }, enabled = !busy) { Text(stringResource(Res.string.cancel)) } },
+            dismissButton = {
+                TextButton(
+                    onClick = { memberToRemove = null },
+                    enabled = !busy
+                ) { Text(stringResource(Res.string.cancel)) }
+            },
         )
     }
 
@@ -735,9 +831,19 @@ fun ChatEditScreen(
                             }
                         }
                     },
-                ) { Text(stringResource(Res.string.sign_out), color = MaterialTheme.colorScheme.error) }
+                ) {
+                    Text(
+                        stringResource(Res.string.sign_out),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             },
-            dismissButton = { TextButton(onClick = { confirmLeave = false }, enabled = !busy) { Text(stringResource(Res.string.cancel)) } },
+            dismissButton = {
+                TextButton(
+                    onClick = { confirmLeave = false },
+                    enabled = !busy
+                ) { Text(stringResource(Res.string.cancel)) }
+            },
         )
     }
 
@@ -766,9 +872,19 @@ fun ChatEditScreen(
                             }
                         }
                     },
-                ) { Text(stringResource(Res.string.remove), color = MaterialTheme.colorScheme.error) }
+                ) {
+                    Text(
+                        stringResource(Res.string.remove),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = false }, enabled = !busy) { Text(stringResource(Res.string.cancel)) } },
+            dismissButton = {
+                TextButton(
+                    onClick = { confirmDelete = false },
+                    enabled = !busy
+                ) { Text(stringResource(Res.string.cancel)) }
+            },
         )
     }
 }

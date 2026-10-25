@@ -2,25 +2,9 @@ package com.jaroapps.funnymail.features.chat.data
 
 import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
-import org.jetbrains.compose.resources.getString
 import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
 import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
-import dev.gitlive.firebase.Firebase
-import dev.gitlive.firebase.firestore.BaseTimestamp
-import dev.gitlive.firebase.firestore.Direction
-import dev.gitlive.firebase.firestore.FieldValue
-import dev.gitlive.firebase.firestore.FirebaseFirestore
-import dev.gitlive.firebase.firestore.Timestamp
-import dev.gitlive.firebase.firestore.firestore
-import dev.gitlive.firebase.firestore.toMilliseconds
-import dev.gitlive.firebase.firestore.where
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
-import kotlinx.serialization.Serializable
-import kotlin.time.Clock
+import com.jaroapps.funnymail.resources.Res
 import com.jaroapps.funnymail.resources.chat_already_left
 import com.jaroapps.funnymail.resources.chat_already_member
 import com.jaroapps.funnymail.resources.chat_cannot_remove_creator
@@ -53,8 +37,24 @@ import com.jaroapps.funnymail.resources.chat_title_creator_only
 import com.jaroapps.funnymail.resources.chat_title_too_long
 import com.jaroapps.funnymail.resources.chat_update_login_required
 import com.jaroapps.funnymail.resources.chat_user_not_found
-import com.jaroapps.funnymail.resources.Res
 import com.jaroapps.funnymail.resources.letter_login_required
+import dev.gitlive.firebase.Firebase
+import dev.gitlive.firebase.firestore.BaseTimestamp
+import dev.gitlive.firebase.firestore.Direction
+import dev.gitlive.firebase.firestore.FieldValue
+import dev.gitlive.firebase.firestore.FirebaseFirestore
+import dev.gitlive.firebase.firestore.Timestamp
+import dev.gitlive.firebase.firestore.firestore
+import dev.gitlive.firebase.firestore.toMilliseconds
+import dev.gitlive.firebase.firestore.where
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
+import kotlinx.serialization.Serializable
+import org.jetbrains.compose.resources.getString
+import kotlin.time.Clock
 
 /**
  * Firestore adapter for chat and invite contracts.
@@ -240,15 +240,17 @@ class FirebaseChatRepository(
         require(userId.isNotBlank()) { "userId must not be blank" }
 
         val chatReference = firestoreProvider().collection(CHATS_COLLECTION).document(chatId)
-        val readAtFlow = chatReference.collection(READS_COLLECTION).document(userId).snapshots.map { document ->
-            if (!document.exists) {
-                0L
-            } else {
-                runCatching {
-                    document.data<FirestoreChatReadDocument>().readAt.toEpochMillisOrNull() ?: 0L
-                }.getOrDefault(0L)
+        val readAtFlow =
+            chatReference.collection(READS_COLLECTION).document(userId).snapshots.map { document ->
+                if (!document.exists) {
+                    0L
+                } else {
+                    runCatching {
+                        document.data<FirestoreChatReadDocument>().readAt.toEpochMillisOrNull()
+                            ?: 0L
+                    }.getOrDefault(0L)
+                }
             }
-        }
 
         // Query only messages newer than the user's read marker and within the seven-day
         // retention window, so chat cards do not repeatedly download every drawing.
@@ -269,8 +271,8 @@ class FirebaseChatRepository(
                         val createdAt = letter.createdAt.toEpochMillisOrNull()
                         val expiresAt = letter.expiresAt.toEpochMillisOrNull()
                         letter.authorUserId != userId &&
-                            createdAt != null && createdAt > readAt &&
-                            expiresAt != null && expiresAt > observedAt
+                                createdAt != null && createdAt > readAt &&
+                                expiresAt != null && expiresAt > observedAt
                     }
                 }
         }

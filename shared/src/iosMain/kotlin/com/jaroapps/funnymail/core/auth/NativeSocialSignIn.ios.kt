@@ -23,8 +23,9 @@ import platform.Security.SecRandomCopyBytes
 import platform.Security.kSecRandomDefault
 import platform.UIKit.UIApplication
 import platform.darwin.NSObject
-import com.jaroapps.funnymail.commoncrypto.CC_SHA256
 import kotlinx.cinterop.convert
+import platform.CoreCrypto.CC_SHA256
+import platform.Foundation.create
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 

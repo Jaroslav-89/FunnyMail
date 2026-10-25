@@ -1,5 +1,10 @@
 package com.jaroapps.funnymail.features.auth.presentation
 
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
+import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
+import com.jaroapps.funnymail.resources.Res
 import com.jaroapps.funnymail.resources.auth_done
 import com.jaroapps.funnymail.resources.auth_email_already_exists
 import com.jaroapps.funnymail.resources.auth_enter_email
@@ -21,22 +26,15 @@ import com.jaroapps.funnymail.resources.auth_signin_cancelled
 import com.jaroapps.funnymail.resources.auth_username_check_failed
 import com.jaroapps.funnymail.resources.auth_username_format_error
 import com.jaroapps.funnymail.resources.network_connection_failed
-import com.jaroapps.funnymail.resources.Res
-
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import org.jetbrains.compose.resources.StringResource
-import org.jetbrains.compose.resources.getString
-import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
-import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.getString
 
 data class AuthUiState(
     val currentUser: UserProfile? = null,
@@ -188,7 +186,8 @@ class AuthViewModel(
                                 isCheckingUsername = false,
                                 usernameAvailability = null,
                                 usernameCheckQuery = null,
-                                message = error.message ?: getString(Res.string.auth_username_check_failed),
+                                message = error.message
+                                    ?: getString(Res.string.auth_username_check_failed),
                                 messageIsError = true,
                             )
                         }
@@ -207,8 +206,18 @@ class AuthViewModel(
         }
 
         viewModelScope.launch {
-            _state.update { it.copy(isSavingProfile = true, message = null, messageIsError = false) }
-            authRepository.updateUserProfile(userId, customName.trim(), username.trim().removePrefix("@").lowercase()).fold(
+            _state.update {
+                it.copy(
+                    isSavingProfile = true,
+                    message = null,
+                    messageIsError = false
+                )
+            }
+            authRepository.updateUserProfile(
+                userId,
+                customName.trim(),
+                username.trim().removePrefix("@").lowercase()
+            ).fold(
                 onSuccess = { user ->
                     _state.update {
                         it.copy(
@@ -229,7 +238,7 @@ class AuthViewModel(
                             isSavingProfile = false,
                             usernameAvailability = if (usernameAlreadyTaken) false else null,
                             message = if (usernameAlreadyTaken) null
-                                else getString(Res.string.auth_profile_save_failed),
+                            else getString(Res.string.auth_profile_save_failed),
                             messageIsError = !usernameAlreadyTaken,
                         )
                     }
@@ -312,27 +321,38 @@ class AuthViewModel(
         return when {
             "google_no_credential" in text ->
                 getString(Res.string.auth_google_no_credential)
+
             "google_provider_configuration" in text || "google_credential_error" in text ->
                 getString(Res.string.auth_google_configuration_error)
+
             "google_sign_in_cancelled" in text ->
                 getString(Res.string.auth_google_cancelled_hint)
+
             "cancel" in text || "cancelled" in text || "canceled" in text ->
                 getString(Res.string.auth_signin_cancelled)
+
             "firebase is not configured" in text ->
                 getString(Res.string.auth_firebase_config_files)
+
             "email-already-in-use" in text || "already in use" in text ->
                 getString(Res.string.auth_email_already_exists)
+
             "invalid-email" in text || "badly formatted" in text ->
                 getString(Res.string.auth_invalid_email)
+
             "invalid-credential" in text || "wrong-password" in text ||
-                "user-not-found" in text || "invalid login credentials" in text ->
+                    "user-not-found" in text || "invalid login credentials" in text ->
                 getString(Res.string.auth_invalid_credentials)
+
             "weak-password" in text || "at least 6 characters" in text ->
                 getString(Res.string.auth_password_too_short)
+
             "network" in text || "unable to resolve host" in text ->
                 getString(Res.string.network_connection_failed)
+
             "email is required" in text || "password is required" in text ->
                 getString(Res.string.auth_enter_email_password)
+
             else -> getString(Res.string.auth_operation_failed)
         }
     }
