@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import org.jetbrains.compose.resources.stringResource
 import com.jaroapps.funnymail.resources.Res
+import com.jaroapps.funnymail.resources.Res.string.invite_create_failed
 import com.jaroapps.funnymail.core.di.appModule
 import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import com.jaroapps.funnymail.core.navigation.AppDestination
@@ -90,7 +91,7 @@ private fun FunnyMailContent(
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
     var darkThemeEnabled by rememberSaveable { mutableStateOf(ThemePreferenceStorage.loadDarkTheme()) }
     val inviteLoginRequiredText = stringResource(Res.string.invite_login_required)
-    val inviteCreateFailedText = stringResource(Res.string.invite_create_failed)
+    val inviteCreateFailedText = stringResource(invite_create_failed)
     val sendDrawingOpenChatFirstText = stringResource(Res.string.send_drawing_open_chat_first)
     val sendDrawingLoginRequiredText = stringResource(Res.string.send_drawing_login_required)
     val readingDrawingFailedText = stringResource(Res.string.reading_drawing_failed_short)
