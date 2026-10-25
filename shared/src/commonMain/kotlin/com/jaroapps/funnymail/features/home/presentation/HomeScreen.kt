@@ -72,6 +72,8 @@ fun HomeScreen(
     val chatRepository = koinInject<ChatRepository>()
     val state by viewModel.state.collectAsState()
     val accountDescription = stringResource(Res.string.account_label)
+    val createChatDescription = stringResource(Res.string.new_chat)
+    val joinChatDescription = stringResource(Res.string.join_chat)
     val openChatMenuDescription = stringResource(Res.string.chat_menu_open)
     val closeChatMenuDescription = stringResource(Res.string.chat_menu_close)
     val currentUserId = state.currentUser?.id
@@ -283,7 +285,7 @@ fun HomeScreen(
                         },
                         modifier = Modifier
                             .size(52.dp)
-                            .semantics { contentDescription = "Новый чат" },
+                            .semantics { contentDescription = createChatDescription },
                         shape = CircleShape,
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -298,7 +300,7 @@ fun HomeScreen(
                         },
                         modifier = Modifier
                             .size(52.dp)
-                            .semantics { contentDescription = "Вступить в чат" },
+                            .semantics { contentDescription = joinChatDescription },
                         shape = CircleShape,
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -313,7 +315,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .size(58.dp)
                     .semantics {
-                        contentDescription = if (actionsExpanded) "Закрыть меню чатов" else "Открыть меню чатов"
+                        contentDescription = if (actionsExpanded) closeChatMenuDescription else openChatMenuDescription
                     },
                 shape = CircleShape,
                 containerColor = Color(0xFFF5A800),
