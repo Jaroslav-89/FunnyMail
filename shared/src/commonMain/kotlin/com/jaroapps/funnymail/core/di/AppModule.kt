@@ -6,6 +6,9 @@ import com.jaroapps.funnymail.features.auth.presentation.AuthViewModel
 import com.jaroapps.funnymail.features.chat.data.FirebaseChatRepository
 import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import com.jaroapps.funnymail.features.chat.presentation.ChatViewModel
+import com.jaroapps.funnymail.features.chat.presentation.ChatDetailsViewModel
+import com.jaroapps.funnymail.features.letter.data.FirebaseLetterRepository
+import com.jaroapps.funnymail.features.letter.domain.repository.LetterRepository
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.usecase.DecodeDrawingUseCase
 import com.jaroapps.funnymail.features.drawing.domain.usecase.EncodeDrawingUseCase
@@ -25,6 +28,8 @@ val appModule = module {
 
     single<AuthRepository> { FirebaseAuthRepository() }
     single<ChatRepository> { FirebaseChatRepository() }
+    single<LetterRepository> { FirebaseLetterRepository(drawingCodec = get()) }
     viewModel { AuthViewModel(get()) }
     viewModel { ChatViewModel(get(), get()) }
+    viewModel { ChatDetailsViewModel(get(), get()) }
 }
