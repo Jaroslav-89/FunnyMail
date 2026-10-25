@@ -20,6 +20,7 @@ dependencies {
     implementation(project(":shared"))
 
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.fragment.ktx)
     implementation(libs.androidx.core.ktx)
     implementation(platform(libs.firebase.android.bom))
     implementation(libs.firebase.android.messaging)
