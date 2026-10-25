@@ -153,25 +153,105 @@ service cloud.firestore {
       allow delete: if isChatCreator(chatId);
     }
 
-    // Private profile information and email indexes are never listable by clients.
+    // Private user data can only be read by its owner.
+    function userPath(userId) {
+      return /databases/$(database)/documents/users/$(userId);
+    }
+
+    function publicProfilePath(userId) {
+      return /databases/$(database)/documents/publicProfiles/$(userId);
+    }
+
+    function usernamePath(username) {
+      return /databases/$(database)/documents/usernames/$(username);
+    }
+
+    function emailLookupPath(email) {
+      return /databases/$(database)/documents/emailLookup/$(email);
+    }
+
+    function validUsernameReservation(userId, username) {
+      return username == ''
+        || (
+          existsAfter(usernamePath(username))
+          && getAfter(usernamePath(username)).data.userId == userId
+        );
+    }
+
+    function validEmailReservation(userId, email) {
+      return email == ''
+        || (
+          existsAfter(emailLookupPath(email))
+          && getAfter(emailLookupPath(email)).data.userId == userId
+        );
+    }
+
+    function publicProfileMatchesPrivate(userId) {
+      let privateProfile = getAfter(userPath(userId)).data;
+      let publicProfile = getAfter(publicProfilePath(userId)).data;
+      return publicProfile.uid == userId
+        && publicProfile.customName == privateProfile.customName
+        && publicProfile.username == privateProfile.username
+        && publicProfile.usernameLower == privateProfile.usernameLower
+        && publicProfile.providerDisplayName == privateProfile.providerDisplayName
+        && publicProfile.generatedName == privateProfile.generatedName
+        && publicProfile.avatarUrl == privateProfile.avatarUrl;
+    }
+
     match /users/{userId} {
       allow get: if signedIn() && request.auth.uid == userId;
       allow list: if false;
       allow create, update: if signedIn()
         && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'emailLower', 'customName', 'username', 'usernameLower',
+          'providerDisplayName', 'generatedName', 'avatarUrl'
+        ])
         && request.resource.data.uid == userId
+        && request.resource.data.email is string
         && request.resource.data.emailLower is string
-        && request.resource.data.usernameLower is string;
+        && request.resource.data.customName is string
+        && request.resource.data.customName.size() <= 40
+        && request.resource.data.username is string
+        && request.resource.data.usernameLower is string
+        && request.resource.data.username == request.resource.data.usernameLower
+        && request.resource.data.providerDisplayName is string
+        && request.resource.data.generatedName is string
+        && request.resource.data.avatarUrl is string
+        && (
+          request.resource.data.emailLower == ''
+          || (
+            request.auth.token.email is string
+            && request.resource.data.emailLower == request.auth.token.email.lower()
+          )
+        )
+        && validUsernameReservation(userId, request.resource.data.usernameLower)
+        && validEmailReservation(userId, request.resource.data.emailLower)
+        && publicProfileMatchesPrivate(userId);
       allow delete: if false;
     }
 
-    // The directory exposes individual profiles only when the caller already knows a user ID.
+    // Public participant names are available by known user ID, but email is deliberately
+    // kept out of this document. User and handle collections cannot be listed.
     match /publicProfiles/{userId} {
       allow get: if signedIn();
       allow list: if false;
       allow create, update: if signedIn()
         && request.auth.uid == userId
-        && request.resource.data.uid == userId;
+        && request.resource.data.keys().hasOnly([
+          'uid', 'customName', 'username', 'usernameLower',
+          'providerDisplayName', 'generatedName', 'avatarUrl'
+        ])
+        && request.resource.data.uid == userId
+        && request.resource.data.customName is string
+        && request.resource.data.username is string
+        && request.resource.data.usernameLower is string
+        && request.resource.data.username == request.resource.data.usernameLower
+        && request.resource.data.providerDisplayName is string
+        && request.resource.data.generatedName is string
+        && request.resource.data.avatarUrl is string
+        && validUsernameReservation(userId, request.resource.data.usernameLower)
+        && publicProfileMatchesPrivate(userId);
       allow delete: if false;
     }
 
@@ -180,28 +260,36 @@ service cloud.firestore {
       allow list: if false;
       allow create: if signedIn()
         && username.matches('^[a-z0-9_]{3,20}$')
+        && request.resource.data.keys().hasOnly(['userId'])
         && request.auth.uid == request.resource.data.userId
-        && !exists(/databases/$(database)/documents/usernames/$(username));
+        && !exists(usernamePath(username))
+        && getAfter(userPath(request.auth.uid)).data.usernameLower == username
+        && getAfter(publicProfilePath(request.auth.uid)).data.usernameLower == username;
       allow update: if signedIn()
         && username.matches('^[a-z0-9_]{3,20}$')
+        && request.resource.data.keys().hasOnly(['userId'])
         && request.auth.uid == resource.data.userId
-        && request.auth.uid == request.resource.data.userId;
-      allow delete: if signedIn() && request.auth.uid == resource.data.userId;
+        && request.auth.uid == request.resource.data.userId
+        && getAfter(userPath(request.auth.uid)).data.usernameLower == username
+        && getAfter(publicProfilePath(request.auth.uid)).data.usernameLower == username;
+      allow delete: if signedIn()
+        && request.auth.uid == resource.data.userId
+        && getAfter(userPath(request.auth.uid)).data.usernameLower != username
+        && getAfter(publicProfilePath(request.auth.uid)).data.usernameLower != username;
     }
 
     match /emailLookup/{email} {
       allow get: if signedIn();
       allow list: if false;
       allow create: if signedIn()
+        && email.matches('^[^/]+$')
         && request.auth.token.email is string
         && email == request.auth.token.email.lower()
+        && request.resource.data.keys().hasOnly(['userId'])
         && request.auth.uid == request.resource.data.userId
-        && !exists(/databases/$(database)/documents/emailLookup/$(email));
-      allow update: if signedIn()
-        && request.auth.token.email is string
-        && email == request.auth.token.email.lower()
-        && request.auth.uid == resource.data.userId
-        && request.auth.uid == request.resource.data.userId;
+        && !exists(emailLookupPath(email))
+        && getAfter(userPath(request.auth.uid)).data.emailLower == email;
+      allow update: if false;
       allow delete: if signedIn() && request.auth.uid == resource.data.userId;
     }
 
