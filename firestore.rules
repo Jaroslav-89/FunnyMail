@@ -53,25 +53,20 @@ service cloud.firestore {
 
       // Joining is permitted only as a single-member addition through an unexpired invite.
       // arrayUnion prevents overwriting concurrent membership changes.
-      allow update: if signedIn() && (
-        (
-          request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['memberIds', 'updatedAt', 'lastInviteCode'])
-          && request.resource.data.memberIds.hasAll(resource.data.memberIds)
-          && request.resource.data.memberIds.size() == resource.data.memberIds.size() + 1
-          && request.auth.uid in request.resource.data.memberIds
-          && !(request.auth.uid in resource.data.memberIds)
-          && request.resource.data.updatedAt == request.time
-          && hasValidInviteForChat(chatId)
-        )
-        ||
-        (
-          // Chat members may advance the activity timestamp to the server time after a letter is sent.
-          isChatMember(chatId)
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageAt'])
-          && request.resource.data.lastMessageAt == request.time
-        )
-      );
+      allow update: if signedIn()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['memberIds', 'updatedAt', 'lastInviteCode'])
+        && request.resource.data.memberIds.hasAll(resource.data.memberIds)
+        && request.resource.data.memberIds.size() == resource.data.memberIds.size() + 1
+        && request.auth.uid in request.resource.data.memberIds
+        && !(request.auth.uid in resource.data.memberIds)
+        && request.resource.data.updatedAt == request.time
+        && hasValidInviteForChat(chatId);
+
+      // A member can update only the last-letter timestamp, and only to server request.time.
+      allow update: if isChatMember(chatId)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessageAt'])
+        && request.resource.data.lastMessageAt == request.time;
 
       allow delete: if false;
     }
