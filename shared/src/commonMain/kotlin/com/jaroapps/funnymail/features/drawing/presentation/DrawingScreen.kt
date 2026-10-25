@@ -55,9 +55,13 @@ private val DrawingPalette = listOf(
 @Composable
 fun DrawingScreen(
     onBack: () -> Unit,
-    onPrepared: (String, (String?) -> Unit) -> Unit,
+    onSaveDrawing: (String, (String?) -> Unit) -> Unit,
+    onSendDrawing: (String, (String?) -> Unit) -> Unit,
 ) {
     var strokes by remember { mutableStateOf<List<DrawingStroke>>(emptyList()) }
+    var savedDrawingJson by remember { mutableStateOf<String?>(null) }
+    var isSaving by remember { mutableStateOf(false) }
+    var isSending by remember { mutableStateOf(false) }
     var activePoints by remember { mutableStateOf<List<List<Double>>>(emptyList()) }
     var selectedColor by remember { mutableStateOf(DrawingPalette.first()) }
     var brushWidth by remember { mutableStateOf(10f) }
@@ -65,6 +69,24 @@ fun DrawingScreen(
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var statusIsError by remember { mutableStateOf(false) }
 
+    val drawingCodec = remember { DrawingCodec() }
+    val currentDrawingJson = remember(strokes) {
+        if (strokes.isEmpty()) {
+            null
+        } else {
+            drawingCodec.encode(
+                DrawingDocument(
+                    canvas = DrawingCanvas(
+                        width = 1000,
+                        height = 1000,
+                        backgroundColor = "#FFFFFF",
+                    ),
+                    strokes = strokes,
+                ),
+            ).getOrNull()
+        }
+    }
+    val isCurrentDrawingSaved = currentDrawingJson != null && currentDrawingJson == savedDrawingJson
     val paintColor = if (eraserEnabled) "#FFFFFF" else selectedColor
 
     Column(
@@ -256,42 +278,67 @@ fun DrawingScreen(
             )
         }
 
-        Button(
-            onClick = {
-                if (strokes.isEmpty()) {
-                    statusMessage = "Сначала нарисуй что-нибудь на холсте."
-                    statusIsError = true
-                } else {
-                    val document = DrawingDocument(
-                        canvas = DrawingCanvas(
-                            width = 1000,
-                            height = 1000,
-                            backgroundColor = "#FFFFFF",
-                        ),
-                        strokes = strokes,
-                    )
-                    DrawingCodec().encode(document).fold(
-                        onSuccess = { json ->
-                            onPrepared(json) { saveError ->
-                                if (saveError == null) {
-                                    statusMessage = "Рисунок сохранён в локальную галерею."
-                                    statusIsError = false
-                                } else {
-                                    statusMessage = saveError
-                                    statusIsError = true
-                                }
-                            }
-                        },
-                        onFailure = { error ->
-                            statusMessage = error.message ?: "Не удалось подготовить рисунок."
-                            statusIsError = true
-                        },
-                    )
-                }
-            },
+        Row(
             modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text("Сохранить рисунок")
+            OutlinedButton(
+                onClick = {
+                    val json = currentDrawingJson
+                    if (json == null) {
+                        statusMessage = "Сначала нарисуй что-нибудь на холсте."
+                        statusIsError = true
+                    } else if (!isSaving && !isCurrentDrawingSaved) {
+                        isSaving = true
+                        onSaveDrawing(json) { saveError ->
+                            isSaving = false
+                            if (saveError == null) {
+                                savedDrawingJson = json
+                                statusMessage = "Рисунок сохранён в локальную галерею."
+                                statusIsError = false
+                            } else {
+                                statusMessage = saveError
+                                statusIsError = true
+                            }
+                        }
+                    }
+                },
+                enabled = currentDrawingJson != null && !isSaving && !isCurrentDrawingSaved,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(
+                    when {
+                        isSaving -> "Сохраняем…"
+                        isCurrentDrawingSaved -> "Сохранено"
+                        else -> "Сохранить рисунок"
+                    },
+                )
+            }
+            Button(
+                onClick = {
+                    val json = currentDrawingJson
+                    if (json == null) {
+                        statusMessage = "Сначала нарисуй что-нибудь на холсте."
+                        statusIsError = true
+                    } else if (!isSending) {
+                        isSending = true
+                        onSendDrawing(json) { sendError ->
+                            isSending = false
+                            if (sendError == null) {
+                                statusMessage = "Рисунок отправлен в чат."
+                                statusIsError = false
+                            } else {
+                                statusMessage = sendError
+                                statusIsError = true
+                            }
+                        }
+                    }
+                },
+                enabled = currentDrawingJson != null && !isSending,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text(if (isSending) "Отправляем…" else "Отправить")
+            }
         }
     }
 }
