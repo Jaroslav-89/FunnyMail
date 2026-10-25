@@ -4,6 +4,8 @@ data class Chat(
     val id: String,
     val title: String,
     val memberIds: List<String>,
+    /** Creator of the chat; for legacy chats the first member is treated as creator. */
+    val creatorUserId: String = memberIds.firstOrNull().orEmpty(),
     /** Unix epoch milliseconds, assigned by the persistence/backend layer. */
     val createdAtEpochMillis: Long,
     /** Unix epoch milliseconds, updated when chat membership changes. */
