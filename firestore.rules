@@ -15,7 +15,8 @@ service cloud.firestore {
     }
 
     function isChatMember(chatId) {
-      return exists(chatPath(chatId))
+      return signedIn()
+        && exists(chatPath(chatId))
         && request.auth.uid in get(chatPath(chatId)).data.memberIds;
     }
 
@@ -59,6 +60,20 @@ service cloud.firestore {
         && hasValidInviteForChat(chatId);
 
       allow delete: if false;
+    }
+
+    match /chats/{chatId}/letters/{letterId} {
+      // Drawing data is stored as JSON text, not as an image or Cloud Storage object.
+      allow create: if isChatMember(chatId)
+        && request.resource.data.keys().hasOnly(['authorUserId', 'drawingJson', 'createdAt'])
+        && request.resource.data.authorUserId == request.auth.uid
+        && request.resource.data.drawingJson is string
+        && request.resource.data.drawingJson.size() > 0
+        && request.resource.data.drawingJson.size() <= 262144
+        && request.resource.data.createdAt == request.time;
+
+      allow read: if isChatMember(chatId);
+      allow update, delete: if false;
     }
 
     match /chatInvites/{code} {

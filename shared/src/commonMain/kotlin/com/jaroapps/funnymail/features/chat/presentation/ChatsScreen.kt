@@ -30,12 +30,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun ChatsScreen(
     onBack: () -> Unit,
     onOpenAccount: () -> Unit,
+    onOpenChat: (Chat) -> Unit,
 ) {
     val viewModel: ChatViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
@@ -216,6 +218,12 @@ fun ChatsScreen(
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                            Button(
+                                onClick = { onOpenChat(chat) },
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("Открыть чат")
+                            }
                             OutlinedButton(
                                 onClick = { viewModel.createInvite(chat.id) },
                                 enabled = !state.isSubmitting,
