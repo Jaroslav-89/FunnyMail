@@ -19,6 +19,12 @@ interface ChatRepository {
         updatedByUserId: String,
     ): Result<Chat>
 
+    suspend fun addMember(
+        chatId: String,
+        requestingUserId: String,
+        memberUserId: String,
+    ): Result<Chat>
+
     suspend fun removeMember(
         chatId: String,
         requestingUserId: String,
