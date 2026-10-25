@@ -322,8 +322,8 @@ fun AuthScreen(
 
 @Composable
 private fun BackArrowGlyph() {
+    val color = MaterialTheme.colorScheme.onSurface
     Canvas(Modifier.size(23.dp)) {
-        val color = MaterialTheme.colorScheme.onSurface
         val arrow = Path().apply {
             moveTo(size.width * 0.78f, size.height * 0.50f)
             lineTo(size.width * 0.22f, size.height * 0.50f)
