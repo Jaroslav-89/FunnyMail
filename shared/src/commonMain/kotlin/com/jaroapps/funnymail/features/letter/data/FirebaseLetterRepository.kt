@@ -22,9 +22,10 @@ import kotlin.time.Clock
 
 /**
  * Stores a drawing as a JSON string in chats/{chatId}/letters/{letterId}.
- * Firestore Security Rules enforce expiresAt at the seven-day boundary (with a five-minute
- * client-clock tolerance). Configure Firestore TTL on collection group "letters", field expiresAt,
- * to automatically remove expired documents.
+ * Letter creation is constrained to a seven-day expiresAt value by Firestore Security Rules.
+ * Live queries filter expiresAt on the client and the Rules restrict list access to chat members;
+ * direct document reads are denied after expiry. Configure Firestore TTL on collection group
+ * "letters", field expiresAt, to automatically remove expired documents.
  */
 class FirebaseLetterRepository(
     private val firestoreProvider: () -> FirebaseFirestore = {
