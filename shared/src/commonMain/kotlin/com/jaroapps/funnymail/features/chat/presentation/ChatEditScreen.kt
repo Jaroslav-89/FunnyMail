@@ -77,10 +77,17 @@ fun ChatEditScreen(
 
     var title by rememberSaveable(chat.id) { mutableStateOf(chat.title) }
     var description by rememberSaveable(chat.id) { mutableStateOf(chat.description) }
+    var maxLettersText by rememberSaveable(chat.id) { mutableStateOf(chat.maxLettersCount?.toString().orEmpty()) }
     var busy by remember { mutableStateOf(false) }
     var creatingInvite by remember { mutableStateOf(false) }
     var invite by remember { mutableStateOf<ChatInvite?>(null) }
     var inviteError by remember { mutableStateOf<String?>(null) }
+    var showInviteDialog by rememberSaveable(chat.id) { mutableStateOf(false) }
+    var userSearchQuery by rememberSaveable(chat.id) { mutableStateOf("") }
+    var foundUser by remember { mutableStateOf<UserProfile?>(null) }
+    var searchMessage by remember { mutableStateOf<String?>(null) }
+    var isSearchingUser by remember { mutableStateOf(false) }
+    var isAddingUser by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var messageIsError by remember { mutableStateOf(false) }
     var memberToRemove by remember { mutableStateOf<String?>(null) }
@@ -195,6 +202,59 @@ fun ChatEditScreen(
                 ) { Text(if (busy) "Сохраняем…" else "Сохранить описание") }
             }
 
+            Text("Максимум рисунков в чате", style = MaterialTheme.typography.titleMedium)
+            val parsedLimit = maxLettersText.toIntOrNull()
+            val normalizedLimit = if (maxLettersText.isBlank()) null else parsedLimit
+            OutlinedTextField(
+                value = if (isCreator) maxLettersText else chat.maxLettersCount?.toString() ?: "Без лимита",
+                onValueChange = { value -> maxLettersText = value.filter { it.isDigit() }.take(3) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !busy,
+                readOnly = !isCreator,
+                singleLine = true,
+                label = { Text("Лимит рисунков") },
+                supportingText = {
+                    Text(
+                        if (isCreator) "Пусто — без лимита. Допустимо от 1 до 500 рисунков."
+                        else "Настраивает создатель чата. Пусто — без лимита."
+                    )
+                },
+            )
+            if (isCreator) {
+                Button(
+                    onClick = {
+                        val userId = currentUserId
+                        if (userId != null && !busy && (maxLettersText.isBlank() || parsedLimit in 1..500)) {
+                            busy = true
+                            message = null
+                            scope.launch {
+                                repository.updateChatMaxLettersCount(chat.id, normalizedLimit, userId).fold(
+                                    onSuccess = { updatedChat ->
+                                        busy = false
+                                        maxLettersText = updatedChat.maxLettersCount?.toString().orEmpty()
+                                        onChatUpdated(updatedChat)
+                                        message = if (updatedChat.maxLettersCount == null) {
+                                            "Лимит рисунков отключён."
+                                        } else {
+                                            "Лимит рисунков сохранён. Старые рисунки будут удаляться автоматически при превышении."
+                                        }
+                                        messageIsError = false
+                                    },
+                                    onFailure = { error ->
+                                        busy = false
+                                        message = error.message ?: "Не удалось изменить лимит рисунков."
+                                        messageIsError = true
+                                    },
+                                )
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !busy && (maxLettersText.isBlank() || parsedLimit in 1..500) &&
+                        normalizedLimit != chat.maxLettersCount,
+                ) { Text(if (busy) "Сохраняем…" else "Сохранить лимит") }
+            }
+
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(18.dp),
@@ -252,44 +312,20 @@ fun ChatEditScreen(
 
             OutlinedButton(
                 onClick = {
-                    if (!creatingInvite) {
-                        creatingInvite = true
-                        inviteError = null
-                        onCreateInvite(chat.id) { result, error ->
-                            creatingInvite = false
-                            invite = result
-                            inviteError = error
-                        }
-                    }
+                    userSearchQuery = ""
+                    foundUser = null
+                    searchMessage = null
+                    invite = null
+                    inviteError = null
+                    showInviteDialog = true
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !creatingInvite && !busy,
+                enabled = !busy && !creatingInvite,
             ) {
-                if (creatingInvite) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                else {
-                    PersonPlusIcon(color = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Пригласить пользователей")
-                }
+                PersonPlusIcon(color = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.width(8.dp))
+                Text("Пригласить пользователей")
             }
-            invite?.let { currentInvite ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
-                ) {
-                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Код приглашения", style = MaterialTheme.typography.titleSmall)
-                        SelectionContainer {
-                            Text(currentInvite.code, style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.primary)
-                        }
-                        Text("Передайте код новому участнику. Он действует 7 дней.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer)
-                    }
-                }
-            }
-            inviteError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             message?.let {
                 Text(it, color = if (messageIsError) MaterialTheme.colorScheme.error
                     else MaterialTheme.colorScheme.primary)
@@ -312,6 +348,145 @@ fun ChatEditScreen(
                 ) { Text("Выйти из чата") }
             }
         }
+    }
+
+    if (showInviteDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!creatingInvite && !isSearchingUser && !isAddingUser) showInviteDialog = false
+            },
+            title = { Text("Добавить пользователя в чат") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Найдите пользователя по точному email или уникальному нику.")
+                    OutlinedTextField(
+                        value = userSearchQuery,
+                        onValueChange = {
+                            userSearchQuery = it
+                            foundUser = null
+                            searchMessage = null
+                        },
+                        label = { Text("Email или @ник") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Button(
+                        onClick = {
+                            if (!isSearchingUser && userSearchQuery.isNotBlank()) {
+                                isSearchingUser = true
+                                foundUser = null
+                                searchMessage = null
+                                scope.launch {
+                                    authRepository.findUser(userSearchQuery).fold(
+                                        onSuccess = { result ->
+                                            foundUser = result
+                                            searchMessage = when {
+                                                result == null -> "Пользователь не найден."
+                                                result.id in chat.memberIds -> "Этот пользователь уже состоит в чате."
+                                                result.id == currentUserId -> "Вы уже состоите в этом чате."
+                                                else -> null
+                                            }
+                                            isSearchingUser = false
+                                        },
+                                        onFailure = { error ->
+                                            searchMessage = error.message ?: "Не удалось выполнить поиск."
+                                            isSearchingUser = false
+                                        },
+                                    )
+                                }
+                            }
+                        },
+                        enabled = !isSearchingUser && userSearchQuery.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        if (isSearchingUser) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        else Text("Найти пользователя")
+                    }
+
+                    foundUser?.let { user ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        ) {
+                            Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(user.chatDisplayName, style = MaterialTheme.typography.titleMedium)
+                                if (user.username.isNotBlank()) Text("@" + user.username, color = MaterialTheme.colorScheme.primary)
+                                if (user.email.isNotBlank()) {
+                                    Text(user.email, style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                Button(
+                                    onClick = {
+                                        val userId = currentUserId
+                                        if (userId != null && !isAddingUser &&
+                                            user.id !in chat.memberIds && user.id != userId
+                                        ) {
+                                            isAddingUser = true
+                                            searchMessage = null
+                                            scope.launch {
+                                                repository.addMember(chat.id, userId, user.id).fold(
+                                                    onSuccess = { updatedChat ->
+                                                        onChatUpdated(updatedChat)
+                                                        searchMessage = "Пользователь добавлен в чат."
+                                                        isAddingUser = false
+                                                    },
+                                                    onFailure = { error ->
+                                                        searchMessage = error.message ?: "Не удалось добавить пользователя."
+                                                        isAddingUser = false
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    },
+                                    enabled = !isAddingUser && user.id !in chat.memberIds && user.id != currentUserId,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
+                                    if (isAddingUser) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                                    else Text(if (user.id in chat.memberIds) "Уже в чате" else "Добавить в чат")
+                                }
+                            }
+                        }
+                    }
+                    searchMessage?.let {
+                        Text(it, color = if (it == "Пользователь добавлен в чат.")
+                            MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                    }
+
+                    OutlinedButton(
+                        onClick = {
+                            if (!creatingInvite) {
+                                creatingInvite = true
+                                inviteError = null
+                                onCreateInvite(chat.id) { result, error ->
+                                    creatingInvite = false
+                                    invite = result
+                                    inviteError = error
+                                }
+                            }
+                        },
+                        enabled = !creatingInvite,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        if (creatingInvite) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                        else Text("Создать код приглашения")
+                    }
+                    invite?.let { currentInvite ->
+                        Text("Код приглашения", style = MaterialTheme.typography.titleSmall)
+                        SelectionContainer {
+                            Text(currentInvite.code, style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.primary)
+                        }
+                        Text("Код действует 7 дней.", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    inviteError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showInviteDialog = false },
+                    enabled = !creatingInvite && !isSearchingUser && !isAddingUser) { Text("Готово") }
+            },
+        )
     }
 
     memberToRemove?.let { targetId ->

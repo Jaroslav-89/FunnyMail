@@ -25,6 +25,14 @@ interface ChatRepository {
         updatedByUserId: String,
     ): Result<Chat>
 
+    suspend fun updateChatMaxLettersCount(
+        chatId: String,
+        maxLettersCount: Int?,
+        updatedByUserId: String,
+    ): Result<Chat>
+
+    suspend fun requestAutomaticCleanup(chatId: String, requestingUserId: String): Result<Unit>
+
     fun observeUnreadCount(chatId: String, userId: String): Flow<Int>
 
     suspend fun markChatAsRead(chatId: String, userId: String): Result<Unit>

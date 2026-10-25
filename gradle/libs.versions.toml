@@ -13,6 +13,7 @@ composeMultiplatform = "1.12.1"
 androidxCredentials = "1.6.0"
 googleId = "1.2.1"
 firebaseKotlinSdk = "3.0.0-alpha02"
+firebaseBom = "35.0.2"
 googleServices = "4.5.0"
 junit = "4.13.2"
 koin = "4.2.2"
@@ -36,6 +37,9 @@ kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-c
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
 firebase-auth = { module = "dev.gitlive:firebase-auth", version.ref = "firebaseKotlinSdk" }
 firebase-firestore = { module = "dev.gitlive:firebase-firestore", version.ref = "firebaseKotlinSdk" }
+firebase-messaging = { module = "dev.gitlive:firebase-messaging", version.ref = "firebaseKotlinSdk" }
+firebase-android-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
+firebase-android-messaging = { module = "com.google.firebase:firebase-messaging" }
 androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "androidxCredentials" }
 androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "androidxCredentials" }
 google-id = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleId" }

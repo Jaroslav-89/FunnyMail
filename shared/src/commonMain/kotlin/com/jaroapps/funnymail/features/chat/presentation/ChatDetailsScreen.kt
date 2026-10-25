@@ -69,6 +69,7 @@ import com.jaroapps.funnymail.core.ui.DrawingListIcon
 import com.jaroapps.funnymail.core.ui.EditPencilIcon
 import com.jaroapps.funnymail.core.ui.PersonPlusIcon
 import com.jaroapps.funnymail.core.ui.PaperPlusIcon
+import com.jaroapps.funnymail.core.ui.TrashCanIcon
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
 import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
@@ -76,6 +77,7 @@ import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
 import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.letter.domain.model.Letter
+import com.jaroapps.funnymail.features.letter.domain.repository.LetterRepository
 import com.jaroapps.funnymail.features.letter.presentation.DrawingPreview
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -96,6 +98,7 @@ fun ChatDetailsScreen(
     val state by viewModel.state.collectAsState()
     val authRepository = koinInject<AuthRepository>()
     val chatRepository = koinInject<ChatRepository>()
+    val letterRepository = koinInject<LetterRepository>()
     val coroutineScope = rememberCoroutineScope()
     val lettersListState = rememberLazyListState()
     var actionsExpanded by rememberSaveable { mutableStateOf(false) }
@@ -109,6 +112,8 @@ fun ChatDetailsScreen(
     var isSearchingUser by remember { mutableStateOf(false) }
     var isAddingUser by remember { mutableStateOf(false) }
     var authorNames by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var drawingActionMessage by remember(chat.id) { mutableStateOf<String?>(null) }
+    var cleanupRequested by remember(chat.id) { mutableStateOf(false) }
 
     DisposableEffect(chat.id) {
         viewModel.observeLetters(chat.id)
@@ -124,6 +129,17 @@ fun ChatDetailsScreen(
     LaunchedEffect(chat.id, state.letters.size, state.currentUser?.id) {
         state.currentUser?.id?.let { userId ->
             chatRepository.markChatAsRead(chat.id, userId)
+        }
+    }
+
+    LaunchedEffect(chat.id, chat.maxLettersCount, state.letters.size, state.isLoading, state.currentUser?.id) {
+        val limit = chat.maxLettersCount
+        val userId = state.currentUser?.id
+        if (!cleanupRequested && !state.isLoading && limit != null && limit > 0 &&
+            state.letters.size > limit && userId != null
+        ) {
+            cleanupRequested = true
+            chatRepository.requestAutomaticCleanup(chat.id, userId)
         }
     }
 
@@ -243,13 +259,26 @@ fun ChatDetailsScreen(
                                     currentUserId = state.currentUser?.id,
                                     authorDisplayName = authorNames[letter.authorUserId],
                                     onClick = { onViewDrawing(letter.drawing) },
+                                    onDelete = {
+                                        val userId = state.currentUser?.id
+                                        if (userId != null) {
+                                            coroutineScope.launch {
+                                                letterRepository.deleteLetter(chat.id, letter.id, userId).fold(
+                                                    onSuccess = { drawingActionMessage = "Ваш рисунок удалён из чата." },
+                                                    onFailure = { error ->
+                                                        drawingActionMessage = error.message ?: "Не удалось удалить рисунок."
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    },
                                 )
                             }
                         }
                     }
                 }
 
-                state.message?.let { message ->
+                (drawingActionMessage ?: state.message)?.let { message ->
                     Text(
                         text = message,
                         modifier = Modifier
@@ -290,10 +319,10 @@ fun ChatDetailsScreen(
                         },
                         modifier = Modifier.size(52.dp).semantics { contentDescription = "Новый рисунок" },
                         shape = CircleShape,
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        containerColor = Color(0xFFF5A800),
+                        contentColor = Color(0xFF202124),
                     ) {
-                        PaperPlusIcon(color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        PaperPlusIcon(color = Color(0xFF202124))
                     }
                     FloatingActionButton(
                         onClick = {
@@ -316,8 +345,8 @@ fun ChatDetailsScreen(
                     contentDescription = if (actionsExpanded) "Закрыть меню действий" else "Открыть меню действий"
                 },
                 shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
+                containerColor = Color(0xFFF5A800),
+                contentColor = Color(0xFF202124),
             ) {
                 Text(
                     text = "+",
@@ -490,6 +519,7 @@ private fun ChatLetterCard(
     currentUserId: String?,
     authorDisplayName: String?,
     onClick: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -499,11 +529,19 @@ private fun ChatLetterCard(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = if (letter.authorUserId == currentUserId) "Вы отправили" else authorDisplayName ?: "Письмо от участника",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = if (letter.authorUserId == currentUserId) "Вы отправили" else authorDisplayName ?: "Письмо от участника",
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                if (letter.authorUserId == currentUserId) {
+                    ChatHeaderIconButton(onClick = onDelete, description = "Удалить свой рисунок") {
+                        TrashCanIcon(color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
             Text(
                 text = "${letter.drawing.strokes.size} штрихов · ${letter.drawing.strokes.sumOf { it.points.size }} точек",
                 style = MaterialTheme.typography.bodySmall,

@@ -351,11 +351,11 @@ fun DrawingScreen(
                         showFinishDialog = true
                     }
                 },
-                background = Color(0xFF188038),
+                background = Color(0xFFF5A800),
             ) {
                 DrawingToolGlyph(
                     icon = DrawingToolIcon.Check,
-                    color = Color.White,
+                    color = Color(0xFF202124),
                     modifier = Modifier.size(23.dp),
                 )
             }

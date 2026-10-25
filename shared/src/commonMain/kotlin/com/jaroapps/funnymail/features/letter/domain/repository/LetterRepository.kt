@@ -17,4 +17,6 @@ interface LetterRepository {
         authorUserId: String,
         drawing: DrawingDocument,
     ): Result<Letter>
+
+    suspend fun deleteLetter(chatId: String, letterId: String, requestingUserId: String): Result<Unit>
 }
