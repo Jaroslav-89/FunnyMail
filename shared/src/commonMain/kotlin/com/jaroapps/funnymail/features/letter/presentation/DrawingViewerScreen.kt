@@ -54,6 +54,7 @@ fun DrawingViewerScreen(
             onClick = onBack,
             modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
             description = "Назад в чат",
+            keepLightAppearance = true,
         )
     }
 }
