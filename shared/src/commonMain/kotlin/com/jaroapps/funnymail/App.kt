@@ -427,7 +427,7 @@ private fun FunnyMailContent(
                                 drawing = drawing,
                                 onBack = {
                                     viewingDrawing = null
-                                    destination = AppDestination.ChatDetail
+                                    destination = drawingViewerReturnDestination
                                 },
                             )
                         }
