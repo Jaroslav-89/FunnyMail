@@ -47,6 +47,7 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [x] Drawing JSON validation and draft preview
 - [x] Local draft persistence on Android (SharedPreferences) and iOS (NSUserDefaults)
 - [x] Firestore letter adapter, sending drawing drafts to chats, and live letter feed
+- [x] Tap a drawing in a chat to open a read-only full-screen viewer with aspect-preserving rendering
 - [x] Firestore Rules validate the seven-day expiry timestamp on letter creation and deny direct document reads after expiry
 - [ ] Enable Firestore TTL policy for letters in the Firebase project (collection group `letters`, field `expiresAt`)
 - [ ] Offline synchronization

@@ -25,12 +25,14 @@ import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
 import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import com.jaroapps.funnymail.features.chat.presentation.ChatDetailsScreen
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
+import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.repository.LocalDrawingRepository
 import com.jaroapps.funnymail.features.auth.presentation.AuthScreen
 import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
 import com.jaroapps.funnymail.features.drawing.presentation.DrawingScreen
 import com.jaroapps.funnymail.features.home.presentation.HomeScreen
 import com.jaroapps.funnymail.features.letter.domain.repository.LetterRepository
+import com.jaroapps.funnymail.features.letter.presentation.DrawingViewerScreen
 import com.jaroapps.funnymail.features.letter.presentation.LettersScreen
 import com.jaroapps.funnymail.features.placeholder.presentation.PlaceholderScreen
 import kotlinx.coroutines.CancellationException
@@ -77,6 +79,7 @@ private fun FunnyMailContent(
 ) {
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
     var selectedChat by remember { mutableStateOf<Chat?>(null) }
+    var viewingDrawing by remember { mutableStateOf<DrawingDocument?>(null) }
     var editingDrawingId by remember { mutableStateOf<Long?>(null) }
     var editingDrawingJson by remember { mutableStateOf<String?>(null) }
     var drawingReturnDestination by remember { mutableStateOf(AppDestination.ChatDetail) }
@@ -108,6 +111,10 @@ private fun FunnyMailContent(
             AppDestination.ChatDetail -> destination = AppDestination.Home
             AppDestination.Drawing -> closeDrawing()
             AppDestination.Letters -> destination = AppDestination.ChatDetail
+            AppDestination.DrawingViewer -> {
+                viewingDrawing = null
+                destination = AppDestination.ChatDetail
+            }
         }
     }
 
@@ -261,7 +268,32 @@ private fun FunnyMailContent(
                                     editingDrawingJson = null
                                     destination = AppDestination.Letters
                                 },
+                                onViewDrawing = { drawing ->
+                                    viewingDrawing = drawing
+                                    destination = AppDestination.DrawingViewer
+                                },
                                 onCreateInvite = createInviteForChat,
+                            )
+                        }
+                    }
+                    AppDestination.DrawingViewer -> {
+                        val drawing = viewingDrawing
+                        if (drawing == null) {
+                            PlaceholderScreen(
+                                title = "Рисунок недоступен",
+                                description = "Вернитесь в чат и выберите рисунок ещё раз.",
+                                onBack = {
+                                    viewingDrawing = null
+                                    destination = AppDestination.ChatDetail
+                                },
+                            )
+                        } else {
+                            DrawingViewerScreen(
+                                drawing = drawing,
+                                onBack = {
+                                    viewingDrawing = null
+                                    destination = AppDestination.ChatDetail
+                                },
                             )
                         }
                     }

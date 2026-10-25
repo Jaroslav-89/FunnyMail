@@ -5,6 +5,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,6 +66,7 @@ fun ChatDetailsScreen(
     onDraftSent: () -> Unit,
     onCreateDrawing: () -> Unit,
     onOpenDrawings: () -> Unit,
+    onViewDrawing: (DrawingDocument) -> Unit,
     onCreateInvite: (String, (ChatInvite?, String?) -> Unit) -> Unit,
 ) {
     val viewModel: ChatDetailsViewModel = koinViewModel()
@@ -256,7 +258,11 @@ fun ChatDetailsScreen(
                             drawing = letter.drawing,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(220.dp),
+                                .height(220.dp)
+                                .semantics {
+                                    contentDescription = "Открыть рисунок на весь экран"
+                                }
+                                .clickable { onViewDrawing(letter.drawing) },
                         )
                     }
                 }

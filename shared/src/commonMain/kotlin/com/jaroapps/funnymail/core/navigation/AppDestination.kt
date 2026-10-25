@@ -11,4 +11,5 @@ enum class AppDestination {
     Drawing,
     Letters,
     ChatDetail,
+    DrawingViewer,
 }
