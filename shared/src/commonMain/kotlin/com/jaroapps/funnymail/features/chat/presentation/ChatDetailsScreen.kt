@@ -201,7 +201,7 @@ fun ChatDetailsScreen(
         coroutineScope.launch {
             excessLetters.forEach { letter ->
                 letterRepository.deleteLetter(chat.id, letter.id, userId).onFailure { error ->
-                    drawingActionMessage = error.message
+                    drawingActionMessage = drawingDeleteFailedText
                         ?: automaticDeleteFailedText
                 }
             }
@@ -268,7 +268,7 @@ fun ChatDetailsScreen(
                                         letterRepository.deleteLetter(chat.id, letter.id, userId).fold(
                                             onSuccess = { drawingActionMessage = drawingDeletedText },
                                             onFailure = { error ->
-                                                drawingActionMessage = error.message ?: drawingDeleteFailedText
+                                                drawingActionMessage = drawingDeleteFailedText
                                             },
                                         )
                                     }
@@ -457,7 +457,7 @@ fun ChatDetailsScreen(
                                                 isSearchingUser = false
                                             },
                                             onFailure = { error ->
-                                                searchMessage = error.message ?: userSearchFailedText
+                                                searchMessage = userSearchFailedText
                                                 isSearchingUser = false
                                             },
                                         )
@@ -511,7 +511,7 @@ fun ChatDetailsScreen(
                                                             isAddingUser = false
                                                         },
                                                         onFailure = { error ->
-                                                            searchMessage = error.message ?: addUserFailedText
+                                                            searchMessage = addUserFailedText
                                                             isAddingUser = false
                                                         },
                                                     )
