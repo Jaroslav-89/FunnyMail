@@ -84,6 +84,25 @@ fun HomeScreen(
         }
     }
 
+    if (!state.isAuthLoaded) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = "FunnyMail",
+                style = MaterialTheme.typography.headlineLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.height(28.dp))
+            CircularProgressIndicator()
+        }
+        return
+    }
+
     if (state.currentUser == null) {
         Column(
             modifier = Modifier
