@@ -215,8 +215,7 @@ class ChatViewModel(
                 getString(Res.string.chat_or_invite_not_found)
             "network" in details || "unavailable" in details ->
                 getString(Res.string.network_connection_failed)
-            else -> message?.takeIf { it.isNotBlank() }
-                ?: getString(Res.string.chat_generic_operation_failed)
+            else -> getString(Res.string.chat_generic_operation_failed)
         }
     }
 }
