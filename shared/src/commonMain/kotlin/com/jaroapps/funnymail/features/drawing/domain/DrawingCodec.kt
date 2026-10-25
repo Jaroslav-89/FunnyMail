@@ -57,6 +57,23 @@ class DrawingCodec(
         require(HEX_COLOR.matches(drawing.canvas.backgroundColor)) {
             "Некорректный цвет фона."
         }
+        require(drawing.canvas.backgroundMode == "SOLID" || drawing.canvas.backgroundMode == "GRADIENT") {
+            "Некорректный режим фона."
+        }
+        require(
+            drawing.canvas.gradientDirection in setOf(
+                "LEFT_TO_RIGHT",
+                "TOP_TO_BOTTOM",
+                "TOP_LEFT_TO_BOTTOM_RIGHT",
+                "TOP_RIGHT_TO_BOTTOM_LEFT",
+            ),
+        ) { "Некорректное направление градиента." }
+        require(HEX_COLOR.matches(drawing.canvas.gradientStartColor)) {
+            "Некорректный первый цвет градиента."
+        }
+        require(HEX_COLOR.matches(drawing.canvas.gradientEndColor)) {
+            "Некорректный второй цвет градиента."
+        }
         require(drawing.strokes.size <= maxStrokes) {
             "Слишком много штрихов."
         }
