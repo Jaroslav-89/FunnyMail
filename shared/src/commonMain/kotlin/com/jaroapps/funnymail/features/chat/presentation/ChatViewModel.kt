@@ -173,7 +173,7 @@ class ChatViewModel(
         val details = message.orEmpty().lowercase()
         return when {
             "permission-denied" in details || "permission_denied" in details || "permission denied" in details ->
-                "Firestore отклонил операцию. Проверьте, что опубликованы правила из firestore.rules."
+                "Firestore отклонил операцию. Проверьте, что опубликованы правила из firestore.rules и код приглашения не истёк (срок — 7 дней)."
             "firebase не настроен" in details || "firebase is not configured" in details ->
                 "Firebase не настроен. Добавьте конфигурационные файлы платформы."
             "не найдено" in details || "not found" in details ->
