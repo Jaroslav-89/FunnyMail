@@ -117,7 +117,7 @@ fun DrawingScreen(
     }
     var isDrawingGestureActive by remember { mutableStateOf(false) }
     val paintColor = if (eraserEnabled) "#FFFFFF" else selectedColor
-    val currentDrawingJson = remember(strokes, canvasHeight) {
+    val currentDrawingJson = remember(strokes, canvasWidth, canvasHeight) {
         if (strokes.isEmpty()) {
             null
         } else {
@@ -146,7 +146,11 @@ fun DrawingScreen(
                 isSaving = false
                 if (saveError == null) {
                     savedDrawingJson = json
-                    statusMessage = "Рисунок сохранён в локальную галерею."
+                    statusMessage = if (initialDrawingJson != null) {
+                        "Изменения сохранены в галерее."
+                    } else {
+                        "Рисунок сохранён в локальную галерею."
+                    }
                     statusIsError = false
                 } else {
                     statusMessage = saveError
