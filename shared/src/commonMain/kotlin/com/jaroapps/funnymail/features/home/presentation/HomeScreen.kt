@@ -47,9 +47,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.flow.catch
 import com.jaroapps.funnymail.core.ui.AccountPersonIcon
 import com.jaroapps.funnymail.core.ui.SearchMagnifierIcon
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
+import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
 import com.jaroapps.funnymail.features.chat.presentation.ChatViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -60,6 +62,7 @@ fun HomeScreen(
     onOpenChat: (Chat) -> Unit,
 ) {
     val viewModel: ChatViewModel = koinViewModel()
+    val chatRepository = koinInject<ChatRepository>()
     val state by viewModel.state.collectAsState()
 
     var actionsExpanded by rememberSaveable { mutableStateOf(false) }
@@ -203,19 +206,29 @@ fun HomeScreen(
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant,
                                 ),
                             ) {
-                                Column(
+                                Row(
                                     modifier = Modifier.padding(16.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Text(
-                                        text = chat.title,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                    )
-                                    Text(
-                                        text = "${chat.memberIds.size} участн.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    Column(
+                                        modifier = Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                                    ) {
+                                        Text(
+                                            text = chat.title,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                        )
+                                        Text(
+                                            text = "${chat.memberIds.size} участн.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                    UnreadMessageBadge(
+                                        chatRepository = chatRepository,
+                                        chatId = chat.id,
+                                        userId = state.currentUser.id,
                                     )
                                 }
                             }
@@ -392,5 +405,32 @@ fun HomeScreen(
                 ) { Text("Отмена") }
             },
         )
+    }
+}
+
+
+@Composable
+private fun UnreadMessageBadge(
+    chatRepository: ChatRepository,
+    chatId: String,
+    userId: String,
+) {
+    val unreadCountFlow = remember(chatRepository, chatId, userId) {
+        chatRepository.observeUnreadCount(chatId, userId).catch { emit(0) }
+    }
+    val unreadCount by unreadCountFlow.collectAsState(initial = 0)
+    if (unreadCount > 0) {
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.error,
+        ) {
+            Text(
+                text = if (unreadCount > 99) "99+" else unreadCount.toString(),
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                color = MaterialTheme.colorScheme.onError,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
