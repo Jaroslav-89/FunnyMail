@@ -11,7 +11,7 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - Koin for dependency injection
 - GitLive Firebase Kotlin SDK for shared Firebase Authentication
 - Cloud Firestore (chat, invite, and letter repository adapters implemented; Firestore rules must be published)
-- Room KMP for local-first letter storage (integration pending)
+- Room KMP + SQLite for the on-device drawing library
 
 **Storage rule:** drawing data is structured JSON stored directly in the Firestore letter document. Firebase Cloud Storage and PNG-based letter storage are not used.
 
@@ -37,8 +37,10 @@ Cross-platform handwritten drawing letters for Android and iOS.
 - [x] Firebase config checks that keep an unconfigured checkout launchable
 - [x] Auth, chat, invite and letter domain models/repository contracts
 - [x] Firestore adapters for chats and invites (`firestore.rules` must be published in the Firebase project)
-- [ ] Room KMP database and local-first repositories
+- [x] Room KMP database and repository for the local drawing library
 - [x] Shared drawing canvas with color palette, adjustable brush, eraser, undo and clear controls
+- [x] Save each prepared drawing to a local Room/SQLite database on Android and iOS
+- [x] Local drawing gallery with previews, full-size viewing and delete actions
 - [x] Drawing JSON validation and draft preview
 - [x] Local draft persistence on Android (SharedPreferences) and iOS (NSUserDefaults)
 - [x] Firestore letter adapter, sending drawing drafts to chats, and live letter feed
@@ -110,8 +112,9 @@ For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run on an iOS simulator or 
 ## Implementation notes
 
 - Presentation and domain code depend on repository interfaces, not Firebase SDK types.
-- The repository layer should expose data through `Flow`, so the UI can react to local and remote changes.
+- The local drawing repository exposes a `Flow`, so the gallery reacts immediately to inserts and deletes. Saved drawings stay on the device; they are not uploaded unless the user sends one through a chat.
 - The Firestore letter adapter encodes a drawing into the `drawingJson` string field under `chats/{chatId}/letters/{letterId}`; it must not upload images or use Firebase Storage.
+- The local drawing library stores validated drawing JSON in a Room/SQLite table (`local_drawings`) and keeps a creation timestamp for each saved drawing. Android stores the database in the app database directory; iOS stores it in Application Support.
 - Letter creation/expiry timestamps and invite validation must be controlled by trusted backend logic, not only by the client clock.
 - The target retention period for letters is seven days. Security Rules enforce expiry using `expiresAt`; a Firestore TTL policy on collection group `letters`, field `expiresAt` must be enabled in the Firebase project for automatic deletion.
 - Client-side validation is not a substitute for Firestore Security Rules and server-side authorization.
