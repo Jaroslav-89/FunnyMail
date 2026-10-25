@@ -571,6 +571,9 @@ fun DrawingScreen(
         AlertDialog(
             onDismissRequest = { showLineColorDialog = false },
             title = { Text("Цвет линии") },
+            containerColor = Color.White,
+            titleContentColor = Color(0xFF202124),
+            textContentColor = Color(0xFF202124),
             text = {
                 ColorWheel(
                     selectedColor = selectedColor,
@@ -582,7 +585,7 @@ fun DrawingScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { showLineColorDialog = false }) { Text("Готово") }
+                TextButton(onClick = { showLineColorDialog = false }) { Text("Готово", color = Color(0xFF202124)) }
             },
         )
     }
@@ -591,6 +594,9 @@ fun DrawingScreen(
         AlertDialog(
             onDismissRequest = { showBackgroundDialog = false },
             title = { Text("Фон рисунка") },
+            containerColor = Color.White,
+            titleContentColor = Color(0xFF202124),
+            textContentColor = Color(0xFF202124),
             text = {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -722,10 +728,10 @@ fun DrawingScreen(
                         showBackgroundDialog = false
                         statusMessage = null
                     },
-                ) { Text("Готово", color = MaterialTheme.colorScheme.primary) }
+                ) { Text("Готово", color = Color(0xFF202124)) }
             },
             dismissButton = {
-                TextButton(onClick = { showBackgroundDialog = false }) { Text("Отмена") }
+                TextButton(onClick = { showBackgroundDialog = false }) { Text("Отмена", color = Color(0xFF202124)) }
             },
         )
     }
@@ -734,6 +740,9 @@ fun DrawingScreen(
         AlertDialog(
             onDismissRequest = { showFinishDialog = false },
             title = { Text("Готово с рисунком") },
+            containerColor = Color.White,
+            titleContentColor = Color(0xFF202124),
+            textContentColor = Color(0xFF202124),
             text = { Text("Сохрани рисунок в локальную галерею или отправь его в этот чат.") },
             confirmButton = {
                 Column(
