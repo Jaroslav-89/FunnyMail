@@ -99,6 +99,7 @@ class FirebaseChatRepository(
                 FirestoreChatDocument(
                     title = normalizedTitle,
                     description = "",
+                    maxLettersCount = null,
                     memberIds = listOf(creatorUserId),
                     creatorUserId = creatorUserId,
                 ),
@@ -157,6 +158,47 @@ class FirebaseChatRepository(
             "updatedAt" to FieldValue.serverTimestamp,
         )
         chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
+    }
+
+    override suspend fun updateChatMaxLettersCount(
+        chatId: String,
+        maxLettersCount: Int?,
+        updatedByUserId: String,
+    ): Result<Chat> = asResult {
+        require(chatId.isNotBlank()) { "Не выбран чат." }
+        require(updatedByUserId.isNotBlank()) { "Для изменения настроек чата нужно войти в аккаунт." }
+        require(maxLettersCount == null || maxLettersCount in 1..MAX_CHAT_LETTERS_LIMIT) {
+            "Лимит рисунков должен быть от 1 до $MAX_CHAT_LETTERS_LIMIT или отключён."
+        }
+
+        val reference = firestoreProvider().collection(CHATS_COLLECTION).document(chatId)
+        val current = reference.get().data<FirestoreChatDocument>().toDomain(chatId)
+        require(current.creatorUserId == updatedByUserId) {
+            "Изменять лимит рисунков может только создатель чата."
+        }
+        reference.update(
+            "maxLettersCount" to maxLettersCount,
+            "updatedAt" to FieldValue.serverTimestamp,
+        )
+        reference.get().data<FirestoreChatDocument>().toDomain(chatId)
+    }
+
+    override suspend fun requestAutomaticCleanup(
+        chatId: String,
+        requestingUserId: String,
+    ): Result<Unit> = asResult {
+        require(chatId.isNotBlank()) { "Не выбран чат." }
+        require(requestingUserId.isNotBlank()) { "Для очистки чата нужно войти в аккаунт." }
+
+        val firestore = firestoreProvider()
+        val chatReference = firestore.collection(CHATS_COLLECTION).document(chatId)
+        val chat = chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
+        require(requestingUserId in chat.memberIds) { "Очистка доступна только участникам чата." }
+        if (chat.maxLettersCount != null) {
+            chatReference.collection(CLEANUP_REQUESTS_COLLECTION).add(
+                FirestoreCleanupRequestDocument(requestedByUserId = requestingUserId),
+            )
+        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -369,6 +411,7 @@ class FirebaseChatRepository(
         description = description,
         memberIds = memberIds,
         creatorUserId = creatorUserId.ifBlank { memberIds.firstOrNull().orEmpty() },
+        maxLettersCount = maxLettersCount,
         createdAtEpochMillis = createdAt.requireEpochMillis("createdAt"),
         updatedAtEpochMillis = updatedAt.requireEpochMillis("updatedAt"),
         lastMessageAtEpochMillis = (lastMessageAt as? Timestamp)?.toMilliseconds()?.toLong(),
@@ -399,6 +442,7 @@ class FirebaseChatRepository(
     private data class FirestoreChatDocument(
         val title: String,
         val description: String = "",
+        val maxLettersCount: Int? = null,
         val memberIds: List<String>,
         val creatorUserId: String = "",
         val createdAt: BaseTimestamp = Timestamp.ServerTimestamp,
@@ -425,6 +469,12 @@ class FirebaseChatRepository(
     )
 
     @Serializable
+    private data class FirestoreCleanupRequestDocument(
+        val requestedByUserId: String,
+        val requestedAt: BaseTimestamp = Timestamp.ServerTimestamp,
+    )
+
+    @Serializable
     private data class FirestoreUnreadLetterDocument(
         val authorUserId: String,
         val drawingJson: String = "",
@@ -436,9 +486,11 @@ class FirebaseChatRepository(
         const val CHATS_COLLECTION = "chats"
         const val LETTERS_COLLECTION = "letters"
         const val READS_COLLECTION = "reads"
+        const val CLEANUP_REQUESTS_COLLECTION = "cleanupRequests"
         const val INVITES_COLLECTION = "chatInvites"
         const val MAX_CHAT_TITLE_LENGTH = 80
         const val MAX_CHAT_DESCRIPTION_LENGTH = 120
+        const val MAX_CHAT_LETTERS_LIMIT = 500
         const val UNREAD_WINDOW_MILLIS = 7L * 24L * 60L * 60L * 1_000L
         const val INVITE_TTL_MILLIS = 7L * 24L * 60L * 60L * 1000L
     }
