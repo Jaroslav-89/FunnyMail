@@ -164,7 +164,8 @@ fun AuthScreen(
                 value = username,
                 onValueChange = {
                     username = it.removePrefix("@").filter { char ->
-                        char.isLetterOrDigit() || char == '_'
+                        char in 'a'..'z' || char in 'A'..'Z' ||
+                            char in '0'..'9' || char == '_'
                     }.take(20)
                     viewModel.resetUsernameCheck()
                 },
