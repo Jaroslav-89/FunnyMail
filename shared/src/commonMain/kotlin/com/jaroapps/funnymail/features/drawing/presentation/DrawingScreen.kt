@@ -606,7 +606,7 @@ fun DrawingScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        listOf("SOLID" to "Однотонный", "GRADIENT" to "Градиент").forEach { (tab, label) ->
+                        listOf("SOLID" to stringResource(Res.string.solid), "GRADIENT" to stringResource(Res.string.gradient)).forEach { (tab, label) ->
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -759,10 +759,10 @@ fun DrawingScreen(
                     ) {
                         Text(
                             when {
-                                isSaving -> "Сохраняем…"
-                                isCurrentDrawingSaved && initialDrawingJson != null -> "Изменения сохранены"
-                                initialDrawingJson != null -> "Сохранить изменения"
-                                else -> "Сохранить в галерею"
+                                isSaving -> stringResource(Res.string.saving)
+                                isCurrentDrawingSaved && initialDrawingJson != null -> stringResource(Res.string.changes_saved)
+                                initialDrawingJson != null -> stringResource(Res.string.save_changes)
+                                else -> stringResource(Res.string.save_drawing_local)
                             },
                         )
                     }
