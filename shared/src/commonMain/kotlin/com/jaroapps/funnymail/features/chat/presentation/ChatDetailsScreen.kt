@@ -65,6 +65,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jaroapps.funnymail.core.ui.AccountPersonIcon
+import com.jaroapps.funnymail.core.ui.AppBackButton
 import com.jaroapps.funnymail.core.ui.DrawingListIcon
 import com.jaroapps.funnymail.core.ui.EditPencilIcon
 import com.jaroapps.funnymail.core.ui.PersonPlusIcon
@@ -223,9 +224,7 @@ fun ChatDetailsScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ChatHeaderIconButton(onClick = onBack, description = "Назад") {
-                BackArrowGlyph(color = MaterialTheme.colorScheme.onSurface)
-            }
+            AppBackButton(onClick = onBack)
 
             Surface(
                 modifier = Modifier.weight(1f).height(48.dp),
