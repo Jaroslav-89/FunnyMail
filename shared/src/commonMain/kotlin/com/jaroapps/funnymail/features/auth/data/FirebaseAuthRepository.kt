@@ -194,45 +194,67 @@ class FirebaseAuthRepository(
             normalizedUsername.isBlank() || USERNAME_REGEX.matches(normalizedUsername),
         ) { "Ник должен содержать 3–20 символов: латинские буквы, цифры или _." }
 
-        val oldProfile = ensureUserDirectory(firebaseUser)
         val firestore = firestoreProvider()
-        val oldUsername = oldProfile.username.lowercase()
+        val userRef = firestore.collection(USERS_COLLECTION).document(userId)
+        val publicRef = firestore.collection(PUBLIC_PROFILES_COLLECTION).document(userId)
+        val emailLower = firebaseUser.email.orEmpty().trim().lowercase()
+        val emailRef = emailLower.takeIf { it.isNotBlank() }?.let {
+            firestore.collection(EMAIL_LOOKUP_COLLECTION).document(it)
+        }
         val newUsernameRef = normalizedUsername.takeIf { it.isNotBlank() }?.let {
             firestore.collection(USERNAMES_COLLECTION).document(it)
         }
 
-        if (newUsernameRef != null) {
-            val reservation = newUsernameRef.get()
-            if (reservation.exists) {
-                val existingUserId = reservation.data<LookupRecord>().userId
-                require(existingUserId == userId) { USERNAME_TAKEN }
-            } else {
-                // Rules allow creation only if this username has not already been reserved.
-                newUsernameRef.set(LookupRecord(userId = userId))
+        val updated = firestore.runTransaction {
+            val userSnapshot = get(userRef)
+            require(userSnapshot.exists) { "Не удалось загрузить профиль пользователя." }
+            val existing = userSnapshot.data<FirestoreUserDirectory>()
+            val oldUsername = existing.usernameLower.ifBlank {
+                normalizeUsername(existing.username)
             }
-        }
+            val oldUsernameRef = oldUsername
+                .takeIf { it.isNotBlank() && it != normalizedUsername }
+                ?.let { firestore.collection(USERNAMES_COLLECTION).document(it) }
 
-        val directoryRef = firestore.collection(USERS_COLLECTION).document(userId)
-        val existingDirectory = directoryRef.get().data<FirestoreUserDirectory>()
-        val updated = existingDirectory.copy(
-            customName = customName.trim(),
-            username = normalizedUsername,
-            usernameLower = normalizedUsername,
-            email = firebaseUser.email.orEmpty(),
-            emailLower = firebaseUser.email.orEmpty().trim().lowercase(),
-        )
-        directoryRef.set(updated)
-        firestore.collection(PUBLIC_PROFILES_COLLECTION)
-            .document(userId)
-            .set(updated)
-        ensureEmailLookup(firestore, updated)
+            // Read every document before performing any transaction writes.
+            val newUsernameSnapshot = newUsernameRef?.let { get(it) }
+            val oldUsernameSnapshot = oldUsernameRef?.let { get(it) }
+            val emailSnapshot = emailRef?.let { get(it) }
 
-        if (oldUsername.isNotBlank() && oldUsername != normalizedUsername) {
-            val oldReservationRef = firestore.collection(USERNAMES_COLLECTION).document(oldUsername)
-            val oldReservation = oldReservationRef.get()
-            if (oldReservation.exists && oldReservation.data<LookupRecord>().userId == userId) {
-                oldReservationRef.delete()
+            if (newUsernameSnapshot?.exists == true) {
+                val reservedBy = newUsernameSnapshot.data<LookupRecord>().userId
+                require(reservedBy == userId) { USERNAME_TAKEN }
             }
+            if (emailSnapshot?.exists == true) {
+                require(emailSnapshot.data<LookupRecord>().userId == userId) {
+                    "Этот email уже связан с другим профилем."
+                }
+            }
+
+            val profile = existing.copy(
+                customName = customName.trim(),
+                username = normalizedUsername,
+                usernameLower = normalizedUsername,
+                email = firebaseUser.email.orEmpty(),
+                emailLower = emailLower,
+                avatarUrl = firebaseUser.photoURL.orEmpty(),
+            )
+
+            if (newUsernameRef != null && newUsernameSnapshot?.exists != true) {
+                set(newUsernameRef, LookupRecord(userId = userId))
+            }
+            set(userRef, profile)
+            set(publicRef, profile)
+
+            if (oldUsernameRef != null && oldUsernameSnapshot?.exists == true &&
+                oldUsernameSnapshot.data<LookupRecord>().userId == userId
+            ) {
+                delete(oldUsernameRef)
+            }
+            if (emailRef != null && emailSnapshot?.exists != true) {
+                set(emailRef, LookupRecord(userId = userId))
+            }
+            profile
         }
 
         firebaseUser.withDirectory(updated)
@@ -283,74 +305,76 @@ class FirebaseAuthRepository(
     ): UserProfile {
         val firestore = firestoreProvider()
         val userRef = firestore.collection(USERS_COLLECTION).document(user.uid)
-        val snapshot = userRef.get()
+        val publicRef = firestore.collection(PUBLIC_PROFILES_COLLECTION).document(user.uid)
+        val emailLower = user.email.orEmpty().trim().lowercase()
+        val emailRef = emailLower.takeIf { it.isNotBlank() }?.let {
+            firestore.collection(EMAIL_LOOKUP_COLLECTION).document(it)
+        }
         val resolvedProviderName = providerDisplayName?.takeIf { it.isNotBlank() }
             ?: user.socialProviderDisplayName().orEmpty()
-        var directory = if (snapshot.exists) {
-            snapshot.data<FirestoreUserDirectory>()
-        } else {
-            FirestoreUserDirectory(
+
+        val directory = firestore.runTransaction {
+            val userSnapshot = get(userRef)
+            val current = if (userSnapshot.exists) {
+                userSnapshot.data<FirestoreUserDirectory>()
+            } else {
+                null
+            }
+            var profile = current ?: FirestoreUserDirectory(
                 uid = user.uid,
                 email = user.email.orEmpty(),
-                emailLower = user.email.orEmpty().trim().lowercase(),
+                emailLower = emailLower,
                 customName = initialCustomName.trim(),
                 providerDisplayName = resolvedProviderName,
                 generatedName = generatedName(),
                 avatarUrl = user.photoURL.orEmpty(),
             )
-        }
 
-        if (snapshot.exists) {
-            var changed = false
-            if (directory.providerDisplayName.isBlank() && resolvedProviderName.isNotBlank()) {
-                directory = directory.copy(providerDisplayName = resolvedProviderName.trim())
-                changed = true
-            }
-            if (directory.customName.isBlank() && initialCustomName.isNotBlank()) {
-                directory = directory.copy(customName = initialCustomName.trim())
-                changed = true
-            }
-            if (directory.email != user.email.orEmpty() ||
-                directory.emailLower != user.email.orEmpty().trim().lowercase()
-            ) {
-                directory = directory.copy(
+            if (current != null) {
+                profile = profile.copy(
+                    customName = profile.customName.ifBlank { initialCustomName.trim() },
+                    username = normalizeUsername(profile.username),
+                    usernameLower = normalizeUsername(profile.username),
+                    providerDisplayName = profile.providerDisplayName.ifBlank { resolvedProviderName },
+                    generatedName = profile.generatedName.ifBlank { generatedName() },
                     email = user.email.orEmpty(),
-                    emailLower = user.email.orEmpty().trim().lowercase(),
+                    emailLower = emailLower,
+                    avatarUrl = user.photoURL.orEmpty().ifBlank { profile.avatarUrl },
                 )
-                changed = true
             }
-            if (changed) userRef.set(directory)
-        } else {
-            userRef.set(directory)
-        }
 
-        val publicRef = firestore.collection(PUBLIC_PROFILES_COLLECTION).document(user.uid)
-        val publicSnapshot = publicRef.get()
-        if (!publicSnapshot.exists || publicSnapshot.data<FirestoreUserDirectory>() != directory) {
-            publicRef.set(directory)
-        }
-        ensureEmailLookup(firestore, directory)
-
-        if (directory.username.isNotBlank()) {
-            val handleRef = firestore.collection(USERNAMES_COLLECTION).document(directory.usernameLower)
-            val handleSnapshot = handleRef.get()
-            if (!handleSnapshot.exists) {
-                handleRef.set(LookupRecord(userId = user.uid))
+            val publicSnapshot = get(publicRef)
+            val emailSnapshot = emailRef?.let { get(it) }
+            val usernameRef = profile.usernameLower.takeIf { it.isNotBlank() }?.let {
+                firestore.collection(USERNAMES_COLLECTION).document(it)
             }
-        }
-        user.withDirectory(directory)
-    }
+            val usernameSnapshot = usernameRef?.let { get(it) }
 
-    private suspend fun ensureEmailLookup(
-        firestore: FirebaseFirestore,
-        directory: FirestoreUserDirectory,
-    ) {
-        if (directory.emailLower.isBlank()) return
-        val reference = firestore.collection(EMAIL_LOOKUP_COLLECTION).document(directory.emailLower)
-        val snapshot = reference.get()
-        if (!snapshot.exists) {
-            reference.set(LookupRecord(userId = directory.uid))
+            if (usernameSnapshot?.exists == true) {
+                require(usernameSnapshot.data<LookupRecord>().userId == user.uid) {
+                    "Этот ник уже занят, выберите другой ник."
+                }
+            }
+            if (emailSnapshot?.exists == true) {
+                require(emailSnapshot.data<LookupRecord>().userId == user.uid) {
+                    "Этот email уже связан с другим профилем."
+                }
+            }
+
+            if (!userSnapshot.exists || current != profile) set(userRef, profile)
+            if (!publicSnapshot.exists || publicSnapshot.data<FirestoreUserDirectory>() != profile) {
+                set(publicRef, profile)
+            }
+            if (usernameRef != null && usernameSnapshot?.exists != true) {
+                set(usernameRef, LookupRecord(userId = user.uid))
+            }
+            if (emailRef != null && emailSnapshot?.exists != true) {
+                set(emailRef, LookupRecord(userId = user.uid))
+            }
+            profile
         }
+
+        return user.withDirectory(directory)
     }
 
     private fun FirebaseUser.socialProviderDisplayName(): String? =
