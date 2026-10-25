@@ -79,6 +79,7 @@
     <string name="description_not_set">No description set.</string>
     <string name="max_drawings_title">Maximum drawings in chat</string>
     <string name="drawing_limit_label">Drawing limit</string>
+    <string name="drawing_limit_value">Drawing limit in chat: %1$d</string>
     <string name="drawing_limit_hint">Leave blank to disable the limit. Enter 1–500 drawings.</string>
     <string name="drawing_limit_readonly">Limit set by the chat creator</string>
     <string name="limit_disabled">Drawing limit disabled.</string>
