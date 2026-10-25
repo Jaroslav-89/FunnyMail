@@ -106,6 +106,21 @@ fun ChatDetailsScreen(
     val chatRepository = koinInject<ChatRepository>()
     val letterRepository = koinInject<LetterRepository>()
     val coroutineScope = rememberCoroutineScope()
+    val automaticDeleteFailedText = stringResource(Res.string.automatic_delete_failed)
+    val drawingDeletedText = stringResource(Res.string.chat_drawing_delete_success)
+    val drawingDeleteFailedText = stringResource(Res.string.chat_drawing_delete_failed)
+    val userNotFoundText = stringResource(Res.string.user_not_found)
+    val userAlreadyMemberText = stringResource(Res.string.user_already_member)
+    val youAlreadyMemberText = stringResource(Res.string.you_already_member)
+    val userSearchFailedText = stringResource(Res.string.user_search_failed)
+    val userAddedText = stringResource(Res.string.user_added)
+    val addUserFailedText = stringResource(Res.string.user_add_failed)
+    val editChatDescription = stringResource(Res.string.edit_chat)
+    val addUserDescription = stringResource(Res.string.add_user_to_chat)
+    val newDrawingDescription = stringResource(Res.string.new_drawing)
+    val myDrawingsDescription = stringResource(Res.string.open_my_drawings)
+    val openActionsMenuDescription = stringResource(Res.string.drawing_menu_open)
+    val closeActionsMenuDescription = stringResource(Res.string.drawing_menu_close)
     val lettersListState = rememberLazyListState()
     var actionsExpanded by rememberSaveable { mutableStateOf(false) }
     var showInviteDialog by rememberSaveable { mutableStateOf(false) }
@@ -187,7 +202,7 @@ fun ChatDetailsScreen(
             excessLetters.forEach { letter ->
                 letterRepository.deleteLetter(chat.id, letter.id, userId).onFailure { error ->
                     drawingActionMessage = error.message
-                        ?: "Не удалось автоматически удалить старый рисунок."
+                        ?: automaticDeleteFailedText
                 }
             }
         }
@@ -251,9 +266,9 @@ fun ChatDetailsScreen(
                                 if (userId != null) {
                                     coroutineScope.launch {
                                         letterRepository.deleteLetter(chat.id, letter.id, userId).fold(
-                                            onSuccess = { drawingActionMessage = "Ваш рисунок удалён из чата." },
+                                            onSuccess = { drawingActionMessage = drawingDeletedText },
                                             onFailure = { error ->
-                                                drawingActionMessage = error.message ?: "Не удалось удалить рисунок."
+                                                drawingActionMessage = error.message ?: drawingDeleteFailedText
                                             },
                                         )
                                     }
@@ -304,7 +319,7 @@ fun ChatDetailsScreen(
                 }
             }
 
-            ChatHeaderIconButton(onClick = onEditChat, description = "Редактировать чат") {
+            ChatHeaderIconButton(onClick = onEditChat, description = editChatDescription) {
                 EditPencilIcon(
                     modifier = Modifier.size(22.dp),
                     color = MaterialTheme.colorScheme.onSurface,
@@ -317,7 +332,7 @@ fun ChatDetailsScreen(
                     inviteError = null
                     showInviteDialog = true
                 },
-                description = "Добавить пользователя в чат",
+                description = addUserDescription,
             ) {
                 PersonPlusIcon(
                     modifier = Modifier.size(23.dp),
@@ -363,7 +378,7 @@ fun ChatDetailsScreen(
                             actionsExpanded = false
                             onCreateDrawing()
                         },
-                        modifier = Modifier.size(52.dp).semantics { contentDescription = "Новый рисунок" },
+                        modifier = Modifier.size(52.dp).semantics { contentDescription = newDrawingDescription },
                         shape = CircleShape,
                         containerColor = Color(0xFFF5A800),
                         contentColor = Color(0xFF202124),
@@ -375,7 +390,7 @@ fun ChatDetailsScreen(
                             actionsExpanded = false
                             onOpenDrawings()
                         },
-                        modifier = Modifier.size(52.dp).semantics { contentDescription = "Мои рисунки" },
+                        modifier = Modifier.size(52.dp).semantics { contentDescription = myDrawingsDescription },
                         shape = CircleShape,
                         containerColor = MaterialTheme.colorScheme.secondaryContainer,
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
@@ -388,7 +403,7 @@ fun ChatDetailsScreen(
             FloatingActionButton(
                 onClick = { actionsExpanded = !actionsExpanded },
                 modifier = Modifier.size(58.dp).semantics {
-                    contentDescription = if (actionsExpanded) "Закрыть меню действий" else "Открыть меню действий"
+                    contentDescription = if (actionsExpanded) closeActionsMenuDescription else openActionsMenuDescription
                 },
                 shape = CircleShape,
                 containerColor = Color(0xFFF5A800),
@@ -434,15 +449,15 @@ fun ChatDetailsScreen(
                                             onSuccess = { result ->
                                                 foundUser = result
                                                 searchMessage = when {
-                                                    result == null -> "Пользователь не найден."
-                                                    result.id in chat.memberIds -> "Этот пользователь уже состоит в чате."
-                                                    result.id == state.currentUser?.id -> "Вы уже состоите в этом чате."
+                                                    result == null -> userNotFoundText
+                                                    result.id in chat.memberIds -> userAlreadyMemberText
+                                                    result.id == state.currentUser?.id -> youAlreadyMemberText
                                                     else -> null
                                                 }
                                                 isSearchingUser = false
                                             },
                                             onFailure = { error ->
-                                                searchMessage = error.message ?: "Не удалось выполнить поиск."
+                                                searchMessage = error.message ?: userSearchFailedText
                                                 isSearchingUser = false
                                             },
                                         )
@@ -492,11 +507,11 @@ fun ChatDetailsScreen(
                                                     chatRepository.addMember(chat.id, currentUserId, user.id).fold(
                                                         onSuccess = { updatedChat ->
                                                             onChatUpdated(updatedChat)
-                                                            searchMessage = "Пользователь добавлен в чат."
+                                                            searchMessage = userAddedText
                                                             isAddingUser = false
                                                         },
                                                         onFailure = { error ->
-                                                            searchMessage = error.message ?: "Не удалось добавить пользователя."
+                                                            searchMessage = error.message ?: addUserFailedText
                                                             isAddingUser = false
                                                         },
                                                     )
@@ -515,7 +530,7 @@ fun ChatDetailsScreen(
                                 }
                             }
                         }
-                        searchMessage?.let { Text(it, color = if (it == "Пользователь добавлен в чат.") {
+                        searchMessage?.let { Text(it, color = if (it == userAddedText) {
                             MaterialTheme.colorScheme.primary
                         } else MaterialTheme.colorScheme.error) }
 
@@ -583,7 +598,7 @@ private fun ChatLetterCard(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 if (letter.authorUserId == currentUserId) {
-                    ChatHeaderIconButton(onClick = onDelete, description = "Удалить свой рисунок") {
+                    ChatHeaderIconButton(onClick = onDelete, description = stringResource(Res.string.delete_own_drawing)) {
                         TrashCanIcon(color = MaterialTheme.colorScheme.error)
                     }
                 }
