@@ -124,7 +124,7 @@ fun LettersScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "Рисунок #${selectedDrawing.id}",
+                    stringResource(Res.string.drawing_number, selectedDrawing.id),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.headlineSmall,
                 )
@@ -145,7 +145,7 @@ fun LettersScreen(
             }
             if (selectedDocument != null) {
                 Text(
-                    "${selectedDocument.strokes.size} штрихов · ${selectedDocument.strokes.sumOf { it.points.size }} точек",
+                    stringResource(Res.string.stroke_point_count, selectedDocument.strokes.size, selectedDocument.strokes.sumOf { it.points.size }),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium,
                 )
@@ -236,7 +236,7 @@ fun LettersScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
                                 Text(
-                                    "Рисунок #${savedDrawing.id}",
+                                    stringResource(Res.string.drawing_number, savedDrawing.id),
                                     modifier = Modifier.weight(1f),
                                     style = MaterialTheme.typography.titleMedium,
                                 )
@@ -257,7 +257,7 @@ fun LettersScreen(
                             }
                             if (document != null) {
                                 Text(
-                                    "${document.strokes.size} штрихов · ${document.strokes.sumOf { it.points.size }} точек",
+                                    stringResource(Res.string.stroke_point_count, document.strokes.size, document.strokes.sumOf { it.points.size }),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
