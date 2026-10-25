@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.platform.LocalContext
 import com.jaroapps.funnymail.core.auth.NativeSocialSignIn
 import com.jaroapps.funnymail.core.storage.DrawingDraftStorage
 import com.jaroapps.funnymail.features.drawing.data.local.LocalDrawingDatabaseBuilder
@@ -33,5 +34,6 @@ class MainActivity : ComponentActivity() {
 @Preview
 @Composable
 fun AppAndroidPreview() {
+    LocalDrawingDatabaseBuilder.attachPlatformContext(LocalContext.current)
     App()
 }
