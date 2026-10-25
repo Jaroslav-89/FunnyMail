@@ -216,7 +216,7 @@ fun ChatEditScreen(
                                     },
                                     onFailure = { error ->
                                         busy = false
-                                        message = error.message ?: chatDescriptionSaveFailedMessage
+                                        message = chatDescriptionSaveFailedMessage
                                         messageIsError = true
                                     },
                                 )
@@ -299,8 +299,7 @@ fun ChatEditScreen(
                                         messageIsError = cleanupFailed
                                     } else {
                                         busy = false
-                                        message = updateResult.exceptionOrNull()?.message
-                                            ?: drawingLimitSaveFailedMessage
+                                        message = drawingLimitSaveFailedMessage
                                         messageIsError = true
                                     }
                                 }
@@ -494,7 +493,7 @@ fun ChatEditScreen(
                                             isSearchingUser = false
                                         },
                                         onFailure = { error ->
-                                            searchMessage = error.message ?: userSearchFailedText
+                                            searchMessage = userSearchFailedText
                                             isSearchingUser = false
                                         },
                                     )
@@ -536,7 +535,7 @@ fun ChatEditScreen(
                                                         isAddingUser = false
                                                     },
                                                     onFailure = { error ->
-                                                        searchMessage = error.message ?: addUserFailedText
+                                                        searchMessage = addUserFailedText
                                                         isAddingUser = false
                                                     },
                                                 )

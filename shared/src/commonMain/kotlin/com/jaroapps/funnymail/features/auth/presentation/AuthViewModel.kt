@@ -200,13 +200,13 @@ class AuthViewModel(
                 },
                 onFailure = { error ->
                     val usernameAlreadyTaken =
-                        error.message?.contains(getString(Res.string.auth_username_taken)) == true
+                        error.message?.contains("USERNAME_TAKEN") == true
                     _state.update {
                         it.copy(
                             isSavingProfile = false,
                             usernameAvailability = if (usernameAlreadyTaken) false else null,
                             message = if (usernameAlreadyTaken) null
-                                else error.message ?: getString(Res.string.auth_profile_save_failed),
+                                else getString(Res.string.auth_profile_save_failed),
                             messageIsError = !usernameAlreadyTaken,
                         )
                     }

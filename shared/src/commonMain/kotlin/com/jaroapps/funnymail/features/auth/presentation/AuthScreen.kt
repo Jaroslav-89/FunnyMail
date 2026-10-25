@@ -57,7 +57,6 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.core.auth.NativeSocialSignIn
 import com.jaroapps.funnymail.core.ui.AppBackButton
-import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -141,13 +140,7 @@ fun AuthScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
             ) {
                 Text(
-                    text = buildString {
-                        append(firebaseUnconfiguredMessage)
-                        FirebaseRuntimeStatus.initializationMessage?.let { details ->
-                            append("\n\n")
-                            append(details)
-                        }
-                    },
+                    text = firebaseUnconfiguredMessage,
                     modifier = Modifier.padding(16.dp),
                     color = MaterialTheme.colorScheme.onErrorContainer,
                     style = MaterialTheme.typography.bodyMedium,

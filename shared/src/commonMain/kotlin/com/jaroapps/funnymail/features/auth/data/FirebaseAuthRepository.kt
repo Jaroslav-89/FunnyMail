@@ -365,7 +365,7 @@ class FirebaseAuthRepository(
 
             if (usernameSnapshot?.exists == true) {
                 require(usernameSnapshot.data<LookupRecord>().userId == user.uid) {
-                    "Этот ник уже занят, выберите другой ник."
+                    USERNAME_TAKEN
                 }
             }
             if (emailSnapshot?.exists == true) {
@@ -507,7 +507,7 @@ class FirebaseAuthRepository(
         const val PUBLIC_PROFILES_COLLECTION = "publicProfiles"
         const val USERNAMES_COLLECTION = "usernames"
         const val EMAIL_LOOKUP_COLLECTION = "emailLookup"
-        const val USERNAME_TAKEN = "Этот ник уже занят, выберите другой ник."
+        const val USERNAME_TAKEN = "USERNAME_TAKEN"
         val USERNAME_REGEX = Regex("^[a-zA-Z0-9_]{3,20}$")
     }
 }

@@ -102,7 +102,7 @@ fun LettersScreen(
                 if (selectedDrawingId == savedDrawing.id) selectedDrawingId = null
                 statusMessage = drawingRemovedDeviceText
             } catch (error: Exception) {
-                statusMessage = error.message ?: deleteDrawingFailedText
+                statusMessage = deleteDrawingFailedText
             }
         }
     }
@@ -217,7 +217,7 @@ fun LettersScreen(
                                                 repository.saveDrawing(draftJson)
                                                 statusMessage = draftAddedGalleryText
                                             } catch (error: Exception) {
-                                                statusMessage = error.message ?: draftAddFailedText
+                                                statusMessage = draftAddFailedText
                                             }
                                         }
                                     },
