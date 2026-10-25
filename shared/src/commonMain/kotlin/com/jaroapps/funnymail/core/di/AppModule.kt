@@ -18,8 +18,8 @@ import org.koin.dsl.module
 /**
  * Shared dependency graph.
  *
- * Platform services and repository implementations can be added through modules as
- * Firestore and Room adapters are introduced.
+ * Firebase repositories live behind domain interfaces; additional local storage adapters,
+ * such as Room, can be registered here as they are introduced.
  */
 val appModule = module {
     single { DrawingCodec() }
