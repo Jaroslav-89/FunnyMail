@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import com.jaroapps.funnymail.core.di.appModule
 import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import com.jaroapps.funnymail.core.navigation.AppDestination
+import com.jaroapps.funnymail.core.navigation.PlatformBackHandler
 import com.jaroapps.funnymail.core.storage.DrawingDraftStorage
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
@@ -89,6 +90,19 @@ private fun FunnyMailContent(
     val chatRepository = koinInject<ChatRepository>()
     val letterRepository = koinInject<LetterRepository>()
     val coroutineScope = rememberCoroutineScope()
+
+    PlatformBackHandler(enabled = destination != AppDestination.Home) {
+        destination = when (destination) {
+            AppDestination.Home,
+            AppDestination.Auth,
+            AppDestination.ChatDetail,
+            -> AppDestination.Home
+
+            AppDestination.Drawing,
+            AppDestination.Letters,
+            -> AppDestination.ChatDetail
+        }
+    }
 
     val createInviteForChat: (String, (ChatInvite?, String?) -> Unit) -> Unit = { chatId, reportResult ->
         coroutineScope.launch {
