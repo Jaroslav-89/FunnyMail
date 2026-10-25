@@ -54,6 +54,7 @@ import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingStrokes
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingCanvas
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
+import kotlin.math.min
 import kotlin.math.roundToInt
 
 private val DrawingPalette = listOf(
@@ -100,14 +101,12 @@ fun DrawingScreen(
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var statusIsError by remember { mutableStateOf(false) }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    var canvasHeight by remember { mutableStateOf(1000) }
+    var canvasAspectInitialized by remember { mutableStateOf(false) }
+    var isDrawingGestureActive by remember { mutableStateOf(false) }
 
     val drawingCodec = remember { DrawingCodec() }
     val paintColor = if (eraserEnabled) "#FFFFFF" else selectedColor
-    val canvasHeight = if (canvasSize.width > 0 && canvasSize.height > 0) {
-        (1000f * canvasSize.height / canvasSize.width).roundToInt().coerceIn(1, 4096)
-    } else {
-        1000
-    }
     val currentDrawingJson = remember(strokes, canvasHeight) {
         if (strokes.isEmpty()) {
             null
@@ -175,30 +174,62 @@ fun DrawingScreen(
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .onSizeChanged { canvasSize = it }
-                .pointerInput(paintColor, brushWidth, canvasSize.width, canvasSize.height) {
-                    fun normalizedPoint(x: Float, y: Float): List<Double> {
-                        val canvasWidth = size.width.toFloat().coerceAtLeast(1f)
-                        val canvasHeight = size.height.toFloat().coerceAtLeast(1f)
-                        return listOf(
-                            (x / canvasWidth).coerceIn(0f, 1f).toDouble(),
-                            (y / canvasHeight).coerceIn(0f, 1f).toDouble(),
-                        )
+                .onSizeChanged { newSize ->
+                    canvasSize = newSize
+                    if (!canvasAspectInitialized && newSize.width > 0 && newSize.height > 0) {
+                        canvasHeight = (
+                            1000f * newSize.height / newSize.width
+                        ).roundToInt().coerceIn(1, 4096)
+                        canvasAspectInitialized = true
                     }
+                }
+                .pointerInput(
+                    paintColor,
+                    brushWidth,
+                    canvasSize.width,
+                    canvasSize.height,
+                    canvasHeight,
+                ) {
+                    val viewportScale = min(
+                        size.width.toFloat() / 1000f,
+                        size.height.toFloat() / canvasHeight.toFloat(),
+                    ).coerceAtLeast(0.0001f)
+                    val viewportWidth = 1000f * viewportScale
+                    val viewportHeight = canvasHeight.toFloat() * viewportScale
+                    val viewportLeft = (size.width.toFloat() - viewportWidth) / 2f
+                    val viewportTop = (size.height.toFloat() - viewportHeight) / 2f
+
+                    fun isInsideViewport(x: Float, y: Float): Boolean =
+                        x >= viewportLeft &&
+                            x <= viewportLeft + viewportWidth &&
+                            y >= viewportTop &&
+                            y <= viewportTop + viewportHeight
+
+                    fun normalizedPoint(x: Float, y: Float): List<Double> = listOf(
+                        ((x - viewportLeft) / viewportWidth).coerceIn(0f, 1f).toDouble(),
+                        ((y - viewportTop) / viewportHeight).coerceIn(0f, 1f).toDouble(),
+                    )
 
                     detectDragGestures(
                         onDragStart = { offset ->
                             statusMessage = null
-                            activePoints = listOf(normalizedPoint(offset.x, offset.y))
+                            isDrawingGestureActive = isInsideViewport(offset.x, offset.y)
+                            activePoints = if (isDrawingGestureActive) {
+                                listOf(normalizedPoint(offset.x, offset.y))
+                            } else {
+                                emptyList()
+                            }
                         },
                         onDrag = { change, _ ->
-                            change.consume()
-                            activePoints = activePoints + listOf(
-                                normalizedPoint(change.position.x, change.position.y),
-                            )
+                            if (isDrawingGestureActive) {
+                                change.consume()
+                                activePoints = activePoints + listOf(
+                                    normalizedPoint(change.position.x, change.position.y),
+                                )
+                            }
                         },
                         onDragEnd = {
-                            if (activePoints.isNotEmpty()) {
+                            if (isDrawingGestureActive && activePoints.isNotEmpty()) {
                                 strokes = strokes + DrawingStroke(
                                     color = paintColor,
                                     width = brushWidth,
@@ -206,9 +237,13 @@ fun DrawingScreen(
                                 )
                                 redoStrokes = emptyList()
                             }
+                            isDrawingGestureActive = false
                             activePoints = emptyList()
                         },
-                        onDragCancel = { activePoints = emptyList() },
+                        onDragCancel = {
+                            isDrawingGestureActive = false
+                            activePoints = emptyList()
+                        },
                     )
                 },
         ) {
