@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 data class ChatDetailsUiState(
     val currentUser: UserProfile? = null,
     val letters: List<Letter> = emptyList(),
-    val isLoading: Boolean = false,
+    val isLoading: Boolean = true,
     val isSending: Boolean = false,
     val lastSentLetterId: String? = null,
     val message: String? = null,

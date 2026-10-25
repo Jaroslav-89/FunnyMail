@@ -23,6 +23,7 @@ class FunnyMailMessagingService : FirebaseMessagingService() {
             ?: "Новое сообщение в чате"
 
         ensureChannel()
+        LauncherBadge.setUnread(this, unread = true)
         val intent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
             message.data["chatId"]?.let { putExtra("chatId", it) }
@@ -67,7 +68,7 @@ class FunnyMailMessagingService : FirebaseMessagingService() {
                 NotificationManager.IMPORTANCE_HIGH,
             ).apply {
                 description = "Уведомления о новых рисунках и сообщениях в чатах FunnyMail"
-                setShowBadge(true)
+                setShowBadge(false)
             },
         )
     }
@@ -83,6 +84,6 @@ class FunnyMailMessagingService : FirebaseMessagingService() {
     }.getOrNull()
 
     private companion object {
-        const val CHANNEL_ID = "new_chat_messages"
+        const val CHANNEL_ID = "new_chat_messages_v2"
     }
 }

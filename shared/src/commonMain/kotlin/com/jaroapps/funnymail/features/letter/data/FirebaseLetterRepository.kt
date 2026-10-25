@@ -135,9 +135,17 @@ class FirebaseLetterRepository(
             .document(chatId)
             .collection(LETTERS_COLLECTION)
             .document(letterId)
-        val letter = reference.get().data<FirestoreLetterDocument>()
-        require(letter.authorUserId == requestingUserId) {
-            "Удалить этот рисунок может только его автор."
+        val letterSnapshot = reference.get()
+        if (!letterSnapshot.exists) return@asResult Unit
+        val letter = letterSnapshot.data<FirestoreLetterDocument>()
+        val chat = firestoreProvider()
+            .collection(CHATS_COLLECTION)
+            .document(chatId)
+            .get()
+            .data<FirestoreLetterChatAccess>()
+        val creatorId = chat.creatorUserId.ifBlank { chat.memberIds.firstOrNull().orEmpty() }
+        require(letter.authorUserId == requestingUserId || creatorId == requestingUserId) {
+            "Удалить рисунок может его автор или создатель чата."
         }
         reference.delete()
     }
@@ -176,6 +184,12 @@ class FirebaseLetterRepository(
         } catch (error: Exception) {
             Result.failure(error)
         }
+
+    @Serializable
+    private data class FirestoreLetterChatAccess(
+        val memberIds: List<String> = emptyList(),
+        val creatorUserId: String = "",
+    )
 
     @Serializable
     private data class FirestoreLetterDocument(

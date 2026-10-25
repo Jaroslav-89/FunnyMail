@@ -43,6 +43,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.unit.dp
+import com.jaroapps.funnymail.core.ui.AppBackButton
 import com.jaroapps.funnymail.core.ui.EditPencilIcon
 import com.jaroapps.funnymail.core.ui.TrashCanIcon
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
@@ -161,7 +162,7 @@ fun LettersScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 12.dp, top = 84.dp, end = 12.dp, bottom = 72.dp),
+                contentPadding = PaddingValues(start = 12.dp, top = 0.dp, end = 12.dp, bottom = 72.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (drawings.isEmpty() && !draftNeedsImport) {
@@ -283,18 +284,11 @@ fun LettersScreen(
         }
 
         Row(
-            modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.size(48.dp).background(MaterialTheme.colorScheme.surface, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
-            ) {
-                DrawingsBackArrowGlyph(color = MaterialTheme.colorScheme.onSurface)
-            }
+            AppBackButton(onClick = onBack)
             Surface(
                 shape = RoundedCornerShape(24.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,

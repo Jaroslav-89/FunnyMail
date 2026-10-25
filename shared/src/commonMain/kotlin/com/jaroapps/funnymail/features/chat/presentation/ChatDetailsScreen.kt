@@ -65,6 +65,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jaroapps.funnymail.core.ui.AccountPersonIcon
+import com.jaroapps.funnymail.core.ui.AppBackButton
 import com.jaroapps.funnymail.core.ui.DrawingListIcon
 import com.jaroapps.funnymail.core.ui.EditPencilIcon
 import com.jaroapps.funnymail.core.ui.PersonPlusIcon
@@ -184,7 +185,7 @@ fun ChatDetailsScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = 16.dp,
-                        top = 68.dp,
+                        top = 0.dp,
                         end = 16.dp,
                         bottom = 100.dp,
                     ),
@@ -219,14 +220,11 @@ fun ChatDetailsScreen(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.background)
                 .padding(horizontal = 10.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ChatHeaderIconButton(onClick = onBack, description = "Назад") {
-                BackArrowGlyph(color = MaterialTheme.colorScheme.onSurface)
-            }
+            AppBackButton(onClick = onBack)
 
             Surface(
                 modifier = Modifier.weight(1f).height(48.dp),
@@ -252,7 +250,7 @@ fun ChatDetailsScreen(
                     )
                     AccountPersonIcon(
                         modifier = Modifier.padding(start = 3.dp).size(18.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 }
             }
@@ -260,7 +258,7 @@ fun ChatDetailsScreen(
             ChatHeaderIconButton(onClick = onEditChat, description = "Редактировать чат") {
                 EditPencilIcon(
                     modifier = Modifier.size(22.dp),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
 
@@ -274,7 +272,7 @@ fun ChatDetailsScreen(
             ) {
                 PersonPlusIcon(
                     modifier = Modifier.size(23.dp),
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
@@ -533,7 +531,7 @@ private fun ChatLetterCard(
                     text = if (letter.authorUserId == currentUserId) "Вы отправили" else authorDisplayName ?: "Письмо от участника",
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 if (letter.authorUserId == currentUserId) {
                     ChatHeaderIconButton(onClick = onDelete, description = "Удалить свой рисунок") {

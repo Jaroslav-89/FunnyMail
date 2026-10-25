@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.jaroapps.funnymail.core.ui.AppBackButton
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingStrokes
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingBackground
@@ -49,34 +50,11 @@ fun DrawingViewerScreen(
             )
         }
 
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(12.dp)
-                .size(48.dp)
-                .shadow(4.dp, CircleShape)
-                .clip(CircleShape)
-                .background(Color.White)
-                .border(1.dp, Color(0xFFE8EAED), CircleShape)
-                .clickable(onClick = onBack)
-                .semantics { contentDescription = "Назад в чат" },
-            contentAlignment = Alignment.Center,
-        ) {
-            Canvas(Modifier.size(23.dp)) {
-                val stroke = Stroke(
-                    width = size.minDimension * 0.095f,
-                    cap = StrokeCap.Round,
-                    join = StrokeJoin.Round,
-                )
-                val arrow = Path().apply {
-                    moveTo(size.width * 0.78f, size.height * 0.50f)
-                    lineTo(size.width * 0.22f, size.height * 0.50f)
-                    moveTo(size.width * 0.45f, size.height * 0.23f)
-                    lineTo(size.width * 0.18f, size.height * 0.50f)
-                    lineTo(size.width * 0.45f, size.height * 0.77f)
-                }
-                drawPath(arrow, Color(0xFF202124), style = stroke)
-            }
-        }
+        AppBackButton(
+            onClick = onBack,
+            modifier = Modifier.align(Alignment.TopStart).padding(12.dp),
+            description = "Назад в чат",
+            keepLightAppearance = true,
+        )
     }
 }

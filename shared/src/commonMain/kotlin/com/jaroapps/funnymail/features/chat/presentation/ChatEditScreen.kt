@@ -3,11 +3,13 @@ package com.jaroapps.funnymail.features.chat.presentation
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -42,6 +44,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.core.ui.AccountPersonIcon
+import com.jaroapps.funnymail.core.ui.AppBackButton
 import com.jaroapps.funnymail.features.auth.domain.model.UserProfile
 import com.jaroapps.funnymail.features.auth.domain.repository.AuthRepository
 import com.jaroapps.funnymail.core.ui.PersonPlusIcon
@@ -49,7 +52,10 @@ import com.jaroapps.funnymail.core.ui.TrashCanIcon
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
 import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
+import com.jaroapps.funnymail.features.letter.domain.repository.LetterRepository
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import org.koin.compose.koinInject
 
 @Composable
@@ -62,6 +68,7 @@ fun ChatEditScreen(
     onCreateInvite: (String, (ChatInvite?, String?) -> Unit) -> Unit,
 ) {
     val repository = koinInject<ChatRepository>()
+    val letterRepository = koinInject<LetterRepository>()
     val authRepository = koinInject<AuthRepository>()
     val scope = rememberCoroutineScope()
     var memberProfiles by remember { mutableStateOf<Map<String, UserProfile>>(emptyMap()) }
@@ -94,26 +101,12 @@ fun ChatEditScreen(
     var confirmLeave by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.size(48.dp).background(Color.Transparent, CircleShape)
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape),
-            ) {
-                Text("←", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(Modifier.width(12.dp))
-            Text("Настройки чата", style = MaterialTheme.typography.titleLarge, maxLines = 1,
-                overflow = TextOverflow.Ellipsis)
-        }
-
+    Box(modifier = Modifier.fillMaxSize()) {
         Column(
-            modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(top = 76.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text("Название чата", style = MaterialTheme.typography.titleMedium)
@@ -225,57 +218,98 @@ fun ChatEditScreen(
                 }
             }
 
-            Text("Максимум рисунков в чате", style = MaterialTheme.typography.titleMedium)
-            val parsedLimit = maxLettersText.toIntOrNull()
-            val normalizedLimit = if (maxLettersText.isBlank()) null else parsedLimit
-            OutlinedTextField(
-                value = if (isCreator) maxLettersText else chat.maxLettersCount?.toString() ?: "Без лимита",
-                onValueChange = { value -> maxLettersText = value.filter { it.isDigit() }.take(3) },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !busy,
-                readOnly = !isCreator,
-                singleLine = true,
-                label = { Text("Лимит рисунков") },
-                supportingText = {
-                    Text(
-                        if (isCreator) "Пусто — без лимита. Допустимо от 1 до 500 рисунков."
-                        else "Настраивает создатель чата. Пусто — без лимита."
+            if (isCreator || chat.maxLettersCount != null) {
+                Text("Максимум рисунков в чате", style = MaterialTheme.typography.titleMedium)
+                val parsedLimit = maxLettersText.toIntOrNull()
+                val normalizedLimit = if (maxLettersText.isBlank()) null else parsedLimit
+                if (isCreator) {
+                    OutlinedTextField(
+                        value = maxLettersText,
+                        onValueChange = { value -> maxLettersText = value.filter { it.isDigit() }.take(3) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !busy,
+                        singleLine = true,
+                        label = { Text("Лимит рисунков") },
+                        supportingText = {
+                            Text("Пусто — отключить лимит. Допустимо от 1 до 500 рисунков.")
+                        },
                     )
-                },
-            )
-            if (isCreator) {
-                Button(
-                    onClick = {
-                        val userId = currentUserId
-                        if (userId != null && !busy && (maxLettersText.isBlank() || parsedLimit in 1..500)) {
-                            busy = true
-                            message = null
-                            scope.launch {
-                                repository.updateChatMaxLettersCount(chat.id, normalizedLimit, userId).fold(
-                                    onSuccess = { updatedChat ->
-                                        busy = false
-                                        maxLettersText = updatedChat.maxLettersCount?.toString().orEmpty()
+                    Button(
+                        onClick = {
+                            val userId = currentUserId
+                            if (userId != null && !busy && (maxLettersText.isBlank() || parsedLimit in 1..500)) {
+                                busy = true
+                                message = null
+                                scope.launch {
+                                    val updateResult = repository.updateChatMaxLettersCount(
+                                        chat.id,
+                                        normalizedLimit,
+                                        userId,
+                                    )
+                                    if (updateResult.isSuccess) {
+                                        val updatedChat = updateResult.getOrThrow()
                                         onChatUpdated(updatedChat)
-                                        message = if (updatedChat.maxLettersCount == null) {
-                                            "Лимит рисунков отключён."
-                                        } else {
-                                            "Лимит рисунков сохранён. Старые рисунки будут удаляться автоматически при превышении."
+                                        maxLettersText = updatedChat.maxLettersCount?.toString().orEmpty()
+                                        var cleanupFailed = false
+                                        val newLimit = updatedChat.maxLettersCount
+                                        if (newLimit != null) {
+                                            try {
+                                                val currentLetters = letterRepository.observeLetters(chat.id).first()
+                                                val excessLetters = (currentLetters.size - newLimit).coerceAtLeast(0)
+                                                currentLetters.take(excessLetters).forEach { letter ->
+                                                    if (letterRepository.deleteLetter(chat.id, letter.id, userId).isFailure) {
+                                                        cleanupFailed = true
+                                                    }
+                                                }
+                                            } catch (cancelled: CancellationException) {
+                                                throw cancelled
+                                            } catch (_: Exception) {
+                                                cleanupFailed = true
+                                            }
                                         }
-                                        messageIsError = false
-                                    },
-                                    onFailure = { error ->
                                         busy = false
-                                        message = error.message ?: "Не удалось изменить лимит рисунков."
+                                        message = when {
+                                            cleanupFailed -> "Лимит сохранён, но не все старые рисунки удалось удалить."
+                                            newLimit == null -> "Лимит рисунков отключён."
+                                            else -> "Лимит сохранён. Лишние старые рисунки удалены."
+                                        }
+                                        messageIsError = cleanupFailed
+                                    } else {
+                                        busy = false
+                                        message = updateResult.exceptionOrNull()?.message
+                                            ?: "Не удалось изменить лимит рисунков."
                                         messageIsError = true
-                                    },
-                                )
+                                    }
+                                }
                             }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !busy && (maxLettersText.isBlank() || parsedLimit in 1..500) &&
+                            normalizedLimit != chat.maxLettersCount,
+                    ) { Text(if (busy) "Сохраняем…" else "Сохранить лимит") }
+                } else {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Text(
+                                text = chat.maxLettersCount.toString(),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface,
+                            )
+                            Text(
+                                "Лимит установлен создателем чата",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !busy && (maxLettersText.isBlank() || parsedLimit in 1..500) &&
-                        normalizedLimit != chat.maxLettersCount,
-                ) { Text(if (busy) "Сохраняем…" else "Сохранить лимит") }
+                    }
+                }
             }
 
             Surface(
@@ -369,6 +403,31 @@ fun ChatEditScreen(
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !busy,
                 ) { Text("Выйти из чата") }
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AppBackButton(onClick = onBack)
+            Surface(
+                modifier = Modifier.weight(1f).height(48.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+            ) {
+                Text(
+                    text = "Настройки чата",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
             }
         }
     }

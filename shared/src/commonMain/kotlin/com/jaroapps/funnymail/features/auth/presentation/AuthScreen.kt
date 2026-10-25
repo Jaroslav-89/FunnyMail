@@ -52,6 +52,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.core.auth.NativeSocialSignIn
+import com.jaroapps.funnymail.core.ui.AppBackButton
 import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -91,19 +92,7 @@ fun AuthScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .shadow(3.dp, CircleShape)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surface)
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                    .clickable(onClick = onBack)
-                    .semantics { contentDescription = "Назад" },
-                contentAlignment = Alignment.Center,
-            ) {
-                BackArrowGlyph()
-            }
+            AppBackButton(onClick = onBack)
             Text(
                 text = "Аккаунт",
                 style = MaterialTheme.typography.headlineLarge,
@@ -320,10 +309,14 @@ fun AuthScreen(
                 modifier = Modifier.padding(top = 6.dp),
             )
             if (NativeSocialSignIn.supportsGoogleSignIn) {
-                OutlinedButton(
+                Button(
                     onClick = viewModel::signInWithGoogle,
                     enabled = !state.isSubmitting && firebaseConfigured,
                     modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF075B35),
+                        contentColor = Color.White,
+                    ),
                 ) { Text("Продолжить с Google") }
             }
             if (NativeSocialSignIn.supportsAppleSignIn) {
