@@ -22,6 +22,7 @@ data class AuthUiState(
     val isCheckingUsername: Boolean = false,
     val isSavingProfile: Boolean = false,
     val usernameAvailability: Boolean? = null,
+    val usernameCheckQuery: String? = null,
 )
 
 class AuthViewModel(
@@ -92,6 +93,7 @@ class AuthViewModel(
         _state.update {
             it.copy(
                 usernameAvailability = null,
+                usernameCheckQuery = null,
                 message = null,
                 messageIsError = false,
             )
@@ -109,26 +111,52 @@ class AuthViewModel(
         }
 
         viewModelScope.launch {
-            _state.update { it.copy(isCheckingUsername = true, usernameAvailability = null, message = null, messageIsError = false) }
+            _state.update {
+                it.copy(
+                    isCheckingUsername = true,
+                    usernameAvailability = null,
+                    usernameCheckQuery = username,
+                    message = null,
+                    messageIsError = false,
+                )
+            }
             authRepository.checkUsernameAvailability(username, userId).fold(
                 onSuccess = { available ->
-                    _state.update {
-                        it.copy(
-                            isCheckingUsername = false,
-                            usernameAvailability = available,
-                            message = null,
-                            messageIsError = false,
-                        )
+                    _state.update { current ->
+                        if (current.usernameCheckQuery != username) {
+                            current.copy(
+                                isCheckingUsername = false,
+                                usernameAvailability = null,
+                                usernameCheckQuery = null,
+                            )
+                        } else {
+                            current.copy(
+                                isCheckingUsername = false,
+                                usernameAvailability = available,
+                                usernameCheckQuery = null,
+                                message = null,
+                                messageIsError = false,
+                            )
+                        }
                     }
                 },
                 onFailure = { error ->
-                    _state.update {
-                        it.copy(
-                            isCheckingUsername = false,
-                            usernameAvailability = null,
-                            message = error.message ?: "Не удалось проверить ник.",
-                            messageIsError = true,
-                        )
+                    _state.update { current ->
+                        if (current.usernameCheckQuery != username) {
+                            current.copy(
+                                isCheckingUsername = false,
+                                usernameAvailability = null,
+                                usernameCheckQuery = null,
+                            )
+                        } else {
+                            current.copy(
+                                isCheckingUsername = false,
+                                usernameAvailability = null,
+                                usernameCheckQuery = null,
+                                message = error.message ?: "Не удалось проверить ник.",
+                                messageIsError = true,
+                            )
+                        }
                     }
                 },
             )
