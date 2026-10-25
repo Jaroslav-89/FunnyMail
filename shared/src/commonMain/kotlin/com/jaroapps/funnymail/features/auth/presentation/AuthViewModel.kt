@@ -89,7 +89,13 @@ class AuthViewModel(
     }
 
     fun resetUsernameCheck() {
-        _state.update { it.copy(usernameAvailability = null) }
+        _state.update {
+            it.copy(
+                usernameAvailability = null,
+                message = null,
+                messageIsError = false,
+            )
+        }
     }
 
     fun checkUsername(username: String) {
