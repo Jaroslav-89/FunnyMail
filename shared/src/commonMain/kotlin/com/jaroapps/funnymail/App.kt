@@ -19,7 +19,6 @@ import com.jaroapps.funnymail.core.navigation.AppDestination
 import com.jaroapps.funnymail.core.storage.DrawingDraftStorage
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import com.jaroapps.funnymail.features.chat.presentation.ChatDetailsScreen
-import com.jaroapps.funnymail.features.drawing.data.local.LocalDrawingDatabaseBuilder
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.repository.LocalDrawingRepository
 import com.jaroapps.funnymail.features.auth.presentation.AuthScreen
