@@ -302,7 +302,13 @@ class FirebaseAuthRepository(
             .document(userId)
             .get()
         if (!snapshot.exists) return@authResult null
-        val directory = snapshot.data<PublicUserDirectory>()
+        val directory = runCatching {
+            snapshot.data<PublicUserDirectory>()
+        }.getOrElse {
+            // Older builds stored extra private email fields in this document; sanitize them
+            // when reading so their display-name data remains usable during migration.
+            snapshot.data<FirestoreUserDirectory>().toPublicDirectory()
+        }
         directory.toUserProfile()
     }
 
