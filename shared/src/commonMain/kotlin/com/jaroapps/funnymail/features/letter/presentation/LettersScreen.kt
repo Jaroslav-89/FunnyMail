@@ -321,7 +321,7 @@ fun LettersScreen(
             Surface(
                 shape = RoundedCornerShape(24.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,
-                modifier = Modifier.border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp)),
+                modifier = Modifier.weight(1f).height(48.dp).border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(24.dp)),
             ) {
                 Text(
                     text = stringResource(Res.string.open_my_drawings),
@@ -330,7 +330,6 @@ fun LettersScreen(
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
-            Spacer(Modifier.weight(1f))
         }
 
         statusMessage?.let { message ->

@@ -5,5 +5,5 @@ expect object ThemePreferenceStorage {
     fun attachPlatformContext(context: Any?)
     fun loadDarkTheme(): Boolean
     fun saveDarkTheme(enabled: Boolean)
-    fun updateSystemBars(darkThemeEnabled: Boolean)
+    fun updateSystemBars(darkThemeEnabled: Boolean, transparentStatusBar: Boolean)
 }

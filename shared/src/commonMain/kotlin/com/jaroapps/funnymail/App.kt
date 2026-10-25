@@ -273,7 +273,11 @@ private fun FunnyMailContent(
     }
 
     SideEffect {
-        ThemePreferenceStorage.updateSystemBars(darkThemeEnabled)
+        ThemePreferenceStorage.updateSystemBars(
+            darkThemeEnabled = darkThemeEnabled,
+            transparentStatusBar = destination == AppDestination.ChatDetail ||
+                destination == AppDestination.Letters,
+        )
     }
 
     MaterialTheme(colorScheme = appColorScheme) {
