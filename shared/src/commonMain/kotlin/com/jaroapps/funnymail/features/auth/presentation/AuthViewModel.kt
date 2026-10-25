@@ -206,7 +206,7 @@ class AuthViewModel(
                             isSavingProfile = false,
                             usernameAvailability = if (usernameAlreadyTaken) false else null,
                             message = if (usernameAlreadyTaken) null
-                                else error.message ?: getString(Res.string.auth_profile_save_failed),
+                                else getString(Res.string.auth_profile_save_failed),
                             messageIsError = !usernameAlreadyTaken,
                         )
                     }
