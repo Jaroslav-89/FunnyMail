@@ -2,8 +2,6 @@ package com.jaroapps.funnymail.features.drawing.presentation
 
 import org.jetbrains.compose.resources.stringResource
 
-import com.jaroapps.funnymail.resources.Res
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -71,6 +69,27 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
+import com.jaroapps.funnymail.resources.cancel
+import com.jaroapps.funnymail.resources.changes_saved
+import com.jaroapps.funnymail.resources.continue_drawing
+import com.jaroapps.funnymail.resources.done
+import com.jaroapps.funnymail.resources.draw_something
+import com.jaroapps.funnymail.resources.drawing_background
+import com.jaroapps.funnymail.resources.drawing_edits_saved
+import com.jaroapps.funnymail.resources.drawing_saved_locally
+import com.jaroapps.funnymail.resources.drawing_sent_chat
+import com.jaroapps.funnymail.resources.eraser
+import com.jaroapps.funnymail.resources.finish_drawing
+import com.jaroapps.funnymail.resources.finish_drawing_hint
+import com.jaroapps.funnymail.resources.gradient
+import com.jaroapps.funnymail.resources.line_color
+import com.jaroapps.funnymail.resources.save_changes
+import com.jaroapps.funnymail.resources.save_drawing_local
+import com.jaroapps.funnymail.resources.saving
+import com.jaroapps.funnymail.resources.send_to_chat
+import com.jaroapps.funnymail.resources.sending
+import com.jaroapps.funnymail.resources.solid
+import com.jaroapps.funnymail.resources.start_drawing_here
 
 private val DrawingPalette = listOf(
     "#202124",
@@ -104,10 +123,10 @@ fun DrawingScreen(
     initialDrawingJson: String? = null,
 ) {
     val drawingCodec = remember { DrawingCodec() }
-    val drawSomethingMessage = stringResource(Res.string.draw_something)
-    val drawingEditsSavedMessage = stringResource(Res.string.drawing_edits_saved)
-    val drawingSavedLocallyMessage = stringResource(Res.string.drawing_saved_locally)
-    val drawingSentChatMessage = stringResource(Res.string.drawing_sent_chat)
+    val drawSomethingMessage = stringResource(draw_something)
+    val drawingEditsSavedMessage = stringResource(drawing_edits_saved)
+    val drawingSavedLocallyMessage = stringResource(drawing_saved_locally)
+    val drawingSentChatMessage = stringResource(drawing_sent_chat)
     val initialDrawing = remember(initialDrawingJson) {
         initialDrawingJson?.let { drawingCodec.decode(it).getOrNull() }
     }
@@ -352,7 +371,7 @@ fun DrawingScreen(
 
         if (strokes.isEmpty() && activePoints.isEmpty()) {
             Text(
-                text = stringResource(Res.string.start_drawing_here),
+                text = stringResource(start_drawing_here),
                 modifier = Modifier.align(Alignment.Center),
                 color = Color(0xFF9AA0A6),
                 style = MaterialTheme.typography.bodyLarge,
@@ -574,7 +593,7 @@ fun DrawingScreen(
     if (showLineColorDialog) {
         AlertDialog(
             onDismissRequest = { showLineColorDialog = false },
-            title = { Text(stringResource(Res.string.line_color)) },
+            title = { Text(stringResource(line_color)) },
             containerColor = Color.White,
             titleContentColor = Color(0xFF202124),
             textContentColor = Color(0xFF202124),
@@ -589,7 +608,7 @@ fun DrawingScreen(
                 )
             },
             confirmButton = {
-                TextButton(onClick = { showLineColorDialog = false }) { Text(stringResource(Res.string.done), color = Color(0xFF202124)) }
+                TextButton(onClick = { showLineColorDialog = false }) { Text(stringResource(done), color = Color(0xFF202124)) }
             },
         )
     }
@@ -597,7 +616,7 @@ fun DrawingScreen(
     if (showBackgroundDialog) {
         AlertDialog(
             onDismissRequest = { showBackgroundDialog = false },
-            title = { Text(stringResource(Res.string.drawing_background)) },
+            title = { Text(stringResource(drawing_background)) },
             containerColor = Color.White,
             titleContentColor = Color(0xFF202124),
             textContentColor = Color(0xFF202124),
@@ -610,7 +629,7 @@ fun DrawingScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        listOf("SOLID" to stringResource(Res.string.solid), "GRADIENT" to stringResource(Res.string.gradient)).forEach { (tab, label) ->
+                        listOf("SOLID" to stringResource(solid), "GRADIENT" to stringResource(gradient)).forEach { (tab, label) ->
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
@@ -732,10 +751,10 @@ fun DrawingScreen(
                         showBackgroundDialog = false
                         statusMessage = null
                     },
-                ) { Text(stringResource(Res.string.done), color = Color(0xFF202124)) }
+                ) { Text(stringResource(done), color = Color(0xFF202124)) }
             },
             dismissButton = {
-                TextButton(onClick = { showBackgroundDialog = false }) { Text(stringResource(Res.string.cancel), color = Color(0xFF202124)) }
+                TextButton(onClick = { showBackgroundDialog = false }) { Text(stringResource(cancel), color = Color(0xFF202124)) }
             },
         )
     }
@@ -743,11 +762,11 @@ fun DrawingScreen(
     if (showFinishDialog) {
         AlertDialog(
             onDismissRequest = { showFinishDialog = false },
-            title = { Text(stringResource(Res.string.finish_drawing)) },
+            title = { Text(stringResource(finish_drawing)) },
             containerColor = Color.White,
             titleContentColor = Color(0xFF202124),
             textContentColor = Color(0xFF202124),
-            text = { Text(stringResource(Res.string.finish_drawing_hint)) },
+            text = { Text(stringResource(finish_drawing_hint)) },
             confirmButton = {
                 Column(
                     horizontalAlignment = Alignment.End,
@@ -763,10 +782,10 @@ fun DrawingScreen(
                     ) {
                         Text(
                             when {
-                                isSaving -> stringResource(Res.string.saving)
-                                isCurrentDrawingSaved && initialDrawingJson != null -> stringResource(Res.string.changes_saved)
-                                initialDrawingJson != null -> stringResource(Res.string.save_changes)
-                                else -> stringResource(Res.string.save_drawing_local)
+                                isSaving -> stringResource(saving)
+                                isCurrentDrawingSaved && initialDrawingJson != null -> stringResource(changes_saved)
+                                initialDrawingJson != null -> stringResource(save_changes)
+                                else -> stringResource(save_drawing_local)
                             },
                         )
                     }
@@ -777,13 +796,13 @@ fun DrawingScreen(
                         },
                         enabled = !isSending,
                     ) {
-                        Text(if (isSending) stringResource(Res.string.sending) else stringResource(Res.string.send_to_chat))
+                        Text(if (isSending) stringResource(sending) else stringResource(send_to_chat))
                     }
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showFinishDialog = false }) {
-                    Text(stringResource(Res.string.continue_drawing))
+                    Text(stringResource(continue_drawing))
                 }
             },
         )
@@ -833,7 +852,7 @@ private fun ColorToolButton(
         contentAlignment = Alignment.Center,
     ) {
         if (eraserEnabled) {
-            Text(stringResource(Res.string.eraser), color = Color(0xFF202124), fontSize = 12.sp)
+            Text(stringResource(eraser), color = Color(0xFF202124), fontSize = 12.sp)
         }
     }
 }
