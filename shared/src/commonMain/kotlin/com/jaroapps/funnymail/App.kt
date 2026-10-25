@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -15,6 +17,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import com.jaroapps.funnymail.core.di.appModule
 import com.jaroapps.funnymail.core.firebase.FirebaseRuntimeStatus
 import com.jaroapps.funnymail.core.navigation.AppDestination
@@ -22,6 +25,7 @@ import com.jaroapps.funnymail.core.navigation.PlatformBackHandler
 import com.jaroapps.funnymail.core.notifications.registerPushToken
 import com.jaroapps.funnymail.core.notifications.unregisterPushToken
 import com.jaroapps.funnymail.core.storage.DrawingDraftStorage
+import com.jaroapps.funnymail.core.storage.ThemePreferenceStorage
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
 import com.jaroapps.funnymail.features.chat.domain.model.ChatInvite
 import com.jaroapps.funnymail.features.chat.domain.repository.ChatRepository
@@ -81,6 +85,7 @@ private fun FunnyMailContent(
     onClearDraft: () -> Unit,
 ) {
     var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
+    var darkThemeEnabled by rememberSaveable { mutableStateOf(ThemePreferenceStorage.loadDarkTheme()) }
     var selectedChat by remember { mutableStateOf<Chat?>(null) }
     var viewingDrawing by remember { mutableStateOf<DrawingDocument?>(null) }
     var editingDrawingId by remember { mutableStateOf<Long?>(null) }
@@ -211,8 +216,42 @@ private fun FunnyMailContent(
         }
     }
 
-    MaterialTheme {
-        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+    val appColorScheme = if (darkThemeEnabled) {
+        darkColorScheme(
+            primary = Color(0xFFF5A800),
+            onPrimary = Color(0xFF202124),
+            background = Color(0xFF101114),
+            surface = Color(0xFF181A1D),
+            surfaceVariant = Color(0xFF292B2F),
+            onSurface = Color(0xFFF5F5F5),
+            onSurfaceVariant = Color(0xFFC7C9CF),
+            outlineVariant = Color(0xFF4A4D53),
+            secondaryContainer = Color(0xFF3A3326),
+            onSecondaryContainer = Color(0xFFFFF1D0),
+            error = Color(0xFFFF7777),
+            errorContainer = Color(0xFF4A2528),
+            onErrorContainer = Color(0xFFFFDADD),
+        )
+    } else {
+        lightColorScheme(
+            primary = Color(0xFFF5A800),
+            onPrimary = Color(0xFF202124),
+            background = Color(0xFFFFFFFF),
+            surface = Color(0xFFFFFFFF),
+            surfaceVariant = Color(0xFFF5F5F5),
+            onSurface = Color(0xFF202124),
+            onSurfaceVariant = Color(0xFF5F6368),
+            outlineVariant = Color(0xFFDADCE0),
+            secondaryContainer = Color(0xFFFFF0C2),
+            onSecondaryContainer = Color(0xFF202124),
+        )
+    }
+
+    MaterialTheme(colorScheme = appColorScheme) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
+        ) { innerPadding ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -235,6 +274,11 @@ private fun FunnyMailContent(
                     )
                     AppDestination.Auth -> AuthScreen(
                         firebaseConfigured = firebaseConfigured,
+                        darkThemeEnabled = darkThemeEnabled,
+                        onDarkThemeEnabledChange = { enabled ->
+                            darkThemeEnabled = enabled
+                            ThemePreferenceStorage.saveDarkTheme(enabled)
+                        },
                         onBack = { destination = AppDestination.Home },
                     )
                     AppDestination.Drawing -> DrawingScreen(
