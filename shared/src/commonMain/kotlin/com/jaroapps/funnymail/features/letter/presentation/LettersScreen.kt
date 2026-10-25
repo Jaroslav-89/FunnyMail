@@ -123,7 +123,7 @@ fun LettersScreen(
 }
 
 @Composable
-private fun DrawingPreview(
+fun DrawingPreview(
     drawing: DrawingDocument,
     modifier: Modifier = Modifier,
 ) {
