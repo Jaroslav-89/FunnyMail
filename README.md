@@ -83,7 +83,7 @@ XCODEPROJ_PATH="$PWD/iosApp/iosApp.xcodeproj" \
 ```
 
 
-Stop existing Gradle daemons first, then export both variables in the same Terminal session and disable the configuration cache for this one-time integration. The `GRADLE_PROJECT_PATH` variable is required by `:shared:integrateEmbedAndSign`; `-p "$PWD"` makes the repository root explicit. The root `gradle.properties` enables `kotlin.mpp.enableCInteropCommonization=true` for the custom CommonCrypto cinterop used by the iOS targets.
+Stop existing Gradle daemons first, then pass both variables inline to the Gradle process and disable the configuration cache for this one-time integration. The `GRADLE_PROJECT_PATH` variable is required by `:shared:integrateEmbedAndSign`; `-p "$PWD"` makes the repository root explicit. The root `gradle.properties` enables `kotlin.mpp.enableCInteropCommonization=true` for the custom CommonCrypto cinterop used by the iOS targets.
 
 The command updates `iosApp/iosApp.xcodeproj/project.pbxproj` and generates `iosApp/KotlinMultiplatformLinkedPackage/`. Commit those generated files and any generated `.swiftpm-locks/**/Package.resolved` files. Then in Xcode select **File → Packages → Resolve Package Versions**, run **Product → Clean Build Folder**, and rebuild. If Xcode still reports `embedSwiftExport`, verify that the active build phase is the direct-integration script and that you opened this branch's `iosApp/iosApp.xcodeproj`.
 
