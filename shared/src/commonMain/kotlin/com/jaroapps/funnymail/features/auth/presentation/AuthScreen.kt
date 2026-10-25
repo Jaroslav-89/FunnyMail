@@ -56,6 +56,34 @@ import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.core.auth.NativeSocialSignIn
 import com.jaroapps.funnymail.core.ui.AppBackButton
 import org.koin.compose.viewmodel.koinViewModel
+import com.jaroapps.funnymail.resources.account_signin_hint
+import com.jaroapps.funnymail.resources.account_title
+import com.jaroapps.funnymail.resources.already_have_account
+import com.jaroapps.funnymail.resources.chat_display_name
+import com.jaroapps.funnymail.resources.check_username
+import com.jaroapps.funnymail.resources.continue_apple
+import com.jaroapps.funnymail.resources.continue_google
+import com.jaroapps.funnymail.resources.continue_with
+import com.jaroapps.funnymail.resources.create_account
+import com.jaroapps.funnymail.resources.dark_theme
+import com.jaroapps.funnymail.resources.dark_theme_description
+import com.jaroapps.funnymail.resources.email
+import com.jaroapps.funnymail.resources.firebase_unconfigured_message
+import com.jaroapps.funnymail.resources.login
+import com.jaroapps.funnymail.resources.name
+import com.jaroapps.funnymail.resources.name_fallback_hint
+import com.jaroapps.funnymail.resources.optional_name
+import com.jaroapps.funnymail.resources.password
+import com.jaroapps.funnymail.resources.register
+import com.jaroapps.funnymail.resources.save
+import com.jaroapps.funnymail.resources.saving
+import com.jaroapps.funnymail.resources.sign_out
+import com.jaroapps.funnymail.resources.signed_in_as
+import com.jaroapps.funnymail.resources.unique_username
+import com.jaroapps.funnymail.resources.username_available
+import com.jaroapps.funnymail.resources.username_hint
+import com.jaroapps.funnymail.resources.username_label
+import com.jaroapps.funnymail.resources.username_taken
 import com.jaroapps.funnymail.resources.Res
 
 @Composable
