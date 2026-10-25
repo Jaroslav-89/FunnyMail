@@ -279,7 +279,7 @@ fun ChatDetailsScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         start = 16.dp,
-                        top = 0.dp,
+                        top = 68.dp,
                         end = 16.dp,
                         bottom = 100.dp,
                     ),
