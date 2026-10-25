@@ -15,8 +15,10 @@ import dev.gitlive.firebase.firestore.toMilliseconds
 import dev.gitlive.firebase.firestore.where
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
+import kotlin.time.Clock
 
 /**
  * Firestore adapter for chat and invite contracts.
@@ -95,6 +97,7 @@ class FirebaseChatRepository(
             .add(
                 FirestoreChatDocument(
                     title = normalizedTitle,
+                    description = "",
                     memberIds = listOf(creatorUserId),
                     creatorUserId = creatorUserId,
                 ),
@@ -129,6 +132,75 @@ class FirebaseChatRepository(
         chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
     }
 
+
+    override suspend fun updateChatDescription(
+        chatId: String,
+        description: String,
+        updatedByUserId: String,
+    ): Result<Chat> = asResult {
+        val normalizedDescription = description.trim()
+        require(chatId.isNotBlank()) { "Не выбран чат." }
+        require(updatedByUserId.isNotBlank()) { "Для изменения чата нужно войти в аккаунт." }
+        require(normalizedDescription.length <= MAX_CHAT_DESCRIPTION_LENGTH) {
+            "Описание чата не должно превышать $MAX_CHAT_DESCRIPTION_LENGTH символов."
+        }
+
+        val chatReference = firestoreProvider().collection(CHATS_COLLECTION).document(chatId)
+        val current = chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
+        require(current.creatorUserId == updatedByUserId) {
+            "Изменять описание чата может только его создатель."
+        }
+
+        chatReference.update(
+            "description" to normalizedDescription,
+            "updatedAt" to FieldValue.serverTimestamp,
+        )
+        chatReference.get().data<FirestoreChatDocument>().toDomain(chatId)
+    }
+
+    override fun observeUnreadCount(chatId: String, userId: String): Flow<Int> {
+        require(chatId.isNotBlank()) { "Не выбран чат." }
+        require(userId.isNotBlank()) { "Для подсчёта непрочитанных сообщений нужен аккаунт." }
+
+        val chatReference = firestoreProvider().collection(CHATS_COLLECTION).document(chatId)
+        val lettersFlow = chatReference.collection(LETTERS_COLLECTION).snapshots.map { snapshot ->
+            snapshot.documents.mapNotNull { document ->
+                runCatching { document.data<FirestoreUnreadLetterDocument>() }.getOrNull()
+            }
+        }
+        val readAtFlow = chatReference.collection(READS_COLLECTION).document(userId).snapshots.map { document ->
+            if (!document.exists) {
+                0L
+            } else {
+                runCatching {
+                    document.data<FirestoreChatReadDocument>().readAt.toEpochMillisOrNull() ?: 0L
+                }.getOrDefault(0L)
+            }
+        }
+
+        return combine(lettersFlow, readAtFlow) { letters, readAt ->
+            val now = Clock.System.now().toEpochMilliseconds()
+            letters.count { letter ->
+                val createdAt = letter.createdAt.toEpochMillisOrNull()
+                val expiresAt = letter.expiresAt.toEpochMillisOrNull()
+                letter.authorUserId != userId &&
+                    createdAt != null && createdAt > readAt &&
+                    expiresAt != null && expiresAt > now
+            }
+        }
+    }
+
+    override suspend fun markChatAsRead(chatId: String, userId: String): Result<Unit> = asResult {
+        require(chatId.isNotBlank()) { "Не выбран чат." }
+        require(userId.isNotBlank()) { "Для отметки о прочтении нужен аккаунт." }
+
+        firestoreProvider()
+            .collection(CHATS_COLLECTION)
+            .document(chatId)
+            .collection(READS_COLLECTION)
+            .document(userId)
+            .set(FirestoreChatReadDocument())
+    }
 
     override suspend fun addMember(
         chatId: String,
@@ -283,12 +355,16 @@ class FirebaseChatRepository(
     private fun FirestoreChatDocument.toDomain(id: String): Chat = Chat(
         id = id,
         title = title,
+        description = description,
         memberIds = memberIds,
         creatorUserId = creatorUserId.ifBlank { memberIds.firstOrNull().orEmpty() },
         createdAtEpochMillis = createdAt.requireEpochMillis("createdAt"),
         updatedAtEpochMillis = updatedAt.requireEpochMillis("updatedAt"),
         lastMessageAtEpochMillis = (lastMessageAt as? Timestamp)?.toMilliseconds()?.toLong(),
     )
+
+    private fun BaseTimestamp.toEpochMillisOrNull(): Long? =
+        (this as? Timestamp)?.toMilliseconds()?.toLong()
 
     private fun BaseTimestamp.requireEpochMillis(field: String): Long =
         (this as? Timestamp)?.toMilliseconds()?.toLong()
@@ -306,6 +382,7 @@ class FirebaseChatRepository(
     @Serializable
     private data class FirestoreChatDocument(
         val title: String,
+        val description: String = "",
         val memberIds: List<String>,
         val creatorUserId: String = "",
         val createdAt: BaseTimestamp = Timestamp.ServerTimestamp,
@@ -326,11 +403,25 @@ class FirebaseChatRepository(
         val createdAt: BaseTimestamp = Timestamp.ServerTimestamp,
     )
 
+    @Serializable
+    private data class FirestoreChatReadDocument(
+        val readAt: BaseTimestamp = Timestamp.ServerTimestamp,
+    )
+
+    @Serializable
+    private data class FirestoreUnreadLetterDocument(
+        val authorUserId: String,
+        val createdAt: BaseTimestamp = Timestamp.ServerTimestamp,
+        val expiresAt: BaseTimestamp = Timestamp.ServerTimestamp,
+    )
+
     private companion object {
         const val CHATS_COLLECTION = "chats"
         const val LETTERS_COLLECTION = "letters"
+        const val READS_COLLECTION = "reads"
         const val INVITES_COLLECTION = "chatInvites"
         const val MAX_CHAT_TITLE_LENGTH = 80
+        const val MAX_CHAT_DESCRIPTION_LENGTH = 120
         const val INVITE_TTL_MILLIS = 7L * 24L * 60L * 60L * 1000L
     }
 }
