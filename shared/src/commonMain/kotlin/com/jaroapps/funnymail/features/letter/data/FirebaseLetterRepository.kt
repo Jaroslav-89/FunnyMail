@@ -67,7 +67,7 @@ class FirebaseLetterRepository(
                                 }.getOrNull()
                             }
                             .filter { it.expiresAtEpochMillis > Clock.System.now().toEpochMilliseconds() }
-                            .sortedByDescending { it.createdAtEpochMillis }
+                            .sortedBy { it.createdAtEpochMillis }
                     },
             )
         }
