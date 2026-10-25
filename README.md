@@ -74,9 +74,13 @@ The GitLive Firebase Kotlin SDK `3.0.0-alpha02` brings the native `firebase-ios-
 Run this one-time setup from the repository root on macOS if the linkage package has not yet been generated, or after changing native SwiftPM dependencies:
 
 ```bash
+GRADLE_PROJECT_PATH=:shared \
 XCODEPROJ_PATH="$PWD/iosApp/iosApp.xcodeproj" \
-  ./gradlew :shared:integrateEmbedAndSign :shared:integrateLinkagePackage
+./gradlew -p "$PWD" :shared:integrateEmbedAndSign :shared:integrateLinkagePackage
 ```
+
+
+The integration command must set both `GRADLE_PROJECT_PATH=:shared` and `XCODEPROJ_PATH`; the former is required by `:shared:integrateEmbedAndSign`. The root `gradle.properties` enables `kotlin.mpp.enableCInteropCommonization=true` for the custom CommonCrypto cinterop used by the iOS targets.
 
 The command updates `iosApp/iosApp.xcodeproj/project.pbxproj` and generates `iosApp/KotlinMultiplatformLinkedPackage/`. Commit those generated files and any generated `.swiftpm-locks/**/Package.resolved` files. Then in Xcode select **File → Packages → Resolve Package Versions**, run **Product → Clean Build Folder**, and rebuild. If Xcode still reports `embedSwiftExport`, verify that the active build phase is the direct-integration script and that you opened this branch's `iosApp/iosApp.xcodeproj`.
 
