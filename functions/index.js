@@ -159,5 +159,6 @@ exports.processChatCleanupRequest = onDocumentCreated(
   async (event) => {
     if (!event.data) return;
     await pruneChatDrawings(event.params.chatId);
+    await event.data.ref.delete();
   },
 );
