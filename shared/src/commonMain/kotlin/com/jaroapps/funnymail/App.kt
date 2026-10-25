@@ -116,6 +116,7 @@ private fun FunnyMailContent(
     var editingDrawingId by remember { mutableStateOf<Long?>(null) }
     var editingDrawingJson by remember { mutableStateOf<String?>(null) }
     var drawingReturnDestination by remember { mutableStateOf(AppDestination.ChatDetail) }
+    var drawingViewerReturnDestination by remember { mutableStateOf(AppDestination.ChatDetail) }
     val localDrawingRepository = koinInject<LocalDrawingRepository>()
     val authRepository = koinInject<AuthRepository>()
     val signedInUser by authRepository.currentUser.collectAsState(initial = null)
@@ -171,7 +172,7 @@ private fun FunnyMailContent(
             AppDestination.Letters -> destination = AppDestination.ChatDetail
             AppDestination.DrawingViewer -> {
                 viewingDrawing = null
-                destination = AppDestination.ChatDetail
+                destination = drawingViewerReturnDestination
             }
         }
     }
@@ -347,6 +348,12 @@ private fun FunnyMailContent(
                             destination = AppDestination.Drawing
                         },
                         onSendDrawing = sendDrawingToChat,
+                        darkThemeEnabled = darkThemeEnabled,
+                        onViewDrawing = { drawing ->
+                            viewingDrawing = drawing
+                            drawingViewerReturnDestination = AppDestination.Letters
+                            destination = AppDestination.DrawingViewer
+                        },
                     )
                     AppDestination.ChatDetail -> {
                         val chat = selectedChat
@@ -374,6 +381,7 @@ private fun FunnyMailContent(
                                 },
                                 onViewDrawing = { drawing ->
                                     viewingDrawing = drawing
+                                    drawingViewerReturnDestination = AppDestination.ChatDetail
                                     destination = AppDestination.DrawingViewer
                                 },
                                 onChatUpdated = { updatedChat -> selectedChat = updatedChat },
@@ -411,7 +419,7 @@ private fun FunnyMailContent(
                                 description = selectDrawingHintText,
                                 onBack = {
                                     viewingDrawing = null
-                                    destination = AppDestination.ChatDetail
+                                    destination = drawingViewerReturnDestination
                                 },
                             )
                         } else {
