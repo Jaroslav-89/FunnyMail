@@ -156,8 +156,7 @@ class ChatDetailsViewModel(
                 getString(Res.string.letter_too_large)
             "network" in details || "unavailable" in details ->
                 getString(Res.string.network_connection_failed)
-            else -> message?.takeIf { it.isNotBlank() }
-                ?: getString(Res.string.letter_generic_error)
+            else -> getString(Res.string.letter_generic_error)
         }
     }
 }
