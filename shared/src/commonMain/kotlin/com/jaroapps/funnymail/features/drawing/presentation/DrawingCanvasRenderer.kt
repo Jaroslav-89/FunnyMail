@@ -1,0 +1,74 @@
+package com.jaroapps.funnymail.features.drawing.presentation
+
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
+import kotlin.math.min
+
+/**
+ * Renders normalized drawing coordinates inside a viewport without changing their aspect ratio.
+ * The document's canvas dimensions describe the coordinate system used when the drawing was made.
+ */
+internal fun DrawScope.drawDrawingStrokes(
+    strokes: List<DrawingStroke>,
+    canvasWidth: Int,
+    canvasHeight: Int,
+) {
+    val logicalWidth = canvasWidth.coerceAtLeast(1).toFloat()
+    val logicalHeight = canvasHeight.coerceAtLeast(1).toFloat()
+    val scale = min(size.width / logicalWidth, size.height / logicalHeight)
+    if (!scale.isFinite() || scale <= 0f) return
+
+    val contentWidth = logicalWidth * scale
+    val contentHeight = logicalHeight * scale
+    val offsetX = (size.width - contentWidth) / 2f
+    val offsetY = (size.height - contentHeight) / 2f
+
+    strokes.forEach { stroke ->
+        if (stroke.points.isEmpty()) return@forEach
+        val color = stroke.color.toDrawingRenderColor()
+        val lineWidth = (stroke.width * scale).coerceAtLeast(1f)
+
+        if (stroke.points.size == 1) {
+            val point = stroke.points.first()
+            drawCircle(
+                color = color,
+                radius = lineWidth / 2f,
+                center = Offset(
+                    x = offsetX + (point[0] * contentWidth).toFloat(),
+                    y = offsetY + (point[1] * contentHeight).toFloat(),
+                ),
+            )
+        } else {
+            val path = Path()
+            stroke.points.forEachIndexed { index, point ->
+                val x = offsetX + (point[0] * contentWidth).toFloat()
+                val y = offsetY + (point[1] * contentHeight).toFloat()
+                if (index == 0) path.moveTo(x, y) else path.lineTo(x, y)
+            }
+            drawPath(
+                path = path,
+                color = color,
+                style = Stroke(
+                    width = lineWidth,
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round,
+                ),
+            )
+        }
+    }
+}
+
+private fun String.toDrawingRenderColor(): androidx.compose.ui.graphics.Color {
+    val rgb = removePrefix("#").toLongOrNull(16) ?: 0x202124L
+    return androidx.compose.ui.graphics.Color(
+        red = ((rgb shr 16) and 0xFF).toFloat() / 255f,
+        green = ((rgb shr 8) and 0xFF).toFloat() / 255f,
+        blue = (rgb and 0xFF).toFloat() / 255f,
+        alpha = 1f,
+    )
+}
