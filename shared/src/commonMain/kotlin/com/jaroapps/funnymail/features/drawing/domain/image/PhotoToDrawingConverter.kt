@@ -16,13 +16,13 @@ class NoContoursFoundException : IllegalStateException("No clear contours found"
 /**
  * Local edge-to-vector conversion.
  *
- * Version 5 prioritizes a small number of bold, smooth silhouette-like contours. It uses a
- * lower analysis resolution, stronger smoothing and thresholds, morphological gap closing,
- * endpoint joining, and aggressive geometry simplification to suppress isolated detail marks.
+ * Version 6 aggressively favors long, bold silhouette-like paths over interior texture. It uses
+ * lower analysis resolution, separable large-radius smoothing, stronger edge thresholds,
+ * morphological closing, direction-aware endpoint joining, and aggressive path simplification.
  */
 class PhotoToDrawingConverter(
-    private val maxStrokes: Int = 90,
-    private val maxPoints: Int = 1_800,
+    private val maxStrokes: Int = 60,
+    private val maxPoints: Int = 1_400,
 ) {
     private data class Candidate(val points: List<Int>, val sourceLength: Int)
 
@@ -105,13 +105,13 @@ class PhotoToDrawingConverter(
             }
         }
 
-        // Version 5 requires much stronger edges. Fine face/clothing texture should not turn
-        // into strokes unless it survives substantial smoothing and a high gradient threshold.
-        val high = (maximumMagnitude * 0.26f).coerceIn(20f, 180f).coerceAtMost(maximumMagnitude)
-        val rawEdges = hysteresis(thinned, width, height, high * 0.72f, high)
+        // Version 6 keeps only dominant edges. Fine facial and clothing texture is more likely
+        // to be discarded unless it creates a strong, sustained gradient after large-radius blur.
+        val high = (maximumMagnitude * 0.31f).coerceIn(24f, 210f).coerceAtMost(maximumMagnitude)
+        val rawEdges = hysteresis(thinned, width, height, high * 0.78f, high)
         val edges = closeSmallGaps(rawEdges, width, height)
-        val maxGap = (min(width, height) * 0.028).roundToInt().coerceIn(12, 30)
-        val minContourLength = (min(width, height) * 0.075).roundToInt().coerceIn(18, 64)
+        val maxGap = (min(width, height) * 0.045).roundToInt().coerceIn(14, 40)
+        val minContourLength = (min(width, height) * 0.09).roundToInt().coerceIn(32, 72)
         val mergedContours = joinNearbyContours(
             paths = traceEdges(edges, width, height).filter { it.size >= 4 },
             width = width,
@@ -120,7 +120,7 @@ class PhotoToDrawingConverter(
         val candidates = mergedContours
             .asSequence()
             .filter { it.size >= minContourLength }
-            .map { Candidate(simplify(it, width, epsilon = 7.0), it.size) }
+            .map { Candidate(simplify(it, width, epsilon = 10.0), it.size) }
             .filter { it.points.size >= 2 }
             .sortedByDescending { it.sourceLength }
             .toList()
@@ -140,8 +140,8 @@ class PhotoToDrawingConverter(
 
             strokes += DrawingStroke(
                 color = "#202124",
-                // Version 5 uses bold strokes so the reduced number of contours reads clearly.
-                width = 10f,
+                // Version 6 uses heavier lines to make the simplified silhouette dominant.
+                width = 12f,
                 points = points.map { point ->
                     listOf(
                         quantizeCoordinate((point % width).toDouble() / (width - 1).toDouble()),
@@ -177,16 +177,25 @@ class PhotoToDrawingConverter(
         (value * 10_000.0).roundToInt().coerceIn(0, 10_000) / 10_000.0
 
     private fun boxBlur(source: IntArray, width: Int, height: Int): IntArray {
-        // 13x13 Gaussian-like kernel with a 256-valued 1D weight sum. This removes small
-        // tonal changes over a wider area before edge detection.
-        val weights = intArrayOf(1, 4, 10, 20, 31, 40, 44, 40, 31, 20, 10, 4, 1)
+        // Separable 17x17 Gaussian-like blur. The 1D weights sum to 256; applying one pass
+        // horizontally and one vertically is equivalent to the full 2D kernel at lower cost.
+        val weights = intArrayOf(1, 2, 4, 8, 13, 20, 28, 34, 36, 34, 28, 20, 13, 8, 4, 2, 1)
+        val horizontal = IntArray(source.size)
+        for (y in 0 until height) for (x in 0 until width) {
+            var sum = 0
+            for (offset in -8..8) {
+                val sampleX = (x + offset).coerceIn(0, width - 1)
+                sum += source[y * width + sampleX] * weights[offset + 8]
+            }
+            horizontal[y * width + x] = sum
+        }
+
         val result = IntArray(source.size)
         for (y in 0 until height) for (x in 0 until width) {
             var sum = 0
-            for (dy in -6..6) for (dx in -6..6) {
-                val sampleX = (x + dx).coerceIn(0, width - 1)
-                val sampleY = (y + dy).coerceIn(0, height - 1)
-                sum += source[sampleY * width + sampleX] * weights[dy + 6] * weights[dx + 6]
+            for (offset in -8..8) {
+                val sampleY = (y + offset).coerceIn(0, height - 1)
+                sum += horizontal[sampleY * width + x] * weights[offset + 8]
             }
             result[y * width + x] = sum / 65_536
         }
@@ -273,7 +282,7 @@ class PhotoToDrawingConverter(
             if (path.size < 2) continue
             val current = MutableContour(path.toMutableList())
             var joins = 0
-            while (joins++ < 16) {
+            while (joins++ < 24) {
                 val connection = findConnection(current.points) ?: break
                 val first = if (connection.currentAtStart) current.points.asReversed() else current.points
                 val targetPoints = connection.target.points
@@ -307,23 +316,24 @@ class PhotoToDrawingConverter(
         if (atStart) points.first() else points.last()
 
     /**
-     * Morphological closing (3x3 dilation followed by erosion) repairs tiny gaps in the
-     * thinned edge mask without keeping the extra thickness introduced by dilation.
+     * 5x5 morphological closing repairs slightly larger breaks in contour paths. The dilation
+     * bridges narrow gaps; erosion then returns the mask to approximately its original thickness.
      */
     private fun closeSmallGaps(edges: BooleanArray, width: Int, height: Int): BooleanArray {
+        val radius = 2
         val dilated = BooleanArray(edges.size)
-        for (y in 1 until height - 1) for (x in 1 until width - 1) {
+        for (y in radius until (height - radius)) for (x in radius until (width - radius)) {
             var found = false
-            for (dy in -1..1) for (dx in -1..1) {
+            for (dy in -radius..radius) for (dx in -radius..radius) {
                 if (edges[(y + dy) * width + x + dx]) found = true
             }
             dilated[y * width + x] = found
         }
 
         val closed = BooleanArray(edges.size)
-        for (y in 1 until height - 1) for (x in 1 until width - 1) {
+        for (y in radius until (height - radius)) for (x in radius until (width - radius)) {
             var filled = true
-            for (dy in -1..1) for (dx in -1..1) {
+            for (dy in -radius..radius) for (dx in -radius..radius) {
                 if (!dilated[(y + dy) * width + x + dx]) filled = false
             }
             closed[y * width + x] = filled
