@@ -113,7 +113,6 @@ class PhotoToDrawingConverter(
         val mergedContours = joinNearbyContours(
             paths = traceEdges(edges, width, height).filter { it.size >= 3 },
             width = width,
-            height = height,
             maxGap = maxGap,
         )
         val candidates = mergedContours
@@ -201,7 +200,6 @@ class PhotoToDrawingConverter(
     private fun joinNearbyContours(
         paths: List<List<Int>>,
         width: Int,
-        height: Int,
         maxGap: Int,
     ): List<List<Int>> {
         if (paths.size < 2) return paths
@@ -247,7 +245,7 @@ class PhotoToDrawingConverter(
                             val dx = other % width - x
                             val dy = other / width - y
                             val distanceSquared = dx * dx + dy * dy
-                            if (distanceSquared == 0 || distanceSquared > gapSquared) continue
+                            if (distanceSquared > gapSquared) continue
 
                             val (tx, ty) = inwardVector(target.points, ref.atStart)
                             val targetLength = sqrt(tx * tx + ty * ty).coerceAtLeast(1.0)
@@ -281,7 +279,11 @@ class PhotoToDrawingConverter(
 
                 val combined = ArrayList<Int>(first.size + second.size)
                 combined.addAll(first)
-                combined.addAll(second)
+                if (first.last() == second.first()) {
+                    combined.addAll(second.drop(1))
+                } else {
+                    combined.addAll(second)
+                }
                 current.points = combined
                 connection.target.active = false
             }
