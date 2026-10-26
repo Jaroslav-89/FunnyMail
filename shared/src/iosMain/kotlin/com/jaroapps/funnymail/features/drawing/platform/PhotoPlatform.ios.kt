@@ -12,6 +12,8 @@ import kotlinx.cinterop.readBytes
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.useContents
 import kotlinx.cinterop.usePinned
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import platform.CoreGraphics.CGBitmapContextCreate
 import platform.CoreGraphics.CGColorSpaceCreateDeviceRGB
 import platform.CoreGraphics.CGContextDrawImage
@@ -116,7 +118,9 @@ private class PhotoPickerDelegate(
 }
 
 @OptIn(ExperimentalForeignApi::class)
-actual fun decodeImageToGrayscale(imageBytes: ByteArray, maxDimension: Int): GrayImage {
+actual suspend fun decodeImageToGrayscale(imageBytes: ByteArray, maxDimension: Int): GrayImage =
+    withContext(Dispatchers.Main) {
+    // UIKit image decoding/drawing runs on the main queue; contour detection returns to Default.
     require(imageBytes.isNotEmpty()) { "Empty image data" }
     require(maxDimension >= 3)
     val data = imageBytes.usePinned { pinned ->
@@ -162,5 +166,5 @@ actual fun decodeImageToGrayscale(imageBytes: ByteArray, maxDimension: Int): Gra
         val blue = raw[offset + 2].toInt() and 0xFF
         (red * 299 + green * 587 + blue * 114) / 1_000
     }
-    return GrayImage(width, height, pixels)
+    GrayImage(width, height, pixels)
 }
