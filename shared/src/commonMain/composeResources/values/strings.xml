@@ -269,4 +269,13 @@
     <string name="chats_invite_friend">Пригласить друга</string>
     <string name="chats_working">Выполняем операцию…</string>
     <string name="chats_member_and_code">%1$d участн. · код чата %2$s…</string>
+
+    <string name="import_image">Импортировать фото</string>
+    <string name="import_image_hint">Выберите изображение из галереи или сделайте новый снимок.</string>
+    <string name="choose_from_gallery">Выбрать из галереи</string>
+    <string name="take_photo">Сделать снимок</string>
+    <string name="processing_image">Преобразуем фото в набросок…</string>
+    <string name="photo_conversion_complete">Фото преобразовано в набросок</string>
+    <string name="photo_import_failed">Не удалось обработать изображение. Попробуйте другое фото.</string>
+    <string name="photo_no_contours">Не удалось найти контуры. Попробуйте фото с более выраженными границами.</string>
 </resources>
