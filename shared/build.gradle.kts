@@ -60,6 +60,8 @@ kotlin {
             implementation(libs.androidx.credentials)
             implementation(libs.androidx.credentials.play.services.auth)
             implementation(libs.google.id)
+            implementation(libs.mlkit.selfie.segmentation)
+            implementation(libs.mlkit.face.detection)
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
