@@ -22,7 +22,7 @@ class PhotoToDrawingConverterTest {
 
         assertTrue(drawing.strokes.size > 10, "Expected multiple connected contours")
         assertTrue(pointCount > 100, "Expected detail to survive vector simplification")
-        assertTrue(drawing.strokes.all { it.width >= 4f }, "Imported lines should remain visible")
+        assertTrue(drawing.strokes.all { it.width >= 5f }, "Version 2 imported lines should be slightly bolder")
         assertTrue(json.encodeToByteArray().size <= 256 * 1024, "Keep the existing JSON size budget")
     }
 
