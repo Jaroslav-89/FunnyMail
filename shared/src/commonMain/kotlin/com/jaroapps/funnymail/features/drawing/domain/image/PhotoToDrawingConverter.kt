@@ -16,14 +16,27 @@ class NoContoursFoundException : IllegalStateException("No clear contours found"
 /**
  * Local edge-to-vector conversion.
  *
- * Version 3 strongly favors the main silhouette over tiny texture marks: stronger Gaussian
- * smoothing, a high minimum contour length, simpler paths, and bolder strokes.
+ * Version 4 aggressively removes texture, joins nearby contour fragments into longer paths,
+ * strongly simplifies geometry, and uses bolder strokes to favor clean silhouettes.
  */
 class PhotoToDrawingConverter(
-    private val maxStrokes: Int = 500,
-    private val maxPoints: Int = 5_000,
+    private val maxStrokes: Int = 250,
+    private val maxPoints: Int = 3_500,
 ) {
     private data class Candidate(val points: List<Int>, val sourceLength: Int)
+
+    private class MutableContour(var points: MutableList<Int>) {
+        var active: Boolean = true
+    }
+
+    private data class EndpointRef(val contour: MutableContour, val atStart: Boolean)
+
+    private data class Connection(
+        val currentAtStart: Boolean,
+        val target: MutableContour,
+        val targetAtStart: Boolean,
+        val score: Double,
+    )
 
     fun convert(image: GrayImage): DrawingDocument {
         val width = image.width
@@ -91,15 +104,22 @@ class PhotoToDrawingConverter(
             }
         }
 
-        // Version 3 prioritizes strong, coherent edges and discards short detached fragments.
-        val high = (maximumMagnitude * 0.14f).coerceIn(8f, 96f).coerceAtMost(maximumMagnitude)
-        val edges = hysteresis(thinned, width, height, high * 0.55f, high)
-        // At typical 600-800 px photo size this rejects contours shorter than roughly 20-32 px.
-        val minContourLength = (min(width, height) * 0.04).roundToInt().coerceIn(20, 32)
-        val candidates = traceEdges(edges, width, height)
+        // Version 4 keeps only strong edges, then reconnects small breaks before rejecting
+        // short fragments. This encourages long, coherent lines instead of many detached marks.
+        val high = (maximumMagnitude * 0.20f).coerceIn(14f, 128f).coerceAtMost(maximumMagnitude)
+        val edges = hysteresis(thinned, width, height, high * 0.62f, high)
+        val maxGap = (min(width, height) * 0.018).roundToInt().coerceIn(8, 18)
+        val minContourLength = (min(width, height) * 0.06).roundToInt().coerceIn(28, 48)
+        val mergedContours = joinNearbyContours(
+            paths = traceEdges(edges, width, height).filter { it.size >= 3 },
+            width = width,
+            height = height,
+            maxGap = maxGap,
+        )
+        val candidates = mergedContours
             .asSequence()
             .filter { it.size >= minContourLength }
-            .map { Candidate(simplify(it, width, epsilon = 2.4), it.size) }
+            .map { Candidate(simplify(it, width, epsilon = 4.2), it.size) }
             .filter { it.points.size >= 2 }
             .sortedByDescending { it.sourceLength }
             .toList()
@@ -119,8 +139,8 @@ class PhotoToDrawingConverter(
 
             strokes += DrawingStroke(
                 color = "#202124",
-                // Version 3: a little thicker for clearer, less delicate contours.
-                width = 6f,
+                // Version 4 uses noticeably bolder lines to emphasize the simplified contour.
+                width = 8f,
                 points = points.map { point ->
                     listOf(
                         quantizeCoordinate((point % width).toDouble() / (width - 1).toDouble()),
@@ -156,21 +176,131 @@ class PhotoToDrawingConverter(
         (value * 10_000.0).roundToInt().coerceIn(0, 10_000) / 10_000.0
 
     private fun boxBlur(source: IntArray, width: Int, height: Int): IntArray {
-        // 7x7 Gaussian kernel [1, 6, 15, 20, 15, 6, 1] in both directions.
-        // This more aggressively suppresses tiny texture and compression artifacts.
-        val weights = intArrayOf(1, 6, 15, 20, 15, 6, 1)
+        // 9x9 Gaussian-like kernel [1,8,28,56,70,56,28,8,1] in each direction.
+        // Strong smoothing suppresses skin pores, cloth grain, and fine compression noise.
+        val weights = intArrayOf(1, 8, 28, 56, 70, 56, 28, 8, 1)
         val result = IntArray(source.size)
         for (y in 0 until height) for (x in 0 until width) {
             var sum = 0
-            for (dy in -3..3) for (dx in -3..3) {
+            for (dy in -4..4) for (dx in -4..4) {
                 val sampleX = (x + dx).coerceIn(0, width - 1)
                 val sampleY = (y + dy).coerceIn(0, height - 1)
-                sum += source[sampleY * width + sampleX] * weights[dy + 3] * weights[dx + 3]
+                sum += source[sampleY * width + sampleX] * weights[dy + 4] * weights[dx + 4]
             }
-            result[y * width + x] = sum / 4_096
+            result[y * width + x] = sum / 65_536
         }
         return result
     }
+
+    /**
+     * Greedily stitches nearby contour endpoints when their local directions are compatible.
+     * The spatial hash avoids comparing every endpoint with every other endpoint. A joined
+     * contour is indexed only after all possible attachments are made, and old entries are
+     * lazily ignored through MutableContour.active.
+     */
+    private fun joinNearbyContours(
+        paths: List<List<Int>>,
+        width: Int,
+        height: Int,
+        maxGap: Int,
+    ): List<List<Int>> {
+        if (paths.size < 2) return paths
+        val bucketSize = maxGap.coerceAtLeast(1)
+        val buckets = HashMap<Long, MutableList<EndpointRef>>()
+        val orderedPaths = paths.sortedByDescending { it.size }
+        val gapSquared = maxGap * maxGap
+
+        fun bucketKey(x: Int, y: Int): Long {
+            val cellX = x / bucketSize
+            val cellY = y / bucketSize
+            return (cellX.toLong() shl 32) xor (cellY.toLong() and 0xffffffffL)
+        }
+
+        fun endpoint(contour: MutableContour, atStart: Boolean): Int =
+            if (atStart) contour.points.first() else contour.points.last()
+
+        fun inwardVector(points: List<Int>, atStart: Boolean): Pair<Double, Double> {
+            val edge = endpointIndex(points, atStart)
+            val inner = if (atStart) points[1] else points[points.lastIndex - 1]
+            val ex = (edge % width).toDouble()
+            val ey = (edge / width).toDouble()
+            return ((inner % width).toDouble() - ex) to ((inner / width).toDouble() - ey)
+        }
+
+        fun findConnection(points: List<Int>): Connection? {
+            var best: Connection? = null
+            for (currentAtStart in listOf(true, false)) {
+                val point = if (currentAtStart) points.first() else points.last()
+                val x = point % width
+                val y = point / width
+                val (vx, vy) = inwardVector(points, currentAtStart)
+                val currentLength = sqrt(vx * vx + vy * vy).coerceAtLeast(1.0)
+
+                for (cellY in y / bucketSize - 1..y / bucketSize + 1) {
+                    for (cellX in x / bucketSize - 1..x / bucketSize + 1) {
+                        val refs = buckets[(cellX.toLong() shl 32) xor (cellY.toLong() and 0xffffffffL)]
+                            ?: continue
+                        for (ref in refs) {
+                            val target = ref.contour
+                            if (!target.active || target.points.size < 2) continue
+                            val other = endpoint(target, ref.atStart)
+                            val dx = other % width - x
+                            val dy = other / width - y
+                            val distanceSquared = dx * dx + dy * dy
+                            if (distanceSquared == 0 || distanceSquared > gapSquared) continue
+
+                            val (tx, ty) = inwardVector(target.points, ref.atStart)
+                            val targetLength = sqrt(tx * tx + ty * ty).coerceAtLeast(1.0)
+                            val alignment = (vx * tx + vy * ty) / (currentLength * targetLength)
+                            // Inward tangent vectors should face roughly away from one another
+                            // at the gap, which is what a continuous line's endpoints do.
+                            if (alignment > 0.35) continue
+
+                            val score = distanceSquared.toDouble() +
+                                (alignment + 1.0) * gapSquared * 0.12
+                            if (best == null || score < best.score) {
+                                best = Connection(currentAtStart, target, ref.atStart, score)
+                            }
+                        }
+                    }
+                }
+            }
+            return best
+        }
+
+        val output = ArrayList<MutableContour>()
+        for (path in orderedPaths) {
+            if (path.size < 2) continue
+            val current = MutableContour(path.toMutableList())
+            var joins = 0
+            while (joins++ < 8) {
+                val connection = findConnection(current.points) ?: break
+                val first = if (connection.currentAtStart) current.points.asReversed() else current.points
+                val targetPoints = connection.target.points
+                val second = if (connection.targetAtStart) targetPoints else targetPoints.asReversed()
+
+                val combined = ArrayList<Int>(first.size + second.size)
+                combined.addAll(first)
+                combined.addAll(second)
+                current.points = combined
+                connection.target.active = false
+            }
+
+            val finished = current
+            output += finished
+            for (atStart in listOf(true, false)) {
+                val point = endpoint(finished, atStart)
+                val x = point % width
+                val y = point / width
+                val key = bucketKey(x, y)
+                buckets.getOrPut(key) { ArrayList() }.add(EndpointRef(finished, atStart))
+            }
+        }
+        return output.filter { it.active }.map { it.points }
+    }
+
+    private fun endpointIndex(points: List<Int>, atStart: Boolean): Int =
+        if (atStart) points.first() else points.last()
 
     private fun hysteresis(
         magnitude: FloatArray,
