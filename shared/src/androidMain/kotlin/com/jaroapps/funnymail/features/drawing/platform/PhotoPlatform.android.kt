@@ -104,10 +104,14 @@ private val portraitFaceContourSpecs = listOf(
     FaceContourSpec(FaceContour.LEFT_EYE, closed = true),
     FaceContourSpec(FaceContour.RIGHT_EYE, closed = true),
     FaceContourSpec(FaceContour.LEFT_EYEBROW_TOP),
+    FaceContourSpec(FaceContour.LEFT_EYEBROW_BOTTOM),
     FaceContourSpec(FaceContour.RIGHT_EYEBROW_TOP),
+    FaceContourSpec(FaceContour.RIGHT_EYEBROW_BOTTOM),
     FaceContourSpec(FaceContour.NOSE_BRIDGE),
     FaceContourSpec(FaceContour.NOSE_BOTTOM),
     FaceContourSpec(FaceContour.UPPER_LIP_TOP),
+    FaceContourSpec(FaceContour.UPPER_LIP_BOTTOM),
+    FaceContourSpec(FaceContour.LOWER_LIP_TOP),
     FaceContourSpec(FaceContour.LOWER_LIP_BOTTOM),
 )
 
