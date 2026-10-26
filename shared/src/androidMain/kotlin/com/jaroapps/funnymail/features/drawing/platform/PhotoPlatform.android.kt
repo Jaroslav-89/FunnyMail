@@ -81,7 +81,7 @@ actual fun rememberPhotoPicker(
     }
 }
 
-actual fun decodeImageToGrayscale(imageBytes: ByteArray, maxDimension: Int): GrayImage {
+actual suspend fun decodeImageToGrayscale(imageBytes: ByteArray, maxDimension: Int): GrayImage {
     require(imageBytes.isNotEmpty()) { "Empty image data" }
     require(maxDimension >= 3)
     // Read dimensions first, then decode with inSampleSize to avoid allocating a full-resolution
