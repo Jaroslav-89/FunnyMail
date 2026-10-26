@@ -84,7 +84,19 @@ actual fun rememberPhotoPicker(
 actual fun decodeImageToGrayscale(imageBytes: ByteArray, maxDimension: Int): GrayImage {
     require(imageBytes.isNotEmpty()) { "Empty image data" }
     require(maxDimension >= 3)
-    val original = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+    // Read dimensions first, then decode with inSampleSize to avoid allocating a full-resolution
+    // bitmap for a high-megapixel camera photo.
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, bounds)
+    require(bounds.outWidth >= 3 && bounds.outHeight >= 3) { "Unsupported image format" }
+    var sampleSize = 1
+    while (max(bounds.outWidth / sampleSize, bounds.outHeight / sampleSize) > maxDimension &&
+        sampleSize < (1 shl 15)
+    ) {
+        sampleSize *= 2
+    }
+    val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+    val original = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, decodeOptions)
         ?: error("Unsupported image format")
 
     val orientation = runCatching {
