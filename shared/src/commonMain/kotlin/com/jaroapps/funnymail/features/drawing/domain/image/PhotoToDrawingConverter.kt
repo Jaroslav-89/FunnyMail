@@ -16,12 +16,12 @@ class NoContoursFoundException : IllegalStateException("No clear contours found"
 /**
  * Local edge-to-vector conversion.
  *
- * Version 2 favors cleaner, more readable silhouettes: stronger smoothing, removal of very
- * short contour fragments, and slightly thicker strokes. The JSON size limit remains unchanged.
+ * Version 3 strongly favors the main silhouette over tiny texture marks: stronger Gaussian
+ * smoothing, a high minimum contour length, simpler paths, and bolder strokes.
  */
 class PhotoToDrawingConverter(
-    private val maxStrokes: Int = 1_000,
-    private val maxPoints: Int = 7_000,
+    private val maxStrokes: Int = 500,
+    private val maxPoints: Int = 5_000,
 ) {
     private data class Candidate(val points: List<Int>, val sourceLength: Int)
 
@@ -91,15 +91,15 @@ class PhotoToDrawingConverter(
             }
         }
 
-        // Version 2 deliberately suppresses weaker texture edges. Stronger Gaussian smoothing
-        // below handles image noise; this threshold and the minimum path length remove leftovers.
-        val high = (maximumMagnitude * 0.10f).coerceIn(6f, 72f).coerceAtMost(maximumMagnitude)
-        val edges = hysteresis(thinned, width, height, high * 0.42f, high)
-        val minContourLength = (min(width, height) * 0.015).roundToInt().coerceIn(8, 14)
+        // Version 3 prioritizes strong, coherent edges and discards short detached fragments.
+        val high = (maximumMagnitude * 0.14f).coerceIn(8f, 96f).coerceAtMost(maximumMagnitude)
+        val edges = hysteresis(thinned, width, height, high * 0.55f, high)
+        // At typical 600-800 px photo size this rejects contours shorter than roughly 20-32 px.
+        val minContourLength = (min(width, height) * 0.04).roundToInt().coerceIn(20, 32)
         val candidates = traceEdges(edges, width, height)
             .asSequence()
             .filter { it.size >= minContourLength }
-            .map { Candidate(simplify(it, width, epsilon = 1.35), it.size) }
+            .map { Candidate(simplify(it, width, epsilon = 2.4), it.size) }
             .filter { it.points.size >= 2 }
             .sortedByDescending { it.sourceLength }
             .toList()
@@ -119,8 +119,8 @@ class PhotoToDrawingConverter(
 
             strokes += DrawingStroke(
                 color = "#202124",
-                // Slightly bolder than version 1 to stay clear on phone-sized canvases.
-                width = 5f,
+                // Version 3: a little thicker for clearer, less delicate contours.
+                width = 6f,
                 points = points.map { point ->
                     listOf(
                         quantizeCoordinate((point % width).toDouble() / (width - 1).toDouble()),
@@ -156,18 +156,18 @@ class PhotoToDrawingConverter(
         (value * 10_000.0).roundToInt().coerceIn(0, 10_000) / 10_000.0
 
     private fun boxBlur(source: IntArray, width: Int, height: Int): IntArray {
-        // A 5x5 separable Gaussian kernel ([1, 4, 6, 4, 1] in each direction)
-        // smooths pores, fabric and compression noise more than the old 3x3 box blur.
-        val weights = intArrayOf(1, 4, 6, 4, 1)
+        // 7x7 Gaussian kernel [1, 6, 15, 20, 15, 6, 1] in both directions.
+        // This more aggressively suppresses tiny texture and compression artifacts.
+        val weights = intArrayOf(1, 6, 15, 20, 15, 6, 1)
         val result = IntArray(source.size)
         for (y in 0 until height) for (x in 0 until width) {
             var sum = 0
-            for (dy in -2..2) for (dx in -2..2) {
+            for (dy in -3..3) for (dx in -3..3) {
                 val sampleX = (x + dx).coerceIn(0, width - 1)
                 val sampleY = (y + dy).coerceIn(0, height - 1)
-                sum += source[sampleY * width + sampleX] * weights[dy + 2] * weights[dx + 2]
+                sum += source[sampleY * width + sampleX] * weights[dy + 3] * weights[dx + 3]
             }
-            result[y * width + x] = sum / 256
+            result[y * width + x] = sum / 4_096
         }
         return result
     }
