@@ -93,7 +93,7 @@ class PhotoToDrawingConverter(
 
         // The previous threshold saturated at 96 for most photos, discarding weaker but useful
         // contours. Lower adaptive thresholds recover detail; a small blur and NMS reduce noise.
-        val high = (maximumMagnitude * 0.08f).coerceIn(14f, 64f)
+        val high = (maximumMagnitude * 0.08f).coerceIn(4f, 64f).coerceAtMost(maximumMagnitude)
         val edges = hysteresis(thinned, width, height, high * 0.34f, high)
         val candidates = traceEdges(edges, width, height)
             .asSequence()
