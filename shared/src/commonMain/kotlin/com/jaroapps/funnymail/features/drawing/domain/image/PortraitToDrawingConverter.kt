@@ -16,14 +16,17 @@ import kotlin.math.sqrt
  */
 class PortraitToDrawingConverter(
     private val confidenceThreshold: Int = 145,
-    private val maxStrokes: Int = 50,
-    private val maxPoints: Int = 1_000,
+    private val maxStrokes: Int = 1_000,
+    private val maxPoints: Int = 7_000,
 ) {
     fun convert(features: PortraitFeatures): DrawingDocument {
         val width = features.maskWidth
         val height = features.maskHeight
+        // V2's 5x5 Gaussian-style smoothing is applied to model confidence before thresholding.
+        // This keeps local mask noise from becoming jagged outlines.
+        val smoothedConfidence = smoothConfidenceMask(features.personMask, width, height)
         val thresholded = BooleanArray(width * height) { index ->
-            (features.personMask[index].toInt() and 0xFF) >= confidenceThreshold
+            (smoothedConfidence[index].toInt() and 0xFF) >= confidenceThreshold
         }
         val closedMask = closeSmallMaskGaps(thresholded, width, height)
         val person = largestComponent(closedMask, width, height)
@@ -32,19 +35,24 @@ class PortraitToDrawingConverter(
 
         val boundary = traceOuterContour(person, width, height)
         if (boundary.size < 8) throw NoContoursFoundException()
-        val simplifiedBoundary = simplify(boundary, width, epsilon = 2.5)
+        val simplifiedBoundary = simplify(boundary, width, epsilon = 1.35)
         val strokes = ArrayList<DrawingStroke>()
         var pointCount = 0
 
-        val silhouettePoints = toNormalizedPoints(
+        val rawSilhouettePoints = toNormalizedPoints(
             path = ensureClosed(simplifiedBoundary),
             width = width,
             height = height,
         )
+        val silhouettePoints = if (rawSilhouettePoints.size > maxPoints) {
+            downsampleNormalized(rawSilhouettePoints, maxPoints)
+        } else {
+            rawSilhouettePoints
+        }
         if (silhouettePoints.size >= 4) {
             strokes += DrawingStroke(
                 color = "#202124",
-                width = 14f,
+                width = 5f,
                 points = silhouettePoints,
             )
             pointCount += silhouettePoints.size
@@ -52,10 +60,15 @@ class PortraitToDrawingConverter(
 
         // These contours are semantically meaningful (eyes, brows, nose, lips, face outline).
         // Keep a small number of them instead of detecting arbitrary internal photo edges.
+        val minContourLength = (
+            min(features.sourceWidth, features.sourceHeight) * 0.015
+        ).roundToInt().coerceIn(8, 14).toDouble()
         val faceContours = features.faceContours
             .asSequence()
             .filter { it.points.size >= 4 }
-            .filter { normalizedLength(it.points, features.sourceWidth, features.sourceHeight) >= 7.0 }
+            .filter {
+                normalizedLength(it.points, features.sourceWidth, features.sourceHeight) >= minContourLength
+            }
             .sortedByDescending {
                 normalizedLength(it.points, features.sourceWidth, features.sourceHeight)
             }
@@ -77,7 +90,7 @@ class PortraitToDrawingConverter(
             if (normalized.size < 2) continue
             strokes += DrawingStroke(
                 color = "#202124",
-                width = contour.strokeWidth.coerceIn(4f, 9f),
+                width = 5f,
                 points = normalized,
             )
             pointCount += normalized.size
@@ -106,29 +119,39 @@ class PortraitToDrawingConverter(
         )
     }
 
+    private fun smoothConfidenceMask(mask: ByteArray, width: Int, height: Int): ByteArray {
+        // Same separable 5x5 Gaussian-style kernel as V2: [1, 4, 6, 4, 1].
+        val weights = intArrayOf(1, 4, 6, 4, 1)
+        return ByteArray(mask.size) { index ->
+            val x = index % width
+            val y = index / width
+            var weightedSum = 0
+            for (dy in -2..2) for (dx in -2..2) {
+                val sampleX = (x + dx).coerceIn(0, width - 1)
+                val sampleY = (y + dy).coerceIn(0, height - 1)
+                val value = mask[sampleY * width + sampleX].toInt() and 0xFF
+                weightedSum += value * weights[dy + 2] * weights[dx + 2]
+            }
+            (weightedSum / 256).coerceIn(0, 255).toByte()
+        }
+    }
+
     private fun closeSmallMaskGaps(mask: BooleanArray, width: Int, height: Int): BooleanArray {
-        // 3x3 morphological closing fills one-pixel holes and tiny breaks around hair/shoulders.
+        // V2's 5x5 morphology is adapted to the semantic person mask to bridge small edge breaks.
+        val radius = 2
         val dilated = BooleanArray(mask.size)
-        for (y in 0 until height) for (x in 0 until width) {
+        for (y in radius until height - radius) for (x in radius until width - radius) {
             var found = false
-            for (dy in -1..1) for (dx in -1..1) {
-                val nx = x + dx
-                val ny = y + dy
-                if (nx in 0 until width && ny in 0 until height && mask[ny * width + nx]) {
-                    found = true
-                }
+            for (dy in -radius..radius) for (dx in -radius..radius) {
+                if (mask[(y + dy) * width + x + dx]) found = true
             }
             dilated[y * width + x] = found
         }
         val closed = BooleanArray(mask.size)
-        for (y in 0 until height) for (x in 0 until width) {
+        for (y in radius until height - radius) for (x in radius until width - radius) {
             var filled = true
-            for (dy in -1..1) for (dx in -1..1) {
-                val nx = x + dx
-                val ny = y + dy
-                if (nx !in 0 until width || ny !in 0 until height || !dilated[ny * width + nx]) {
-                    filled = false
-                }
+            for (dy in -radius..radius) for (dx in -radius..radius) {
+                if (!dilated[(y + dy) * width + x + dx]) filled = false
             }
             closed[y * width + x] = filled
         }
