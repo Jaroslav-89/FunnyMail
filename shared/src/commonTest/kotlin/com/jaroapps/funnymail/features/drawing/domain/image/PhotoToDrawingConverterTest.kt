@@ -7,22 +7,26 @@ import kotlin.test.assertTrue
 
 class PhotoToDrawingConverterTest {
     @Test
-    fun preservesMoreContoursForDetailedImagesWithVisibleStrokeWidth() {
+    fun suppressesFineTextureAndKeepsMainSilhouetteWithBolderLines() {
         val width = 160
         val height = 120
         val pixels = IntArray(width * height) { index ->
             val x = index % width
             val y = index / width
-            if (((x / 4) + (y / 4)) % 2 == 0) 18 else 238
+            // Fine background texture should be smoothed away.
+            val texture = if (((x / 2) + (y / 2)) % 2 == 0) 224 else 244
+            // A large, high-contrast object should remain recognizable.
+            if (x in 34..126 && y in 22..98) 24 else texture
         }
 
         val drawing = PhotoToDrawingConverter().convert(GrayImage(width, height, pixels))
         val pointCount = drawing.strokes.sumOf { it.points.size }
         val json = DrawingCodec().encode(drawing).getOrThrow()
 
-        assertTrue(drawing.strokes.size > 10, "Expected multiple connected contours")
-        assertTrue(pointCount > 100, "Expected detail to survive vector simplification")
-        assertTrue(drawing.strokes.all { it.width >= 5f }, "Version 2 imported lines should be slightly bolder")
+        assertTrue(drawing.strokes.isNotEmpty(), "The main object contour should survive")
+        assertTrue(drawing.strokes.size < 100, "Fine texture should not create hundreds of tiny marks")
+        assertTrue(pointCount > 4, "The main silhouette should retain enough points")
+        assertTrue(drawing.strokes.all { it.width >= 6f }, "Version 3 lines should be bolder")
         assertTrue(json.encodeToByteArray().size <= 256 * 1024, "Keep the existing JSON size budget")
     }
 
