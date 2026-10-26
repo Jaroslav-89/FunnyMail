@@ -258,7 +258,7 @@ fun DrawingScreen(
                         val convertedDrawing = withContext(Dispatchers.Default) {
                             val portraitFeatures = analyzePortraitLocally(
                                 imageBytes,
-                                maxDimension = 512,
+                                maxDimension = 1024,
                             ) ?: throw IllegalStateException(
                                 "The local portrait model did not return features.",
                             )
