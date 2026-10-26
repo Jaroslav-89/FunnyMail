@@ -4,6 +4,7 @@ import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.math.roundToInt
 
 class PortraitToDrawingConverterTest {
     @Test
@@ -45,17 +46,19 @@ class PortraitToDrawingConverterTest {
         val xValues = outlinePoints.map { it[0] }
 
         assertTrue(drawing.strokes.size in 2..3, "The person outline and face contour should survive")
-        assertEquals(5f, outline.width, "V2 post-processing uses a consistent 5px stroke width")
+        assertEquals(4f, outline.width, "V1 post-processing uses a consistent 4px stroke width")
         assertTrue(xValues.minOrNull()!! > 0.20, "The outline should follow the dominant person mask")
         assertTrue(xValues.maxOrNull()!! < 0.90)
-        assertTrue(drawing.strokes.all { it.width == 5f }, "Imported model contours should use V2 line width")
+        assertTrue(drawing.strokes.all { it.width == 4f }, "Imported model contours should use V1 line width")
         assertTrue(
             drawing.strokes.sumOf { it.points.size } <= 7_000,
-            "V2 point budget must remain bounded",
+            "V1 point budget must remain bounded",
         )
         assertTrue(drawing.strokes.flatMap { it.points }.all { point ->
-            point.size == 2 && point.all { it in 0.0..1.0 }
-        })
+            point.size == 2 && point.all {
+                it in 0.0..1.0 && (it * 10_000.0).roundToInt() / 10_000.0 == it
+            }
+        }, "Coordinates should be normalized and quantized to four decimal places")
         val json = DrawingCodec().encode(drawing).getOrThrow()
         assertTrue(json.encodeToByteArray().size <= 256 * 1024)
     }
