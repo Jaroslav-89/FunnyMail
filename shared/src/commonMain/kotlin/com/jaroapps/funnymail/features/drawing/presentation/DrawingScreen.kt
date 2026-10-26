@@ -101,7 +101,6 @@ import com.jaroapps.funnymail.resources.import_image_hint
 import com.jaroapps.funnymail.resources.choose_from_gallery
 import com.jaroapps.funnymail.resources.take_photo
 import com.jaroapps.funnymail.resources.processing_image
-import com.jaroapps.funnymail.resources.photo_conversion_complete
 import com.jaroapps.funnymail.resources.photo_import_failed
 import com.jaroapps.funnymail.resources.save_changes
 import com.jaroapps.funnymail.resources.save_drawing_local
@@ -153,7 +152,6 @@ fun DrawingScreen(
     val chooseFromGalleryLabel = stringResource(Res.string.choose_from_gallery)
     val takePhotoLabel = stringResource(Res.string.take_photo)
     val processingImageLabel = stringResource(Res.string.processing_image)
-    val photoConversionCompleteMessage = stringResource(Res.string.photo_conversion_complete)
     val photoImportFailedMessage = stringResource(Res.string.photo_import_failed)
     val coroutineScope = rememberCoroutineScope()
     val initialDrawing = remember(initialDrawingJson) {
