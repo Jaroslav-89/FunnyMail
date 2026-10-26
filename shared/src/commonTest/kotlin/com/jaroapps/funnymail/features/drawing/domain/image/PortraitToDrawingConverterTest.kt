@@ -34,7 +34,6 @@ class PortraitToDrawingConverterTest {
                         NormalizedPhotoPoint(0.51, 0.34),
                         NormalizedPhotoPoint(0.46, 0.34),
                     ),
-                    strokeWidth = 7f,
                     closed = true,
                 ),
             ),
