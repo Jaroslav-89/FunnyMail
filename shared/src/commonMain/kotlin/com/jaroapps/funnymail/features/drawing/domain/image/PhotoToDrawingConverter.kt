@@ -16,13 +16,13 @@ class NoContoursFoundException : IllegalStateException("No clear contours found"
 /**
  * Local edge-to-vector conversion.
  *
- * Version 6 aggressively favors long, bold silhouette-like paths over interior texture. It uses
- * lower analysis resolution, separable large-radius smoothing, stronger edge thresholds,
- * morphological closing, direction-aware endpoint joining, and aggressive path simplification.
+ * Version 7 adds an explicit geometric-length and span filter after contour joining. Short
+ * marks and tiny loops are discarded before vector simplification; surviving contours are
+ * simplified aggressively and drawn with thicker strokes.
  */
 class PhotoToDrawingConverter(
-    private val maxStrokes: Int = 60,
-    private val maxPoints: Int = 1_400,
+    private val maxStrokes: Int = 45,
+    private val maxPoints: Int = 1_000,
 ) {
     private data class Candidate(val points: List<Int>, val sourceLength: Int)
 
@@ -112,6 +112,11 @@ class PhotoToDrawingConverter(
         val edges = closeSmallGaps(rawEdges, width, height)
         val maxGap = (min(width, height) * 0.045).roundToInt().coerceIn(14, 40)
         val minContourLength = (min(width, height) * 0.09).roundToInt().coerceIn(32, 72)
+        // Explicit geometric filtering: long pixel paths are not necessarily long strokes
+        // (a noisy loop can contain many pixels in a tiny area), so check both path length
+        // and bounding-box span after nearby fragments have been joined.
+        val minStrokeLength = (min(width, height) * 0.14).coerceIn(36.0, 68.0)
+        val minStrokeSpan = (min(width, height) * 0.045).coerceIn(12.0, 24.0)
         val mergedContours = joinNearbyContours(
             paths = traceEdges(edges, width, height).filter { it.size >= 4 },
             width = width,
@@ -120,6 +125,8 @@ class PhotoToDrawingConverter(
         val candidates = mergedContours
             .asSequence()
             .filter { it.size >= minContourLength }
+            .filter { polylineLength(it, width) >= minStrokeLength }
+            .filter { contourSpan(it, width) >= minStrokeSpan }
             .map { Candidate(simplify(it, width, epsilon = 10.0), it.size) }
             .filter { it.points.size >= 2 }
             .sortedByDescending { it.sourceLength }
@@ -140,8 +147,8 @@ class PhotoToDrawingConverter(
 
             strokes += DrawingStroke(
                 color = "#202124",
-                // Version 6 uses heavier lines to make the simplified silhouette dominant.
-                width = 12f,
+                // Version 7 emphasizes the remaining long contours with much heavier strokes.
+                width = 14f,
                 points = points.map { point ->
                     listOf(
                         quantizeCoordinate((point % width).toDouble() / (width - 1).toDouble()),
@@ -171,6 +178,37 @@ class PhotoToDrawingConverter(
             ),
             strokes = strokes,
         )
+    }
+
+    private fun polylineLength(path: List<Int>, width: Int): Double {
+        var length = 0.0
+        for (index in 1 until path.size) {
+            val previous = path[index - 1]
+            val current = path[index]
+            val dx = (current % width - previous % width).toDouble()
+            val dy = (current / width - previous / width).toDouble()
+            length += sqrt(dx * dx + dy * dy)
+        }
+        return length
+    }
+
+    private fun contourSpan(path: List<Int>, width: Int): Double {
+        if (path.isEmpty()) return 0.0
+        var minX = Int.MAX_VALUE
+        var maxX = Int.MIN_VALUE
+        var minY = Int.MAX_VALUE
+        var maxY = Int.MIN_VALUE
+        for (point in path) {
+            val x = point % width
+            val y = point / width
+            minX = min(minX, x)
+            maxX = max(maxX, x)
+            minY = min(minY, y)
+            maxY = max(maxY, y)
+        }
+        val dx = (maxX - minX).toDouble()
+        val dy = (maxY - minY).toDouble()
+        return sqrt(dx * dx + dy * dy)
     }
 
     private fun quantizeCoordinate(value: Double): Double =
