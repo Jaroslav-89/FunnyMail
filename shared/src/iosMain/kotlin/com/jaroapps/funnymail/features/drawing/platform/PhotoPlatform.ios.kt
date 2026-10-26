@@ -237,15 +237,15 @@ private fun analyzeWithAppleVision(image: UIImage): PortraitFeatures? {
         }
         val landmarks = face.landmarks
         listOfNotNull(
-            appleVisionContour(landmarks?.faceContour, bounds, sourceWidth, sourceHeight, 8f, true),
-            appleVisionContour(landmarks?.leftEye, bounds, sourceWidth, sourceHeight, 6f, true),
-            appleVisionContour(landmarks?.rightEye, bounds, sourceWidth, sourceHeight, 6f, true),
-            appleVisionContour(landmarks?.leftEyebrow, bounds, sourceWidth, sourceHeight, 5f, false),
-            appleVisionContour(landmarks?.rightEyebrow, bounds, sourceWidth, sourceHeight, 5f, false),
-            appleVisionContour(landmarks?.nose, bounds, sourceWidth, sourceHeight, 5f, false),
-            appleVisionContour(landmarks?.noseCrest, bounds, sourceWidth, sourceHeight, 5f, false),
-            appleVisionContour(landmarks?.outerLips, bounds, sourceWidth, sourceHeight, 5.5f, true),
-            appleVisionContour(landmarks?.innerLips, bounds, sourceWidth, sourceHeight, 5f, true),
+            appleVisionContour(landmarks?.faceContour, bounds, true),
+            appleVisionContour(landmarks?.leftEye, bounds, true),
+            appleVisionContour(landmarks?.rightEye, bounds, true),
+            appleVisionContour(landmarks?.leftEyebrow, bounds, false),
+            appleVisionContour(landmarks?.rightEyebrow, bounds, false),
+            appleVisionContour(landmarks?.nose, bounds, false),
+            appleVisionContour(landmarks?.noseCrest, bounds, false),
+            appleVisionContour(landmarks?.outerLips, bounds, true),
+            appleVisionContour(landmarks?.innerLips, bounds, true),
         )
     }
 
@@ -263,9 +263,6 @@ private fun analyzeWithAppleVision(image: UIImage): PortraitFeatures? {
 private fun appleVisionContour(
     region: VNFaceLandmarkRegion2D?,
     faceBounds: DoubleArray,
-    imageWidth: Int,
-    imageHeight: Int,
-    strokeWidth: Float,
     closed: Boolean,
 ): PortraitFeatureContour? {
     if (region == null || region.pointCount.toInt() < 4) return null
@@ -280,5 +277,5 @@ private fun appleVisionContour(
             y = normalizedY.coerceIn(0.0, 1.0),
         )
     }
-    return PortraitFeatureContour(points, strokeWidth, closed)
+    return PortraitFeatureContour(points, closed)
 }
