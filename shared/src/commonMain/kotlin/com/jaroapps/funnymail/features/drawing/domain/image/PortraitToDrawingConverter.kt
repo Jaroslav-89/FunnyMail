@@ -10,9 +10,10 @@ import kotlin.math.sqrt
 
 /**
  * Converts the V8 on-device person mask and named face landmarks into editable vector strokes.
- * Reuses V2 post-processing choices (5x5 Gaussian-style smoothing and closing, epsilon 1.35,
- * 8-14 px minimum semantic contour length, 5 px stroke width, and a 7,000-point budget).
- * Edge-gradient thresholds from V2 do not apply to the model's confidence mask.
+ * Uses V1-compatible post-processing where applicable: 3x3 box smoothing, epsilon 0.95,
+ * 4 px stroke width, 4-decimal normalized coordinates, and a 7,000-point budget.
+ * Gradient-based non-maximum suppression and hysteresis are specific to grayscale edge maps,
+ * so the model confidence mask still uses its own confidence threshold.
  */
 class PortraitToDrawingConverter(
     private val confidenceThreshold: Int = 145,
@@ -22,20 +23,19 @@ class PortraitToDrawingConverter(
     fun convert(features: PortraitFeatures): DrawingDocument {
         val width = features.maskWidth
         val height = features.maskHeight
-        // V2's 5x5 Gaussian-style smoothing is applied to model confidence before thresholding.
-        // This keeps local mask noise from becoming jagged outlines.
+        // V1 uses a 3x3 box blur before edge extraction; apply the same lighter smoothing
+        // to model confidence, then threshold and keep only the dominant person component.
         val smoothedConfidence = smoothConfidenceMask(features.personMask, width, height)
         val thresholded = BooleanArray(width * height) { index ->
             (smoothedConfidence[index].toInt() and 0xFF) >= confidenceThreshold
         }
-        val closedMask = closeSmallMaskGaps(thresholded, width, height)
-        val person = largestComponent(closedMask, width, height)
+        val person = largestComponent(thresholded, width, height)
         val foregroundCount = person.count { it }
         if (foregroundCount < width * height * 0.015) throw NoContoursFoundException()
 
         val boundary = traceOuterContour(person, width, height)
         if (boundary.size < 8) throw NoContoursFoundException()
-        val simplifiedBoundary = simplify(boundary, width, epsilon = 1.35)
+        val simplifiedBoundary = simplify(boundary, width, epsilon = 0.95)
         val strokes = ArrayList<DrawingStroke>()
         var pointCount = 0
 
@@ -52,7 +52,7 @@ class PortraitToDrawingConverter(
         if (silhouettePoints.size >= 4) {
             strokes += DrawingStroke(
                 color = "#202124",
-                width = 5f,
+                width = 4f,
                 points = silhouettePoints,
             )
             pointCount += silhouettePoints.size
@@ -60,15 +60,11 @@ class PortraitToDrawingConverter(
 
         // These contours are semantically meaningful (eyes, brows, nose, lips, face outline).
         // Keep a small number of them instead of detecting arbitrary internal photo edges.
-        val minContourLength = (
-            min(features.sourceWidth, features.sourceHeight) * 0.015
-        ).roundToInt().coerceIn(8, 14).toDouble()
+        // V1 retains any usable contour with at least two points; keep that policy for
+        // the named facial landmarks rather than applying V2's extra minimum-length filter.
         val faceContours = features.faceContours
             .asSequence()
-            .filter { it.points.size >= 4 }
-            .filter {
-                normalizedLength(it.points, features.sourceWidth, features.sourceHeight) >= minContourLength
-            }
+            .filter { it.points.size >= 2 }
             .sortedByDescending {
                 normalizedLength(it.points, features.sourceWidth, features.sourceHeight)
             }
@@ -80,10 +76,13 @@ class PortraitToDrawingConverter(
                 points = contour.points,
                 width = features.sourceWidth,
                 height = features.sourceHeight,
-                epsilon = 1.35,
+                epsilon = 0.95,
             )
             var normalized = simplifiedFaceContour.map { point ->
-                listOf(point.x.coerceIn(0.0, 1.0), point.y.coerceIn(0.0, 1.0))
+                listOf(
+                    quantizeCoordinate(point.x.coerceIn(0.0, 1.0)),
+                    quantizeCoordinate(point.y.coerceIn(0.0, 1.0)),
+                )
             }
             if (contour.closed && normalized.isNotEmpty() && normalized.first() != normalized.last()) {
                 normalized = normalized + listOf(normalized.first())
@@ -126,42 +125,18 @@ class PortraitToDrawingConverter(
     }
 
     private fun smoothConfidenceMask(mask: ByteArray, width: Int, height: Int): ByteArray {
-        // Same separable 5x5 Gaussian-style kernel as V2: [1, 4, 6, 4, 1].
-        val weights = intArrayOf(1, 4, 6, 4, 1)
+        // V1's 3x3 box blur, adapted for an unsigned 8-bit model confidence mask.
         return ByteArray(mask.size) { index ->
             val x = index % width
             val y = index / width
-            var weightedSum = 0
-            for (dy in -2..2) for (dx in -2..2) {
+            var sum = 0
+            for (dy in -1..1) for (dx in -1..1) {
                 val sampleX = (x + dx).coerceIn(0, width - 1)
                 val sampleY = (y + dy).coerceIn(0, height - 1)
-                val value = mask[sampleY * width + sampleX].toInt() and 0xFF
-                weightedSum += value * weights[dy + 2] * weights[dx + 2]
+                sum += mask[sampleY * width + sampleX].toInt() and 0xFF
             }
-            (weightedSum / 256).coerceIn(0, 255).toByte()
+            (sum / 9).coerceIn(0, 255).toByte()
         }
-    }
-
-    private fun closeSmallMaskGaps(mask: BooleanArray, width: Int, height: Int): BooleanArray {
-        // V2's 5x5 morphology is adapted to the semantic person mask to bridge small edge breaks.
-        val radius = 2
-        val dilated = BooleanArray(mask.size)
-        for (y in radius until height - radius) for (x in radius until width - radius) {
-            var found = false
-            for (dy in -radius..radius) for (dx in -radius..radius) {
-                if (mask[(y + dy) * width + x + dx]) found = true
-            }
-            dilated[y * width + x] = found
-        }
-        val closed = BooleanArray(mask.size)
-        for (y in radius until height - radius) for (x in radius until width - radius) {
-            var filled = true
-            for (dy in -radius..radius) for (dx in -radius..radius) {
-                if (!dilated[(y + dy) * width + x + dx]) filled = false
-            }
-            closed[y * width + x] = filled
-        }
-        return closed
     }
 
     private fun largestComponent(mask: BooleanArray, width: Int, height: Int): BooleanArray {
@@ -323,10 +298,14 @@ class PortraitToDrawingConverter(
     private fun toNormalizedPoints(path: List<Int>, width: Int, height: Int): List<List<Double>> =
         path.map { point ->
             listOf(
-                (point % width).toDouble() / (width - 1).toDouble(),
-                (point / width).toDouble() / (height - 1).toDouble(),
+                quantizeCoordinate((point % width).toDouble() / (width - 1).toDouble()),
+                quantizeCoordinate((point / width).toDouble() / (height - 1).toDouble()),
             )
         }
+
+    /** V1 stores normalized coordinates to four decimal places to keep JSON compact. */
+    private fun quantizeCoordinate(value: Double): Double =
+        (value * 10_000.0).roundToInt().coerceIn(0, 10_000) / 10_000.0
 
     private fun normalizedLength(points: List<NormalizedPhotoPoint>, width: Int, height: Int): Double {
         var length = 0.0
