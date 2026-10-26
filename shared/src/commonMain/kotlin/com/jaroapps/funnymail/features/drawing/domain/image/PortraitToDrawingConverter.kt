@@ -77,7 +77,13 @@ class PortraitToDrawingConverter(
 
         for (contour in faceContours) {
             if (strokes.size >= maxStrokes || pointCount >= maxPoints) break
-            var normalized = contour.points.map { point ->
+            val simplifiedFaceContour = simplifyNormalized(
+                points = contour.points,
+                width = features.sourceWidth,
+                height = features.sourceHeight,
+                epsilon = 1.35,
+            )
+            var normalized = simplifiedFaceContour.map { point ->
                 listOf(point.x.coerceIn(0.0, 1.0), point.y.coerceIn(0.0, 1.0))
             }
             if (contour.closed && normalized.isNotEmpty() && normalized.first() != normalized.last()) {
@@ -333,6 +339,58 @@ class PortraitToDrawingConverter(
             length += sqrt(dx * dx + dy * dy)
         }
         return length
+    }
+
+    /**
+     * V2 Douglas-Peucker simplification applied to the model's face landmarks in image-pixel space.
+     * This reduces redundant landmark points without changing the normalized JSON coordinate format.
+     */
+    private fun simplifyNormalized(
+        points: List<NormalizedPhotoPoint>,
+        width: Int,
+        height: Int,
+        epsilon: Double,
+    ): List<NormalizedPhotoPoint> {
+        if (points.size <= 3) return points
+        val keep = BooleanArray(points.size)
+        keep[0] = true
+        keep[points.lastIndex] = true
+        val ranges = ArrayList<Pair<Int, Int>>()
+        ranges += 0 to points.lastIndex
+        while (ranges.isNotEmpty()) {
+            val (start, end) = ranges.removeAt(ranges.lastIndex)
+            val first = points[start]
+            val last = points[end]
+            val x1 = first.x * width
+            val y1 = first.y * height
+            val x2 = last.x * width
+            val y2 = last.y * height
+            val dx = x2 - x1
+            val dy = y2 - y1
+            val denominator = dx * dx + dy * dy
+            var farthest = -1
+            var maxDistance = 0.0
+            for (index in start + 1 until end) {
+                val point = points[index]
+                val px = point.x * width
+                val py = point.y * height
+                val projection = if (denominator == 0.0) 0.0 else
+                    (((px - x1) * dx + (py - y1) * dy) / denominator).coerceIn(0.0, 1.0)
+                val nearestX = x1 + projection * dx
+                val nearestY = y1 + projection * dy
+                val distance = sqrt((px - nearestX) * (px - nearestX) + (py - nearestY) * (py - nearestY))
+                if (distance > maxDistance) {
+                    maxDistance = distance
+                    farthest = index
+                }
+            }
+            if (farthest >= 0 && maxDistance > epsilon) {
+                keep[farthest] = true
+                ranges += start to farthest
+                ranges += farthest to end
+            }
+        }
+        return points.indices.filter { keep[it] }.map { points[it] }
     }
 
     private fun downsampleNormalized(
