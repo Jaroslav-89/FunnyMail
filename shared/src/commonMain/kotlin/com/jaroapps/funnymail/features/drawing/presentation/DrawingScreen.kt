@@ -259,7 +259,7 @@ fun DrawingScreen(
                     try {
                         val convertedDrawing = withContext(Dispatchers.Default) {
                             val portraitDocument = try {
-                                analyzePortraitLocally(imageBytes, maxDimension = 420)?.let {
+                                analyzePortraitLocally(imageBytes, maxDimension = 512)?.let {
                                     PortraitToDrawingConverter().convert(it)
                                 }
                             } catch (cancelled: CancellationException) {
