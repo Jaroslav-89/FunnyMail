@@ -269,4 +269,13 @@
     <string name="chats_invite_friend">Invite a friend</string>
     <string name="chats_working">Working…</string>
     <string name="chats_member_and_code">%1$d members · chat code %2$s…</string>
+ 
+    <string name="import_image">Import photo</string>
+    <string name="import_image_hint">Choose an image from your gallery or take a new photo.</string>
+    <string name="choose_from_gallery">Choose from gallery</string>
+    <string name="take_photo">Take a photo</string>
+    <string name="processing_image">Converting photo to a sketch…</string>
+    <string name="photo_conversion_complete">Photo converted to a sketch</string>
+    <string name="photo_import_failed">Could not process the image. Try another photo.</string>
+    <string name="photo_no_contours">No clear contours found. Try a photo with stronger edges.</string>
 </resources>
