@@ -329,7 +329,7 @@ private fun appleVisionContour(
     strokeWidth: Float,
     closed: Boolean,
 ): PortraitFeatureContour? {
-    if (region == null || region.pointCount < 4u) return null
+    if (region == null || region.pointCount.toInt() < 4) return null
     val rawPoints = region.normalizedPoints ?: return null
     val points = ArrayList<NormalizedPhotoPoint>(region.pointCount.toInt())
     for (index in 0 until region.pointCount.toInt()) {
