@@ -16,13 +16,13 @@ class NoContoursFoundException : IllegalStateException("No clear contours found"
 /**
  * Local edge-to-vector conversion.
  *
- * Version 7 adds an explicit geometric-length and span filter after contour joining. Short
- * marks and tiny loops are discarded before vector simplification; surviving contours are
- * simplified aggressively and drawn with thicker strokes.
+ * Version 8 substantially raises the minimum contour length and spatial span thresholds, so
+ * medium-sized isolated marks are discarded too. Only long contours with meaningful overall
+ * extent survive; the existing JSON limits remain untouched.
  */
 class PhotoToDrawingConverter(
-    private val maxStrokes: Int = 45,
-    private val maxPoints: Int = 1_000,
+    private val maxStrokes: Int = 30,
+    private val maxPoints: Int = 750,
 ) {
     private data class Candidate(val points: List<Int>, val sourceLength: Int)
 
@@ -111,12 +111,11 @@ class PhotoToDrawingConverter(
         val rawEdges = hysteresis(thinned, width, height, high * 0.78f, high)
         val edges = closeSmallGaps(rawEdges, width, height)
         val maxGap = (min(width, height) * 0.045).roundToInt().coerceIn(14, 40)
-        val minContourLength = (min(width, height) * 0.09).roundToInt().coerceIn(32, 72)
-        // Explicit geometric filtering: long pixel paths are not necessarily long strokes
-        // (a noisy loop can contain many pixels in a tiny area), so check both path length
-        // and bounding-box span after nearby fragments have been joined.
-        val minStrokeLength = (min(width, height) * 0.14).coerceIn(36.0, 68.0)
-        val minStrokeSpan = (min(width, height) * 0.045).coerceIn(12.0, 24.0)
+        val minContourLength = (min(width, height) * 0.12).roundToInt().coerceIn(36, 90)
+        // Stronger V8 filter: a contour must have a substantial travelled length AND span a
+        // meaningful part of the image. This rejects more little marks and compact loops.
+        val minStrokeLength = (min(width, height) * 0.28).coerceIn(70.0, 110.0)
+        val minStrokeSpan = (min(width, height) * 0.10).coerceIn(25.0, 48.0)
         val mergedContours = joinNearbyContours(
             paths = traceEdges(edges, width, height).filter { it.size >= 4 },
             width = width,
@@ -127,7 +126,7 @@ class PhotoToDrawingConverter(
             .filter { it.size >= minContourLength }
             .filter { polylineLength(it, width) >= minStrokeLength }
             .filter { contourSpan(it, width) >= minStrokeSpan }
-            .map { Candidate(simplify(it, width, epsilon = 10.0), it.size) }
+            .map { Candidate(simplify(it, width, epsilon = 12.0), it.size) }
             .filter { it.points.size >= 2 }
             .sortedByDescending { it.sourceLength }
             .toList()
