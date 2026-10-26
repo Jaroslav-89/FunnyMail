@@ -27,6 +27,5 @@ data class NormalizedPhotoPoint(
 
 data class PortraitFeatureContour(
     val points: List<NormalizedPhotoPoint>,
-    val strokeWidth: Float,
     val closed: Boolean = false,
 )
