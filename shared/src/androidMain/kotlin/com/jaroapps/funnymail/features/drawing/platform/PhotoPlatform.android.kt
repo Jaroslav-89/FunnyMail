@@ -157,7 +157,7 @@ actual suspend fun analyzePortraitLocally(
                                 y = (point.y / bitmap.height.toDouble()).coerceIn(0.0, 1.0),
                             )
                         }
-                    if (points.size < 4) null else {
+                    if (points.size < 2) null else {
                         PortraitFeatureContour(points, spec.closed)
                     }
                 }
