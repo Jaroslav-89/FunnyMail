@@ -7,6 +7,26 @@ import kotlin.test.assertTrue
 
 class PhotoToDrawingConverterTest {
     @Test
+    fun preservesMoreContoursForDetailedImagesWithVisibleStrokeWidth() {
+        val width = 160
+        val height = 120
+        val pixels = IntArray(width * height) { index ->
+            val x = index % width
+            val y = index / width
+            if (((x / 10) + (y / 10)) % 2 == 0) 18 else 238
+        }
+
+        val drawing = PhotoToDrawingConverter().convert(GrayImage(width, height, pixels))
+        val pointCount = drawing.strokes.sumOf { it.points.size }
+        val json = DrawingCodec().encode(drawing).getOrThrow()
+
+        assertTrue(drawing.strokes.size > 10, "Expected multiple connected contours")
+        assertTrue(pointCount > 100, "Expected detail to survive vector simplification")
+        assertTrue(drawing.strokes.all { it.width >= 4f }, "Imported lines should remain visible")
+        assertTrue(json.encodeToByteArray().size <= 256 * 1024, "Keep the existing JSON size budget")
+    }
+
+    @Test
     fun convertsHighContrastShapeToNormalizedStrokesWithinJsonLimit() {
         val width = 128
         val height = 96
