@@ -173,7 +173,7 @@ actual suspend fun decodeImageToGrayscale(imageBytes: ByteArray, maxDimension: I
             data = pinned.addressOf(0),
             width = width.convert(),
             height = height.convert(),
-            bitsPerComponent = 8.convert(),
+            bitsPerComponent = 8u,
             bytesPerRow = (width * 4).convert(),
             space = colorSpace,
             bitmapInfo = CGImageAlphaInfo.kCGImageAlphaPremultipliedLast.value,
