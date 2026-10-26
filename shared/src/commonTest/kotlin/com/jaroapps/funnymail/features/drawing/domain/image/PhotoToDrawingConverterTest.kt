@@ -13,7 +13,7 @@ class PhotoToDrawingConverterTest {
         val pixels = IntArray(width * height) { index ->
             val x = index % width
             val y = index / width
-            if (((x / 10) + (y / 10)) % 2 == 0) 18 else 238
+            if (((x / 4) + (y / 4)) % 2 == 0) 18 else 238
         }
 
         val drawing = PhotoToDrawingConverter().convert(GrayImage(width, height, pixels))
