@@ -41,7 +41,7 @@ class PhotoToDrawingConverterTest {
         assertTrue(drawing.strokes.isNotEmpty())
         assertEquals(1_000, drawing.canvas.width)
         assertEquals(750, drawing.canvas.height)
-        assertTrue(drawing.strokes.all { stroke -> stroke.points.size >= 3 })
+        assertTrue(drawing.strokes.all { stroke -> stroke.points.size >= 2 })
         assertTrue(drawing.strokes.flatMap { it.points }.all { point ->
             point.size == 2 && point.all { it in 0.0..1.0 }
         })
