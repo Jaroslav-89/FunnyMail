@@ -133,7 +133,7 @@ actual suspend fun analyzePortraitLocally(
             .setContourMode(FaceDetectorOptions.CONTOUR_MODE_ALL)
             .build(),
     )
-    try {
+    return try {
         val inputImage = com.google.mlkit.vision.common.InputImage.fromBitmap(bitmap, 0)
         val mask = segmenter.process(inputImage).awaitResult()
         val maskWidth = mask.width
