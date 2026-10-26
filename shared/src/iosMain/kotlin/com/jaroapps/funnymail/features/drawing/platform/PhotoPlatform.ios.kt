@@ -116,7 +116,7 @@ private class PhotoPickerDelegate(
         val image = didFinishPickingMediaWithInfo[UIImagePickerControllerOriginalImage] as? UIImage
         picker.dismissViewControllerAnimated(true, completion = null)
         // Downsample immediately, so a full-resolution camera image is never retained as a byte array.
-        val bytes = image?.toBoundedJpeg(maxDimension = 640)
+        val bytes = image?.toBoundedJpeg(maxDimension = 1024)
         if (bytes.isNullOrEmpty()) onError() else onPicked(bytes)
         onFinished()
     }
@@ -265,7 +265,7 @@ private fun appleVisionContour(
     faceBounds: DoubleArray,
     closed: Boolean,
 ): PortraitFeatureContour? {
-    if (region == null || region.pointCount.toInt() < 4) return null
+    if (region == null || region.pointCount.toInt() < 2) return null
     val rawPoints = region.normalizedPoints ?: return null
     val points = ArrayList<NormalizedPhotoPoint>(region.pointCount.toInt())
     for (index in 0 until region.pointCount.toInt()) {
