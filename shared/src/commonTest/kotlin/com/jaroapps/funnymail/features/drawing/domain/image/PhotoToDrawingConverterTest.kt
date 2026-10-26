@@ -24,9 +24,10 @@ class PhotoToDrawingConverterTest {
         val json = DrawingCodec().encode(drawing).getOrThrow()
 
         assertTrue(drawing.strokes.isNotEmpty(), "The main object contour should survive")
-        assertTrue(drawing.strokes.size < 30, "Version 5 should collapse fine texture into a small set of contours")
+        assertTrue(drawing.strokes.size < 20, "Version 6 should collapse fine texture into very few contours")
         assertTrue(pointCount > 4, "The main silhouette should retain enough points")
-        assertTrue(drawing.strokes.all { it.width >= 10f }, "Version 5 should use noticeably bolder lines")
+        assertTrue(drawing.strokes.all { it.width >= 12f }, "Version 6 should use heavier lines")
+        assertTrue(pointCount <= 1_400, "Version 6 should keep the point count compact")
         assertTrue(json.encodeToByteArray().size <= 256 * 1024, "Keep the existing JSON size budget")
     }
 
