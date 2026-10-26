@@ -4,7 +4,6 @@ import com.jaroapps.funnymail.features.drawing.domain.model.DrawingCanvas
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
 import kotlin.math.ceil
-import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -95,7 +94,7 @@ class PortraitToDrawingConverter(
             if (normalized.size < 2) continue
             strokes += DrawingStroke(
                 color = "#202124",
-                width = 5f,
+                width = 4f,
                 points = normalized,
             )
             pointCount += normalized.size
