@@ -31,8 +31,12 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -41,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,9 +63,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jaroapps.funnymail.core.ui.AppBackButton
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
+import com.jaroapps.funnymail.features.drawing.domain.image.NoContoursFoundException
+import com.jaroapps.funnymail.features.drawing.domain.image.PhotoToDrawingConverter
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingCanvas
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
+import com.jaroapps.funnymail.features.drawing.platform.decodeImageToGrayscale
+import com.jaroapps.funnymail.features.drawing.platform.rememberPhotoPicker
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -83,6 +96,14 @@ import com.jaroapps.funnymail.resources.finish_drawing
 import com.jaroapps.funnymail.resources.finish_drawing_hint
 import com.jaroapps.funnymail.resources.gradient
 import com.jaroapps.funnymail.resources.line_color
+import com.jaroapps.funnymail.resources.import_image
+import com.jaroapps.funnymail.resources.import_image_hint
+import com.jaroapps.funnymail.resources.choose_from_gallery
+import com.jaroapps.funnymail.resources.take_photo
+import com.jaroapps.funnymail.resources.processing_image
+import com.jaroapps.funnymail.resources.photo_conversion_complete
+import com.jaroapps.funnymail.resources.photo_import_failed
+import com.jaroapps.funnymail.resources.photo_no_contours
 import com.jaroapps.funnymail.resources.save_changes
 import com.jaroapps.funnymail.resources.save_drawing_local
 import com.jaroapps.funnymail.resources.saving
@@ -128,6 +149,15 @@ fun DrawingScreen(
     val drawingEditsSavedMessage = stringResource(Res.string.drawing_edits_saved)
     val drawingSavedLocallyMessage = stringResource(Res.string.drawing_saved_locally)
     val drawingSentChatMessage = stringResource(Res.string.drawing_sent_chat)
+    val importImageTitle = stringResource(Res.string.import_image)
+    val importImageHint = stringResource(Res.string.import_image_hint)
+    val chooseFromGalleryLabel = stringResource(Res.string.choose_from_gallery)
+    val takePhotoLabel = stringResource(Res.string.take_photo)
+    val processingImageLabel = stringResource(Res.string.processing_image)
+    val photoConversionCompleteMessage = stringResource(Res.string.photo_conversion_complete)
+    val photoImportFailedMessage = stringResource(Res.string.photo_import_failed)
+    val photoNoContoursMessage = stringResource(Res.string.photo_no_contours)
+    val coroutineScope = rememberCoroutineScope()
     val initialDrawing = remember(initialDrawingJson) {
         initialDrawingJson?.let { drawingCodec.decode(it).getOrNull() }
     }
@@ -167,6 +197,8 @@ fun DrawingScreen(
     var pendingGradientEndColor by remember { mutableStateOf("#F5A800") }
     var pendingGradientEndpoint by remember { mutableStateOf(0) }
     var showFinishDialog by remember { mutableStateOf(false) }
+    var showPhotoSourceDialog by remember { mutableStateOf(false) }
+    var isProcessingImage by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var statusIsError by remember { mutableStateOf(false) }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
@@ -215,6 +247,55 @@ fun DrawingScreen(
         }
     }
     val isCurrentDrawingSaved = currentDrawingJson != null && currentDrawingJson == savedDrawingJson
+
+    val photoPicker = rememberPhotoPicker(
+        onImagePicked = { imageBytes ->
+            if (!isProcessingImage) {
+                coroutineScope.launch {
+                    isProcessingImage = true
+                    statusMessage = null
+                    try {
+                        val convertedDrawing = withContext(Dispatchers.Default) {
+                            val grayImage = decodeImageToGrayscale(imageBytes, maxDimension = 640)
+                            val document = PhotoToDrawingConverter().convert(grayImage)
+                            drawingCodec.encode(document).getOrThrow()
+                            document
+                        }
+                        canvasWidth = convertedDrawing.canvas.width
+                        canvasHeight = convertedDrawing.canvas.height
+                        canvasAspectInitialized = true
+                        strokes = convertedDrawing.strokes
+                        activePoints = emptyList()
+                        redoStrokes = emptyList()
+                        backgroundMode = "SOLID"
+                        backgroundColor = "#FFFFFF"
+                        selectedColor = "#202124"
+                        eraserEnabled = false
+                        statusMessage = photoConversionCompleteMessage
+                        statusIsError = false
+                    } catch (error: CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        statusMessage = if (error is NoContoursFoundException) {
+                            photoNoContoursMessage
+                        } else {
+                            photoImportFailedMessage
+                        }
+                        statusIsError = true
+                    } finally {
+                        imageBytes.fill(0)
+                        isProcessingImage = false
+                    }
+                }
+            } else {
+                imageBytes.fill(0)
+            }
+        },
+        onError = {
+            statusMessage = photoImportFailedMessage
+            statusIsError = true
+        },
+    )
 
     val saveDrawingAction: () -> Unit = {
         val json = currentDrawingJson
@@ -390,7 +471,19 @@ fun DrawingScreen(
 
             Spacer(Modifier.weight(1f))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                RoundToolButton(
+                    enabled = !isProcessingImage,
+                    onClick = { showPhotoSourceDialog = true },
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AddAPhoto,
+                        contentDescription = importImageTitle,
+                        tint = Color(0xFF202124),
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+
                 RoundToolButton(
                     enabled = strokes.isNotEmpty(),
                     onClick = {
@@ -758,6 +851,51 @@ fun DrawingScreen(
                 TextButton(onClick = { showBackgroundDialog = false }) { Text(stringResource(Res.string.cancel), color = Color(0xFF202124)) }
             },
         )
+    }
+
+    if (showPhotoSourceDialog) {
+        AlertDialog(
+            onDismissRequest = { showPhotoSourceDialog = false },
+            title = { Text(importImageTitle) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(importImageHint)
+                    TextButton(onClick = {
+                        showPhotoSourceDialog = false
+                        photoPicker.openGallery()
+                    }) { Text(chooseFromGalleryLabel) }
+                    TextButton(onClick = {
+                        showPhotoSourceDialog = false
+                        photoPicker.openCamera()
+                    }) { Text(takePhotoLabel) }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showPhotoSourceDialog = false }) {
+                    Text(stringResource(Res.string.cancel))
+                }
+            },
+        )
+    }
+
+    if (isProcessingImage) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = {}) {
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Color.White)
+                    .padding(horizontal = 28.dp, vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                CircularProgressIndicator(color = Color(0xFFF5A800))
+                Text(
+                    text = processingImageLabel,
+                    color = Color(0xFF202124),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+        }
     }
 
     if (showFinishDialog) {
