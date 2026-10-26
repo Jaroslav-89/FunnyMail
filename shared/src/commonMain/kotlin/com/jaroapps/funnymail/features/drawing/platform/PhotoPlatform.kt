@@ -16,4 +16,4 @@ expect fun rememberPhotoPicker(
 ): PhotoPickerLauncher
 
 /** Decode, normalize orientation and downsample the image into grayscale pixels. */
-expect fun decodeImageToGrayscale(imageBytes: ByteArray, maxDimension: Int): GrayImage
+expect suspend fun decodeImageToGrayscale(imageBytes: ByteArray, maxDimension: Int): GrayImage
