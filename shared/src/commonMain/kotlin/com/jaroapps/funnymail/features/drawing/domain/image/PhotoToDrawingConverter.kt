@@ -16,12 +16,13 @@ class NoContoursFoundException : IllegalStateException("No clear contours found"
 /**
  * Local edge-to-vector conversion.
  *
- * Version 4 aggressively removes texture, joins nearby contour fragments into longer paths,
- * strongly simplifies geometry, and uses bolder strokes to favor clean silhouettes.
+ * Version 5 prioritizes a small number of bold, smooth silhouette-like contours. It uses a
+ * lower analysis resolution, stronger smoothing and thresholds, morphological gap closing,
+ * endpoint joining, and aggressive geometry simplification to suppress isolated detail marks.
  */
 class PhotoToDrawingConverter(
-    private val maxStrokes: Int = 250,
-    private val maxPoints: Int = 3_500,
+    private val maxStrokes: Int = 90,
+    private val maxPoints: Int = 1_800,
 ) {
     private data class Candidate(val points: List<Int>, val sourceLength: Int)
 
@@ -104,21 +105,22 @@ class PhotoToDrawingConverter(
             }
         }
 
-        // Version 4 keeps only strong edges, then reconnects small breaks before rejecting
-        // short fragments. This encourages long, coherent lines instead of many detached marks.
-        val high = (maximumMagnitude * 0.20f).coerceIn(14f, 128f).coerceAtMost(maximumMagnitude)
-        val edges = hysteresis(thinned, width, height, high * 0.62f, high)
-        val maxGap = (min(width, height) * 0.018).roundToInt().coerceIn(8, 18)
-        val minContourLength = (min(width, height) * 0.06).roundToInt().coerceIn(28, 48)
+        // Version 5 requires much stronger edges. Fine face/clothing texture should not turn
+        // into strokes unless it survives substantial smoothing and a high gradient threshold.
+        val high = (maximumMagnitude * 0.26f).coerceIn(20f, 180f).coerceAtMost(maximumMagnitude)
+        val rawEdges = hysteresis(thinned, width, height, high * 0.72f, high)
+        val edges = closeSmallGaps(rawEdges, width, height)
+        val maxGap = (min(width, height) * 0.028).roundToInt().coerceIn(12, 30)
+        val minContourLength = (min(width, height) * 0.075).roundToInt().coerceIn(18, 64)
         val mergedContours = joinNearbyContours(
-            paths = traceEdges(edges, width, height).filter { it.size >= 3 },
+            paths = traceEdges(edges, width, height).filter { it.size >= 4 },
             width = width,
             maxGap = maxGap,
         )
         val candidates = mergedContours
             .asSequence()
             .filter { it.size >= minContourLength }
-            .map { Candidate(simplify(it, width, epsilon = 4.2), it.size) }
+            .map { Candidate(simplify(it, width, epsilon = 7.0), it.size) }
             .filter { it.points.size >= 2 }
             .sortedByDescending { it.sourceLength }
             .toList()
@@ -138,8 +140,8 @@ class PhotoToDrawingConverter(
 
             strokes += DrawingStroke(
                 color = "#202124",
-                // Version 4 uses noticeably bolder lines to emphasize the simplified contour.
-                width = 8f,
+                // Version 5 uses bold strokes so the reduced number of contours reads clearly.
+                width = 10f,
                 points = points.map { point ->
                     listOf(
                         quantizeCoordinate((point % width).toDouble() / (width - 1).toDouble()),
@@ -175,16 +177,16 @@ class PhotoToDrawingConverter(
         (value * 10_000.0).roundToInt().coerceIn(0, 10_000) / 10_000.0
 
     private fun boxBlur(source: IntArray, width: Int, height: Int): IntArray {
-        // 9x9 Gaussian-like kernel [1,8,28,56,70,56,28,8,1] in each direction.
-        // Strong smoothing suppresses skin pores, cloth grain, and fine compression noise.
-        val weights = intArrayOf(1, 8, 28, 56, 70, 56, 28, 8, 1)
+        // 13x13 Gaussian-like kernel with a 256-valued 1D weight sum. This removes small
+        // tonal changes over a wider area before edge detection.
+        val weights = intArrayOf(1, 4, 10, 20, 31, 40, 44, 40, 31, 20, 10, 4, 1)
         val result = IntArray(source.size)
         for (y in 0 until height) for (x in 0 until width) {
             var sum = 0
-            for (dy in -4..4) for (dx in -4..4) {
+            for (dy in -6..6) for (dx in -6..6) {
                 val sampleX = (x + dx).coerceIn(0, width - 1)
                 val sampleY = (y + dy).coerceIn(0, height - 1)
-                sum += source[sampleY * width + sampleX] * weights[dy + 4] * weights[dx + 4]
+                sum += source[sampleY * width + sampleX] * weights[dy + 6] * weights[dx + 6]
             }
             result[y * width + x] = sum / 65_536
         }
@@ -271,7 +273,7 @@ class PhotoToDrawingConverter(
             if (path.size < 2) continue
             val current = MutableContour(path.toMutableList())
             var joins = 0
-            while (joins++ < 8) {
+            while (joins++ < 16) {
                 val connection = findConnection(current.points) ?: break
                 val first = if (connection.currentAtStart) current.points.asReversed() else current.points
                 val targetPoints = connection.target.points
@@ -303,6 +305,31 @@ class PhotoToDrawingConverter(
 
     private fun endpointIndex(points: List<Int>, atStart: Boolean): Int =
         if (atStart) points.first() else points.last()
+
+    /**
+     * Morphological closing (3x3 dilation followed by erosion) repairs tiny gaps in the
+     * thinned edge mask without keeping the extra thickness introduced by dilation.
+     */
+    private fun closeSmallGaps(edges: BooleanArray, width: Int, height: Int): BooleanArray {
+        val dilated = BooleanArray(edges.size)
+        for (y in 1 until height - 1) for (x in 1 until width - 1) {
+            var found = false
+            for (dy in -1..1) for (dx in -1..1) {
+                if (edges[(y + dy) * width + x + dx]) found = true
+            }
+            dilated[y * width + x] = found
+        }
+
+        val closed = BooleanArray(edges.size)
+        for (y in 1 until height - 1) for (x in 1 until width - 1) {
+            var filled = true
+            for (dy in -1..1) for (dx in -1..1) {
+                if (!dilated[(y + dy) * width + x + dx]) filled = false
+            }
+            closed[y * width + x] = filled
+        }
+        return closed
+    }
 
     private fun hysteresis(
         magnitude: FloatArray,
