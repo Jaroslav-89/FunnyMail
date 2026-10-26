@@ -80,7 +80,7 @@ class PhotoToDrawingConverter(
             }
         }
 
-        val high = (maximumMagnitude * 0.16f).coerceIn(16f, 96f)
+        val high = (maximumMagnitude * 0.16f).coerceIn(4f, 96f)
         val edges = hysteresis(thinned, width, height, high * 0.42f, high)
         val candidates = traceEdges(edges, width, height)
             .asSequence()
