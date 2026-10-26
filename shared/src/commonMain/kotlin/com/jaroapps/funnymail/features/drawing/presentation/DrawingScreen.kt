@@ -65,10 +65,12 @@ import com.jaroapps.funnymail.core.ui.AppBackButton
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.image.NoContoursFoundException
 import com.jaroapps.funnymail.features.drawing.domain.image.PhotoToDrawingConverter
+import com.jaroapps.funnymail.features.drawing.domain.image.PortraitToDrawingConverter
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingCanvas
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
 import com.jaroapps.funnymail.features.drawing.platform.decodeImageToGrayscale
+import com.jaroapps.funnymail.features.drawing.platform.analyzePortraitLocally
 import com.jaroapps.funnymail.features.drawing.platform.rememberPhotoPicker
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -256,8 +258,19 @@ fun DrawingScreen(
                     statusMessage = null
                     try {
                         val convertedDrawing = withContext(Dispatchers.Default) {
-                            val grayImage = decodeImageToGrayscale(imageBytes, maxDimension = 420)
-                            val document = PhotoToDrawingConverter().convert(grayImage)
+                            val portraitDocument = try {
+                                analyzePortraitLocally(imageBytes, maxDimension = 420)?.let {
+                                    PortraitToDrawingConverter().convert(it)
+                                }
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (_: Exception) {
+                                null
+                            }
+                            val document = portraitDocument ?: run {
+                                val grayImage = decodeImageToGrayscale(imageBytes, maxDimension = 420)
+                                PhotoToDrawingConverter().convert(grayImage)
+                            }
                             drawingCodec.encode(document).getOrThrow()
                             document
                         }
