@@ -41,14 +41,19 @@ class PortraitToDrawingConverterTest {
         )
 
         val drawing = PortraitToDrawingConverter().convert(features)
-        val outline = drawing.strokes.single { it.width == 14f }
+        val outline = drawing.strokes.first()
         val outlinePoints = outline.points
         val xValues = outlinePoints.map { it[0] }
 
-        assertTrue(drawing.strokes.size <= 3, "Tiny mask islands must not become individual marks")
+        assertTrue(drawing.strokes.size in 2..3, "The person outline and face contour should survive")
+        assertEquals(5f, outline.width, "V2 post-processing uses a consistent 5px stroke width")
         assertTrue(xValues.minOrNull()!! > 0.20, "The outline should follow the dominant person mask")
         assertTrue(xValues.maxOrNull()!! < 0.90)
-        assertTrue(drawing.strokes.any { it.width == 7f }, "Meaningful face contours should be included")
+        assertTrue(drawing.strokes.all { it.width == 5f }, "Imported model contours should use V2 line width")
+        assertTrue(
+            drawing.strokes.sumOf { it.points.size } <= 7_000,
+            "V2 point budget must remain bounded",
+        )
         assertTrue(drawing.strokes.flatMap { it.points }.all { point ->
             point.size == 2 && point.all { it in 0.0..1.0 }
         })
