@@ -256,7 +256,7 @@ fun DrawingScreen(
                     statusMessage = null
                     try {
                         val convertedDrawing = withContext(Dispatchers.Default) {
-                            val grayImage = decodeImageToGrayscale(imageBytes, maxDimension = 560)
+                            val grayImage = decodeImageToGrayscale(imageBytes, maxDimension = 420)
                             val document = PhotoToDrawingConverter().convert(grayImage)
                             drawingCodec.encode(document).getOrThrow()
                             document
