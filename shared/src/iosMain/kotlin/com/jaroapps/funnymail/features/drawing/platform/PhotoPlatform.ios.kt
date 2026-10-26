@@ -102,19 +102,43 @@ private class PhotoPickerDelegate(
     ) {
         val image = didFinishPickingMediaWithInfo[UIImagePickerControllerOriginalImage] as? UIImage
         picker.dismissViewControllerAnimated(true, completion = null)
-        onFinished()
-        val data = image?.let { UIImageJPEGRepresentation(it, 0.9) }
-        val length = data?.length?.toInt() ?: 0
-        val bytes = if (data != null && length > 0) {
-            data.bytes?.reinterpret<kotlinx.cinterop.ByteVar>()?.readBytes(length)
-        } else null
+        // Downsample immediately, so a full-resolution camera image is never retained as a byte array.
+        val bytes = image?.toBoundedJpeg(maxDimension = 640)
         if (bytes.isNullOrEmpty()) onError() else onPicked(bytes)
+        onFinished()
     }
 
     override fun imagePickerControllerDidCancel(picker: UIImagePickerController) {
         picker.dismissViewControllerAnimated(true, completion = null)
         onFinished()
     }
+}
+
+
+@OptIn(ExperimentalForeignApi::class)
+private fun UIImage.toBoundedJpeg(maxDimension: Int): ByteArray? {
+    require(maxDimension >= 3)
+    val sourceWidth = size.useContents { width }.roundToInt().coerceAtLeast(3)
+    val sourceHeight = size.useContents { height }.roundToInt().coerceAtLeast(3)
+    val factor = minOf(1.0, maxDimension.toDouble() / max(sourceWidth, sourceHeight).toDouble())
+    val targetWidth = (sourceWidth * factor).roundToInt().coerceAtLeast(3)
+    val targetHeight = (sourceHeight * factor).roundToInt().coerceAtLeast(3)
+
+    UIGraphicsBeginImageContextWithOptions(
+        CGSizeMake(targetWidth.toDouble(), targetHeight.toDouble()),
+        true,
+        1.0,
+    )
+    val thumbnail = try {
+        drawInRect(CGRectMake(0.0, 0.0, targetWidth.toDouble(), targetHeight.toDouble()))
+        UIGraphicsGetImageFromCurrentImageContext()
+    } finally {
+        UIGraphicsEndImageContext()
+    } ?: return null
+    val data = UIImageJPEGRepresentation(thumbnail, 0.9) ?: return null
+    val length = data.length.toInt()
+    if (length <= 0) return null
+    return data.bytes?.reinterpret<kotlinx.cinterop.ByteVar>()?.readBytes(length)
 }
 
 @OptIn(ExperimentalForeignApi::class)
