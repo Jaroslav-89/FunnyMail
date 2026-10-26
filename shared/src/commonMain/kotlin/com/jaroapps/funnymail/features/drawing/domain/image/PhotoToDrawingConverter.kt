@@ -14,12 +14,14 @@ import kotlin.math.sqrt
 class NoContoursFoundException : IllegalStateException("No clear contours found")
 
 /**
- * Lightweight Sobel/NMS edge detection with hysteresis and contour tracing.
- * The output is intentionally budgeted to keep the existing 256 KiB JSON limit unchanged.
+ * Local edge-to-vector conversion.
+ *
+ * A higher vector budget, sub-pixel coordinate quantization and more continuous contour tracing
+ * preserve much more detail without increasing the 256 KiB serialized drawing limit.
  */
 class PhotoToDrawingConverter(
-    private val maxStrokes: Int = 450,
-    private val maxPoints: Int = 4_000,
+    private val maxStrokes: Int = 1_000,
+    private val maxPoints: Int = 7_000,
 ) {
     private data class Candidate(val points: List<Int>, val sourceLength: Int)
 
@@ -27,6 +29,7 @@ class PhotoToDrawingConverter(
         val width = image.width
         val height = image.height
         require(width >= 3 && height >= 3)
+
         val gray = boxBlur(image.pixels, width, height)
         val gx = FloatArray(gray.size)
         val gy = FloatArray(gray.size)
@@ -44,14 +47,16 @@ class PhotoToDrawingConverter(
                 val bl = gray[index + width - 1]
                 val b = gray[index + width]
                 val br = gray[index + width + 1]
+
                 gx[index] = (-tl - 2 * l - bl + tr + 2 * r + br).toFloat()
                 gy[index] = (-tl - 2 * t - tr + bl + 2 * b + br).toFloat()
                 magnitude[index] = sqrt(gx[index] * gx[index] + gy[index] * gy[index])
                 if (magnitude[index] > maximumMagnitude) maximumMagnitude = magnitude[index]
             }
         }
-        if (maximumMagnitude < 8f) throw NoContoursFoundException()
+        if (maximumMagnitude < 5f) throw NoContoursFoundException()
 
+        // Non-maximum suppression thins edges while retaining their location.
         val thinned = FloatArray(gray.size)
         for (y in 1 until height - 1) {
             for (x in 1 until width - 1) {
@@ -64,29 +69,37 @@ class PhotoToDrawingConverter(
                 val second: Int
                 when {
                     angle < 22.5 || angle >= 157.5 -> {
-                        first = index - 1; second = index + 1
+                        first = index - 1
+                        second = index + 1
                     }
                     angle < 67.5 -> {
-                        first = index - width + 1; second = index + width - 1
+                        first = index - width + 1
+                        second = index + width - 1
                     }
                     angle < 112.5 -> {
-                        first = index - width; second = index + width
+                        first = index - width
+                        second = index + width
                     }
                     else -> {
-                        first = index - width - 1; second = index + width + 1
+                        first = index - width - 1
+                        second = index + width + 1
                     }
                 }
-                if (current >= magnitude[first] && current >= magnitude[second]) thinned[index] = current
+                if (current >= magnitude[first] && current >= magnitude[second]) {
+                    thinned[index] = current
+                }
             }
         }
 
-        val high = (maximumMagnitude * 0.16f).coerceIn(4f, 96f)
-        val edges = hysteresis(thinned, width, height, high * 0.42f, high)
+        // The previous threshold saturated at 96 for most photos, discarding weaker but useful
+        // contours. Lower adaptive thresholds recover detail; a small blur and NMS reduce noise.
+        val high = (maximumMagnitude * 0.08f).coerceIn(14f, 64f)
+        val edges = hysteresis(thinned, width, height, high * 0.34f, high)
         val candidates = traceEdges(edges, width, height)
             .asSequence()
-            .filter { it.size >= 3 }
-            .map { Candidate(simplify(it, width, 1.8), it.size) }
-            .filter { it.points.size >= 3 }
+            .filter { it.size >= 2 }
+            .map { Candidate(simplify(it, width, epsilon = 0.95), it.size) }
+            .filter { it.points.size >= 2 }
             .sortedByDescending { it.sourceLength }
             .toList()
         if (candidates.isEmpty()) throw NoContoursFoundException()
@@ -96,16 +109,21 @@ class PhotoToDrawingConverter(
         for (candidate in candidates) {
             if (strokes.size >= maxStrokes || pointCount >= maxPoints) break
             val remaining = maxPoints - pointCount
-            val points = if (candidate.points.size <= remaining) candidate.points
-                else downsample(candidate.points, remaining)
-            if (points.size < 3) continue
+            val points = if (candidate.points.size <= remaining) {
+                candidate.points
+            } else {
+                downsample(candidate.points, remaining)
+            }
+            if (points.size < 2) continue
+
             strokes += DrawingStroke(
                 color = "#202124",
-                width = 2f,
+                // A two-pixel stroke became sub-pixel on typical phone canvases.
+                width = 4f,
                 points = points.map { point ->
                     listOf(
-                        (point % width).toDouble() / (width - 1).toDouble(),
-                        (point / width).toDouble() / (height - 1).toDouble(),
+                        quantizeCoordinate((point % width).toDouble() / (width - 1).toDouble()),
+                        quantizeCoordinate((point / width).toDouble() / (height - 1).toDouble()),
                     )
                 },
             )
@@ -132,6 +150,9 @@ class PhotoToDrawingConverter(
             strokes = strokes,
         )
     }
+
+    private fun quantizeCoordinate(value: Double): Double =
+        (value * 10_000.0).roundToInt().coerceIn(0, 10_000) / 10_000.0
 
     private fun boxBlur(source: IntArray, width: Int, height: Int): IntArray {
         val result = source.copyOf()
@@ -163,8 +184,15 @@ class PhotoToDrawingConverter(
         }
         while (head < tail) {
             val index = queue[head++]
-            for (neighbour in thresholdNeighbours(index, width, height, magnitude, low)) {
-                if (!result[neighbour]) {
+            val x = index % width
+            val y = index / width
+            for (dy in -1..1) for (dx in -1..1) {
+                if (dx == 0 && dy == 0) continue
+                val nx = x + dx
+                val ny = y + dy
+                if (nx !in 1 until width - 1 || ny !in 1 until height - 1) continue
+                val neighbour = ny * width + nx
+                if (!result[neighbour] && magnitude[neighbour] >= low) {
                     result[neighbour] = true
                     queue[tail++] = neighbour
                 }
@@ -173,25 +201,10 @@ class PhotoToDrawingConverter(
         return result
     }
 
-    private fun thresholdNeighbours(
-        index: Int, width: Int, height: Int, magnitude: FloatArray, threshold: Float,
-    ): IntArray {
-        val x = index % width
-        val y = index / width
-        val result = IntArray(8)
-        var count = 0
-        for (dy in -1..1) for (dx in -1..1) {
-            if (dx == 0 && dy == 0) continue
-            val nx = x + dx
-            val ny = y + dy
-            if (nx in 1 until width - 1 && ny in 1 until height - 1) {
-                val neighbour = ny * width + nx
-                if (magnitude[neighbour] >= threshold) result[count++] = neighbour
-            }
-        }
-        return result.copyOf(count)
-    }
-
+    /**
+     * Uses 8-connectivity for diagonal contours but discards redundant diagonal links whenever
+     * an orthogonal route already connects the same two pixels. This reduces false branch nodes.
+     */
     private fun edgeNeighbours(index: Int, width: Int, height: Int, edges: BooleanArray): IntArray {
         val x = index % width
         val y = index / width
@@ -201,10 +214,15 @@ class PhotoToDrawingConverter(
             if (dx == 0 && dy == 0) continue
             val nx = x + dx
             val ny = y + dy
-            if (nx in 1 until width - 1 && ny in 1 until height - 1) {
-                val neighbour = ny * width + nx
-                if (edges[neighbour]) result[count++] = neighbour
+            if (nx !in 1 until width - 1 || ny !in 1 until height - 1) continue
+            val neighbour = ny * width + nx
+            if (!edges[neighbour]) continue
+            if (dx != 0 && dy != 0) {
+                val horizontal = y * width + nx
+                val vertical = ny * width + x
+                if (edges[horizontal] || edges[vertical]) continue
             }
+            result[count++] = neighbour
         }
         return result.copyOf(count)
     }
@@ -217,6 +235,7 @@ class PhotoToDrawingConverter(
         }
         val visited = HashSet<Long>()
         fun key(a: Int, b: Int): Long = min(a, b).toLong() * size.toLong() + max(a, b).toLong()
+
         fun trace(start: Int, first: Int): List<Int> {
             val path = ArrayList<Int>()
             path += start
@@ -225,10 +244,25 @@ class PhotoToDrawingConverter(
             visited += key(previous, current)
             var guard = 0
             while (guard++ <= size) {
+                if (current == start) {
+                    path += current
+                    break
+                }
                 path += current
-                if (current == start || degree[current].toInt() != 2) break
-                val next = edgeNeighbours(current, width, height, edges)
-                    .firstOrNull { it != previous && key(current, it) !in visited } ?: break
+                val nextCandidates = edgeNeighbours(current, width, height, edges)
+                    .filter { it != previous && key(current, it) !in visited }
+                if (nextCandidates.isEmpty()) break
+
+                // At junctions, continue along the edge with the smallest turn. The previous
+                // implementation stopped at every node whose degree was not exactly two,
+                // splitting long contours into many tiny fragments which were then discarded.
+                val prevX = (current % width - previous % width).toDouble()
+                val prevY = (current / width - previous / width).toDouble()
+                val next = nextCandidates.maxByOrNull { candidate ->
+                    val nextX = (candidate % width - current % width).toDouble()
+                    val nextY = (candidate / width - current / width).toDouble()
+                    prevX * nextX + prevY * nextY
+                } ?: break
                 visited += key(current, next)
                 previous = current
                 current = next
@@ -242,16 +276,17 @@ class PhotoToDrawingConverter(
             for (neighbour in edgeNeighbours(index, width, height, edges)) {
                 if (key(index, neighbour) !in visited) {
                     val path = trace(index, neighbour)
-                    if (path.size >= 3) result += path
+                    if (path.size >= 2) result += path
                 }
             }
         }
+        // Remaining edges belong to loops or isolated chains whose every vertex has degree two.
         for (index in edges.indices) {
             if (!edges[index]) continue
             for (neighbour in edgeNeighbours(index, width, height, edges)) {
                 if (key(index, neighbour) !in visited) {
                     val path = trace(index, neighbour)
-                    if (path.size >= 3) result += path
+                    if (path.size >= 2) result += path
                 }
             }
         }
@@ -260,7 +295,7 @@ class PhotoToDrawingConverter(
 
     private fun simplify(path: List<Int>, width: Int, epsilon: Double): List<Int> {
         if (path.size <= 3) return path
-        val stride = ceil(path.size / 2_048.0).toInt().coerceAtLeast(1)
+        val stride = ceil(path.size / 4_096.0).toInt().coerceAtLeast(1)
         val sampled = if (stride == 1) path else buildList {
             var index = 0
             while (index < path.size) {
@@ -270,6 +305,7 @@ class PhotoToDrawingConverter(
             if (lastOrNull() != path.last()) add(path.last())
         }
         if (sampled.size <= 3) return sampled
+
         val keep = BooleanArray(sampled.size)
         keep[0] = true
         keep[sampled.lastIndex] = true
@@ -313,7 +349,7 @@ class PhotoToDrawingConverter(
 
     private fun downsample(path: List<Int>, targetSize: Int): List<Int> {
         if (targetSize >= path.size) return path
-        if (targetSize < 3) return emptyList()
+        if (targetSize < 2) return emptyList()
         val result = ArrayList<Int>(targetSize)
         val step = (path.size - 1).toDouble() / (targetSize - 1).toDouble()
         for (index in 0 until targetSize) result += path[(index * step).roundToInt()]
