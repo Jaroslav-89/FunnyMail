@@ -1,24 +1,22 @@
 package com.jaroapps.funnymail.features.drawing.platform
 
 import androidx.compose.runtime.Composable
-import com.jaroapps.funnymail.features.drawing.domain.image.GrayImage
-import com.jaroapps.funnymail.features.drawing.domain.image.PortraitFeatures
+import androidx.compose.ui.graphics.ImageBitmap
 
 interface PhotoPickerLauncher {
     fun openGallery()
     fun openCamera()
 }
 
-/** Returns encoded bytes temporarily for local conversion; implementations do not persist them. */
+/** Returns encoded bytes temporarily for tracing; the caller keeps them in memory only. */
 @Composable
 expect fun rememberPhotoPicker(
     onImagePicked: (ByteArray) -> Unit,
     onError: () -> Unit,
 ): PhotoPickerLauncher
 
-/** Decode, normalize orientation and downsample the image into grayscale pixels. */
-expect suspend fun decodeImageToGrayscale(imageBytes: ByteArray, maxDimension: Int): GrayImage
-
-
-/** Runs on-device human segmentation and facial contour analysis, or returns null if unavailable. */
-expect suspend fun analyzePortraitLocally(imageBytes: ByteArray, maxDimension: Int): PortraitFeatures?
+/**
+ * Decodes and bounds a chosen image for the tracing overlay. The returned bitmap is transient
+ * UI state only and is never included in a DrawingDocument.
+ */
+expect fun decodePhotoForTracing(imageBytes: ByteArray, maxDimension: Int): ImageBitmap?
