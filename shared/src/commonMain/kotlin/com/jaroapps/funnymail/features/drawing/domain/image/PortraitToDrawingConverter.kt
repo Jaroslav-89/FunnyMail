@@ -10,9 +10,10 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
- * Turns a local person-segmentation mask into a bold outer silhouette and adds semantic face
- * contours supplied by the platform's on-device face detector. Unlike raw edge detection, this
- * converter starts from a human/person mask and named facial features, not from all image texture.
+ * Converts the V8 on-device person mask and named face landmarks into editable vector strokes.
+ * Reuses V2 post-processing choices (5x5 Gaussian-style smoothing and closing, epsilon 1.35,
+ * 8-14 px minimum semantic contour length, 5 px stroke width, and a 7,000-point budget).
+ * Edge-gradient thresholds from V2 do not apply to the model's confidence mask.
  */
 class PortraitToDrawingConverter(
     private val confidenceThreshold: Int = 145,
