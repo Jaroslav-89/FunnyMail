@@ -29,11 +29,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -64,11 +66,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jaroapps.funnymail.core.ui.AppBackButton
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
-import com.jaroapps.funnymail.features.drawing.domain.image.PortraitFeatures
+import androidx.compose.ui.graphics.ImageBitmap
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingCanvas
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
-import com.jaroapps.funnymail.features.drawing.platform.analyzePortraitLocally
+import com.jaroapps.funnymail.features.drawing.platform.decodePhotoForTracing
 import com.jaroapps.funnymail.features.drawing.platform.rememberPhotoPicker
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -195,9 +197,9 @@ fun DrawingScreen(
     var showFinishDialog by remember { mutableStateOf(false) }
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
     var isProcessingImage by remember { mutableStateOf(false) }
-    // Test-only: keep the platform model output separate from the editable DrawingDocument.
-    var rawPortraitPreview by remember(initialDrawingJson) {
-        mutableStateOf<PortraitFeatures?>(null)
+    // Temporary guide image; only strokes and canvas metadata are encoded into DrawingDocument.
+    var tracingImage by remember(initialDrawingJson) {
+        mutableStateOf<ImageBitmap?>(null)
     }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var statusIsError by remember { mutableStateOf(false) }
@@ -253,29 +255,24 @@ fun DrawingScreen(
             if (!isProcessingImage) {
                 coroutineScope.launch {
                     isProcessingImage = true
-                    rawPortraitPreview = null
                     statusMessage = null
                     try {
-                        val rawModelOutput = withContext(Dispatchers.Default) {
-                            analyzePortraitLocally(
+                        val decodedImage = withContext(Dispatchers.Default) {
+                            decodePhotoForTracing(
                                 imageBytes,
-                                maxDimension = 512,
-                            ) ?: throw IllegalStateException(
-                                "The local portrait model did not return features.",
-                            )
+                                maxDimension = 2_048,
+                            ) ?: throw IllegalStateException("The selected image could not be decoded.")
                         }
-                        // Keep the model confidence mask and face landmark coordinates unchanged.
-                        // The canvas renders these raw outputs directly instead of building strokes.
-                        rawPortraitPreview = rawModelOutput
-                        if (rawModelOutput.sourceWidth >= rawModelOutput.sourceHeight) {
+                        tracingImage = decodedImage
+                        if (decodedImage.width >= decodedImage.height) {
                             canvasWidth = 1_000
                             canvasHeight = (
-                                1_000.0 * rawModelOutput.sourceHeight / rawModelOutput.sourceWidth
+                                1_000.0 * decodedImage.height / decodedImage.width
                             ).roundToInt().coerceAtLeast(1)
                         } else {
                             canvasHeight = 1_000
                             canvasWidth = (
-                                1_000.0 * rawModelOutput.sourceWidth / rawModelOutput.sourceHeight
+                                1_000.0 * decodedImage.width / decodedImage.height
                             ).roundToInt().coerceAtLeast(1)
                         }
                         canvasAspectInitialized = true
@@ -291,7 +288,6 @@ fun DrawingScreen(
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Exception) {
-                        rawPortraitPreview = null
                         statusMessage = photoImportFailedMessage
                         statusIsError = true
                     } finally {
@@ -372,7 +368,6 @@ fun DrawingScreen(
                     }
                 }
                 .pointerInput(
-                    rawPortraitPreview,
                     paintColor,
                     brushWidth,
                     canvasSize.width,
@@ -380,7 +375,6 @@ fun DrawingScreen(
                     canvasWidth,
                     canvasHeight,
                 ) {
-                    if (rawPortraitPreview != null) return@pointerInput
                     val viewportScale = min(
                         size.width.toFloat() / canvasWidth.toFloat(),
                         size.height.toFloat() / canvasHeight.toFloat(),
@@ -438,43 +432,56 @@ fun DrawingScreen(
                     )
                 },
         ) {
-            val rawOutput = rawPortraitPreview
-            if (rawOutput != null) {
-                drawRawPortraitModelOutput(
-                    features = rawOutput,
-                    canvasWidth = canvasWidth,
-                    canvasHeight = canvasHeight,
+            drawDrawingBackground(
+                DrawingCanvas(
+                    width = canvasWidth,
+                    height = canvasHeight,
+                    backgroundColor = backgroundColor,
+                    backgroundMode = backgroundMode,
+                    gradientDirection = gradientDirection,
+                    gradientStartColor = gradientStartColor,
+                    gradientEndColor = gradientEndColor,
+                ),
+            )
+            val guideImage = tracingImage
+            if (guideImage != null) {
+                val scale = min(
+                    size.width / canvasWidth.toFloat(),
+                    size.height / canvasHeight.toFloat(),
+                ).coerceAtLeast(0.0001f)
+                val viewportWidth = canvasWidth * scale
+                val viewportHeight = canvasHeight * scale
+                val viewportLeft = (size.width - viewportWidth) / 2f
+                val viewportTop = (size.height - viewportHeight) / 2f
+                drawImage(
+                    image = guideImage,
+                    dstOffset = IntOffset(viewportLeft.roundToInt(), viewportTop.roundToInt()),
+                    dstSize = IntSize(viewportWidth.roundToInt().coerceAtLeast(1), viewportHeight.roundToInt().coerceAtLeast(1)),
                 )
-            } else {
-                drawDrawingBackground(
-                    DrawingCanvas(
-                        width = canvasWidth,
-                        height = canvasHeight,
-                        backgroundColor = backgroundColor,
-                        backgroundMode = backgroundMode,
-                        gradientDirection = gradientDirection,
-                        gradientStartColor = gradientStartColor,
-                        gradientEndColor = gradientEndColor,
-                    ),
-                )
-                val visibleStrokes = if (activePoints.isEmpty()) {
-                    strokes
-                } else {
-                    strokes + DrawingStroke(
-                        color = paintColor,
-                        width = brushWidth,
-                        points = activePoints,
-                    )
-                }
-                drawDrawingStrokes(
-                    strokes = visibleStrokes,
-                    canvasWidth = canvasWidth,
-                    canvasHeight = canvasHeight,
+                // The guide photo is intentionally ephemeral and washed out like tracing paper.
+                drawRect(
+                    color = Color.White.copy(alpha = 0.58f),
+                    topLeft = Offset(viewportLeft, viewportTop),
+                    size = Size(viewportWidth, viewportHeight),
                 )
             }
+            val visibleStrokes = if (activePoints.isEmpty()) {
+                strokes
+            } else {
+                strokes + DrawingStroke(
+                    color = paintColor,
+                    width = brushWidth,
+                    points = activePoints,
+                )
+            }
+            drawDrawingStrokes(
+                strokes = visibleStrokes,
+                canvasWidth = canvasWidth,
+                canvasHeight = canvasHeight,
+            )
         }
 
-        if (rawPortraitPreview == null && strokes.isEmpty() && activePoints.isEmpty()) {
+        if (tracingImage == null && strokes.isEmpty() && activePoints.isEmpty()) {
             Text(
                 text = stringResource(Res.string.start_drawing_here),
                 modifier = Modifier.align(Alignment.Center),
@@ -483,16 +490,16 @@ fun DrawingScreen(
             )
         }
 
-        if (rawPortraitPreview != null) {
+        if (tracingImage != null) {
             Text(
-                text = "RAW MODEL OUTPUT — постобработка отключена",
+                text = "Режим обводки · фото не сохраняется",
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 62.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(Color.White.copy(alpha = 0.94f))
                     .padding(horizontal = 10.dp, vertical = 6.dp),
-                color = Color(0xFFD93025),
+                color = Color(0xFF5F6368),
                 style = MaterialTheme.typography.labelMedium,
             )
         }
@@ -519,6 +526,19 @@ fun DrawingScreen(
                         tint = Color(0xFF202124),
                         modifier = Modifier.size(22.dp),
                     )
+                }
+
+                if (tracingImage != null) {
+                    RoundToolButton(
+                        onClick = { tracingImage = null },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Скрыть фото",
+                            tint = Color(0xFF202124),
+                            modifier = Modifier.size(21.dp),
+                        )
+                    }
                 }
 
                 RoundToolButton(
@@ -1100,65 +1120,6 @@ private fun DrawingToolGlyph(
                 drawPath(check, color, style = stroke)
             }
         }
-    }
-}
-
-/**
- * Renders model outputs for inspection only: raw person-confidence values as grayscale pixels,
- * plus the face detector's returned landmark paths. No mask thresholding, morphology, component
- * selection, contour tracing, smoothing, or point filtering is applied here.
- */
-private fun DrawScope.drawRawPortraitModelOutput(
-    features: PortraitFeatures,
-    canvasWidth: Int,
-    canvasHeight: Int,
-) {
-    drawRect(Color.White)
-
-    val scale = min(
-        size.width / canvasWidth.toFloat(),
-        size.height / canvasHeight.toFloat(),
-    ).coerceAtLeast(0.0001f)
-    val viewportWidth = canvasWidth * scale
-    val viewportHeight = canvasHeight * scale
-    val left = (size.width - viewportWidth) / 2f
-    val top = (size.height - viewportHeight) / 2f
-
-    val pixelWidth = viewportWidth / features.maskWidth
-    val pixelHeight = viewportHeight / features.maskHeight
-    for (y in 0 until features.maskHeight) {
-        for (x in 0 until features.maskWidth) {
-            val confidence = (features.personMask[y * features.maskWidth + x].toInt() and 0xFF) / 255f
-            drawRect(
-                color = Color(confidence, confidence, confidence),
-                topLeft = Offset(left + x * pixelWidth, top + y * pixelHeight),
-                size = Size(pixelWidth + 0.15f, pixelHeight + 0.15f),
-            )
-        }
-    }
-
-    // Red paths expose the face detector's model-provided landmarks, not derived edges.
-    features.faceContours.forEach { contour ->
-        if (contour.points.isEmpty()) return@forEach
-        val first = contour.points.first()
-        val path = Path().apply {
-            moveTo(
-                left + first.x.toFloat() * viewportWidth,
-                top + first.y.toFloat() * viewportHeight,
-            )
-            contour.points.drop(1).forEach { point ->
-                lineTo(
-                    left + point.x.toFloat() * viewportWidth,
-                    top + point.y.toFloat() * viewportHeight,
-                )
-            }
-            if (contour.closed) close()
-        }
-        drawPath(
-            path = path,
-            color = Color(0xFFD93025),
-            style = Stroke(width = 2f, cap = StrokeCap.Round, join = StrokeJoin.Round),
-        )
     }
 }
 
