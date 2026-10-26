@@ -97,20 +97,19 @@ actual fun rememberPhotoPicker(
 
 private data class FaceContourSpec(
     val type: Int,
-    val strokeWidth: Float,
     val closed: Boolean = false,
 )
 
 private val portraitFaceContourSpecs = listOf(
-    FaceContourSpec(FaceContour.FACE, strokeWidth = 8f, closed = true),
-    FaceContourSpec(FaceContour.LEFT_EYE, strokeWidth = 6f, closed = true),
-    FaceContourSpec(FaceContour.RIGHT_EYE, strokeWidth = 6f, closed = true),
-    FaceContourSpec(FaceContour.LEFT_EYEBROW_TOP, strokeWidth = 5f),
-    FaceContourSpec(FaceContour.RIGHT_EYEBROW_TOP, strokeWidth = 5f),
-    FaceContourSpec(FaceContour.NOSE_BRIDGE, strokeWidth = 5f),
-    FaceContourSpec(FaceContour.NOSE_BOTTOM, strokeWidth = 5f),
-    FaceContourSpec(FaceContour.UPPER_LIP_TOP, strokeWidth = 5.5f),
-    FaceContourSpec(FaceContour.LOWER_LIP_BOTTOM, strokeWidth = 5.5f),
+    FaceContourSpec(FaceContour.FACE, closed = true),
+    FaceContourSpec(FaceContour.LEFT_EYE, closed = true),
+    FaceContourSpec(FaceContour.RIGHT_EYE, closed = true),
+    FaceContourSpec(FaceContour.LEFT_EYEBROW_TOP),
+    FaceContourSpec(FaceContour.RIGHT_EYEBROW_TOP),
+    FaceContourSpec(FaceContour.NOSE_BRIDGE),
+    FaceContourSpec(FaceContour.NOSE_BOTTOM),
+    FaceContourSpec(FaceContour.UPPER_LIP_TOP),
+    FaceContourSpec(FaceContour.LOWER_LIP_BOTTOM),
 )
 
 /**
@@ -160,7 +159,7 @@ actual suspend fun analyzePortraitLocally(
                             )
                         }
                     if (points.size < 4) null else {
-                        PortraitFeatureContour(points, spec.strokeWidth, spec.closed)
+                        PortraitFeatureContour(points, spec.closed)
                     }
                 }
             }.orEmpty()
