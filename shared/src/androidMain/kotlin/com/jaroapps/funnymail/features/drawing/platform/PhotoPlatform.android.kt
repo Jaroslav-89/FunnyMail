@@ -15,7 +15,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
-import com.jaroapps.funnymail.features.drawing.domain.image.GrayImage
 import com.jaroapps.funnymail.features.drawing.domain.image.NormalizedPhotoPoint
 import com.jaroapps.funnymail.features.drawing.domain.image.PortraitFeatureContour
 import com.jaroapps.funnymail.features.drawing.domain.image.PortraitFeatures
@@ -95,82 +94,6 @@ actual fun rememberPhotoPicker(
         }
     }
 }
-
-actual suspend fun decodeImageToGrayscale(imageBytes: ByteArray, maxDimension: Int): GrayImage {
-    require(imageBytes.isNotEmpty()) { "Empty image data" }
-    require(maxDimension >= 3)
-    // Read dimensions first, then decode with inSampleSize to avoid allocating a full-resolution
-    // bitmap for a high-megapixel camera photo.
-    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, bounds)
-    require(bounds.outWidth >= 3 && bounds.outHeight >= 3) { "Unsupported image format" }
-    var sampleSize = 1
-    while (max(bounds.outWidth / sampleSize, bounds.outHeight / sampleSize) > maxDimension &&
-        sampleSize < (1 shl 15)
-    ) {
-        sampleSize *= 2
-    }
-    val decodeOptions = BitmapFactory.Options().apply { inSampleSize = sampleSize }
-    val original = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size, decodeOptions)
-        ?: error("Unsupported image format")
-
-    val orientation = runCatching {
-        ExifInterface(ByteArrayInputStream(imageBytes)).getAttributeInt(
-            ExifInterface.TAG_ORIENTATION,
-            ExifInterface.ORIENTATION_NORMAL,
-        )
-    }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
-
-    val matrix = Matrix()
-    when (orientation) {
-        ExifInterface.ORIENTATION_FLIP_HORIZONTAL -> matrix.setScale(-1f, 1f)
-        ExifInterface.ORIENTATION_ROTATE_180 -> matrix.setRotate(180f)
-        ExifInterface.ORIENTATION_FLIP_VERTICAL -> matrix.setScale(1f, -1f)
-        ExifInterface.ORIENTATION_TRANSPOSE -> {
-            matrix.setRotate(90f)
-            matrix.postScale(-1f, 1f)
-        }
-        ExifInterface.ORIENTATION_ROTATE_90 -> matrix.setRotate(90f)
-        ExifInterface.ORIENTATION_TRANSVERSE -> {
-            matrix.setRotate(-90f)
-            matrix.postScale(-1f, 1f)
-        }
-        ExifInterface.ORIENTATION_ROTATE_270 -> matrix.setRotate(-90f)
-    }
-
-    val oriented = if (orientation == ExifInterface.ORIENTATION_NORMAL ||
-        orientation == ExifInterface.ORIENTATION_UNDEFINED
-    ) original else Bitmap.createBitmap(
-        original, 0, 0, original.width, original.height, matrix, true,
-    ).also { transformed ->
-        if (transformed !== original) original.recycle()
-    }
-
-    val factor = minOf(1f, maxDimension.toFloat() / max(oriented.width, oriented.height).toFloat())
-    val targetWidth = (oriented.width * factor).roundToInt().coerceAtLeast(3)
-    val targetHeight = (oriented.height * factor).roundToInt().coerceAtLeast(3)
-    val scaled = if (targetWidth != oriented.width || targetHeight != oriented.height) {
-        Bitmap.createScaledBitmap(oriented, targetWidth, targetHeight, true).also {
-            if (it !== oriented) oriented.recycle()
-        }
-    } else oriented
-
-    return try {
-        val argb = IntArray(targetWidth * targetHeight)
-        scaled.getPixels(argb, 0, targetWidth, 0, 0, targetWidth, targetHeight)
-        val gray = IntArray(argb.size) { index ->
-            val color = argb[index]
-            val red = (color shr 16) and 0xFF
-            val green = (color shr 8) and 0xFF
-            val blue = color and 0xFF
-            (red * 299 + green * 587 + blue * 114) / 1_000
-        }
-        GrayImage(targetWidth, targetHeight, gray)
-    } finally {
-        scaled.recycle()
-    }
-}
-
 
 private data class FaceContourSpec(
     val type: Int,
