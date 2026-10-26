@@ -4,5 +4,9 @@
 <dict>
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
+    <key>NSCameraUsageDescription</key>
+    <string>FunnyMail uses the camera to turn a photo into a drawing.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>FunnyMail accesses a selected photo only to turn it into a drawing on your device.</string>
 </dict>
 </plist>
