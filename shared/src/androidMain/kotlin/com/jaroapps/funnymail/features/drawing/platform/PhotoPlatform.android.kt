@@ -181,7 +181,7 @@ actual suspend fun analyzePortraitLocally(
     } catch (cancelled: CancellationException) {
         throw cancelled
     } catch (_: Exception) {
-        // Let the shared drawing screen fall back to the classic local edge converter.
+        // The shared screen reports an import error; this branch has no classical conversion fallback.
         null
     } finally {
         faceDetector.close()
