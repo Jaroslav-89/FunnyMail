@@ -1,7 +1,7 @@
 package com.jaroapps.funnymail.features.drawing.platform
 
 import androidx.compose.runtime.Composable
-import com.jaroapps.funnymail.features.drawing.domain.image.PortraitFeatures
+import com.jaroapps.funnymail.features.drawing.domain.image.GrayImage
 
 interface PhotoPickerLauncher {
     fun openGallery()
@@ -15,5 +15,5 @@ expect fun rememberPhotoPicker(
     onError: () -> Unit,
 ): PhotoPickerLauncher
 
-/** Runs on-device human segmentation and facial contour analysis, or returns null if unavailable. */
-expect suspend fun analyzePortraitLocally(imageBytes: ByteArray, maxDimension: Int): PortraitFeatures?
+/** Decodes a selected photo into a bounded grayscale buffer for local edge detection. */
+expect suspend fun decodePhotoToGrayscale(imageBytes: ByteArray, maxDimension: Int): GrayImage?
