@@ -2,11 +2,12 @@
 
 V12 is based on the classic V10 detector. It does not use a neural model.
 
-## Match the “Карта найденных границ” preview
+## Keep contours compact while preserving their shape
 
 - Vectorization uses the same grouped preview grid and maximum edge strength per cell as the diagnostic map.
-- No minimum contour-length filtering, path simplification, or point downsampling is applied.
-- Short contours and isolated edge cells remain in the drawing.
+- Connected edge cells are traced into editable polylines. Long paths use iterative Ramer–Douglas–Peucker simplification with a one-preview-cell tolerance, retaining endpoints and important bends while removing raster stair-steps.
+- For isolated edge cells only, the weakest 20% are removed; cells connected to a contour are not removed by that noise filter. With fewer than five isolated cells, the integer 20% budget removes none.
+- Stroke width is 2.6 canvas units, increased from 2.0 to make simplified contours read more clearly.
 - The document retains the source photo's aspect ratio and uses editable vector strokes.
 
 ## Drawing size and limits
