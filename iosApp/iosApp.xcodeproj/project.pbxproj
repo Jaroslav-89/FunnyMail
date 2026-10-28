@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		5A149E345EA665F39586E244 /* KotlinMultiplatformLinkedPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 8136108C69DF83C544AA71F8 /* KotlinMultiplatformLinkedPackage */; };
+		8A7B6C5D4E3F2A190123456A /* onnxruntime in Frameworks */ = {isa = PBXBuildFile; productRef = 8A7B6C5D4E3F2A1901234568 /* onnxruntime */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -54,6 +55,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5A149E345EA665F39586E244 /* KotlinMultiplatformLinkedPackage in Frameworks */,
+				8A7B6C5D4E3F2A190123456A /* onnxruntime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -99,6 +101,7 @@
 			name = iosApp;
 			packageProductDependencies = (
 				8136108C69DF83C544AA71F8 /* KotlinMultiplatformLinkedPackage */,
+				8A7B6C5D4E3F2A1901234568 /* onnxruntime */,
 			);
 			productName = iosApp;
 			productReference = B056BBCE458E8552D202E8F6 /* FunnyMail.app */;
@@ -130,6 +133,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				6732C05954CBAB6909848065 /* XCLocalSwiftPackageReference "KotlinMultiplatformLinkedPackage" */,
+				8A7B6C5D4E3F2A1901234569 /* XCRemoteSwiftPackageReference "onnxruntime-swift-package-manager" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = F3A7D6FEF17DF9518A692CB9 /* Products */;
@@ -393,10 +397,26 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		8A7B6C5D4E3F2A1901234569 /* XCRemoteSwiftPackageReference "onnxruntime-swift-package-manager" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/microsoft/onnxruntime-swift-package-manager";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.24.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		8136108C69DF83C544AA71F8 /* KotlinMultiplatformLinkedPackage */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = KotlinMultiplatformLinkedPackage;
+		};
+		8A7B6C5D4E3F2A1901234568 /* onnxruntime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8A7B6C5D4E3F2A1901234569 /* XCRemoteSwiftPackageReference "onnxruntime-swift-package-manager" */;
+			productName = onnxruntime;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
