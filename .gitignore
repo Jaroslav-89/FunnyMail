@@ -23,3 +23,8 @@ androidApp/google-services.json
 iosApp/iosApp/GoogleService-Info.plist
 # Firebase iOS configuration files (including duplicate downloads)
 iosApp/GoogleService-Info*.plist
+
+# DexiNed is fetched and checksum-verified during Android/iOS builds, then bundled in the app.
+shared/src/androidMain/assets/edge_detection_dexined_2024sep.onnx
+shared/src/androidMain/assets/edge_detection_dexined_2024sep.onnx.download
+shared/src/androidMain/assets/edge_detection_dexined_2024sep.onnx.copying
