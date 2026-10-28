@@ -7,11 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		ABCD1234ABCD1234ABCD1234 /* edge_detection_dexined_2024sep.onnx in Resources */ = {isa = PBXBuildFile; fileRef = DCBA4321DCBA4321DCBA4321 /* edge_detection_dexined_2024sep.onnx */; };
 		5A149E345EA665F39586E244 /* KotlinMultiplatformLinkedPackage in Frameworks */ = {isa = PBXBuildFile; productRef = 8136108C69DF83C544AA71F8 /* KotlinMultiplatformLinkedPackage */; };
 		8A7B6C5D4E3F2A190123456A /* onnxruntime in Frameworks */ = {isa = PBXBuildFile; productRef = 8A7B6C5D4E3F2A1901234568 /* onnxruntime */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		DCBA4321DCBA4321DCBA4321 /* edge_detection_dexined_2024sep.onnx */ = {isa = PBXFileReference; lastKnownFileType = file; path = ../shared/src/androidMain/assets/edge_detection_dexined_2024sep.onnx; sourceTree = "<group>"; };
 		B056BBCE458E8552D202E8F6 /* FunnyMail.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FunnyMail.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -66,6 +68,7 @@
 			isa = PBXGroup;
 			children = (
 				4F793B044DB5AA2D50F478A0 /* Configuration */,
+				DCBA4321DCBA4321DCBA4321 /* edge_detection_dexined_2024sep.onnx */,
 				02904837036940B5736EAF9F /* iosApp */,
 				F3A7D6FEF17DF9518A692CB9 /* Products */,
 			);
@@ -89,6 +92,7 @@
 				4996151E89FF3DE160ACC387 /* Compile Kotlin Framework */,
 				9255BF987D07D33F1EE46B16 /* Sources */,
 				96BDF44EEBE5D534169BF27E /* Frameworks */,
+				F00DBA5E0000111122223333 /* Prepare DexiNed model resource */,
 				D0EE7ACA520FAFC361B9DC04 /* Resources */,
 			);
 			buildRules = (
@@ -150,12 +154,32 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				ABCD1234ABCD1234ABCD1234 /* edge_detection_dexined_2024sep.onnx in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		F00DBA5E0000111122223333 /* Prepare DexiNed model resource */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Prepare DexiNed model resource";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "set -e\nMODEL_PATH=\"$SRCROOT/../shared/src/androidMain/assets/edge_detection_dexined_2024sep.onnx\"\nEXPECTED_SHA=\"a50d01dc8481549c7dedb9eb3e0123b810a016520df75e4669a504609982cdd0\"\nMODEL_URL=\"https://huggingface.co/opencv/edge_detection_dexined/resolve/main/edge_detection_dexined_2024sep.onnx\"\n\nif [ -f \"$MODEL_PATH\" ]; then\n  ACTUAL_SHA=\"$(shasum -a 256 \"$MODEL_PATH\" | awk '{print $1}')\"\nelse\n  ACTUAL_SHA=\"\"\nfi\nif [ \"$ACTUAL_SHA\" = \"$EXPECTED_SHA\" ]; then\n  echo \"DexiNed model already verified.\"\n  exit 0\nfi\n\nmkdir -p \"$(dirname \"$MODEL_PATH\")\"\nTEMP_PATH=\"${MODEL_PATH}.download\"\nrm -f \"$TEMP_PATH\"\ncurl -L --fail --retry 2 --connect-timeout 20 --output \"$TEMP_PATH\" \"$MODEL_URL\"\nACTUAL_SHA=\"$(shasum -a 256 \"$TEMP_PATH\" | awk '{print $1}')\"\nif [ \"$ACTUAL_SHA\" != \"$EXPECTED_SHA\" ]; then\n  rm -f \"$TEMP_PATH\"\n  echo \"error: DexiNed model SHA-256 verification failed.\" >&2\n  exit 1\nfi\nmv -f \"$TEMP_PATH\" \"$MODEL_PATH\"\necho \"DexiNed model verified and ready to be bundled.\"\n";
+		};
 		4996151E89FF3DE160ACC387 /* Compile Kotlin Framework */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
