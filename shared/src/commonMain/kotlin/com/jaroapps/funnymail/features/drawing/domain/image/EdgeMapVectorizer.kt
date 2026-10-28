@@ -31,7 +31,7 @@ class EdgeMapVectorizer(
             strength > 0 && strength >= settings.minimumEdgeStrength
         }
         discardWeakIsolatedCells(
-            edgePixels = edgePixels,
+            edges = edgePixels,
             strengths = displayMap.strength,
             width = width,
             height = height,

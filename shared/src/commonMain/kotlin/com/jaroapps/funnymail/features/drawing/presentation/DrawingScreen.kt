@@ -566,7 +566,7 @@ fun DrawingScreen(
                                     lineToolEnabled -> {
                                         pendingLinePoints = when (pendingLinePoints.size) {
                                             0 -> listOf(point)
-                                            1 -> pendingLinePoints + point
+                                            1 -> pendingLinePoints + listOf(point)
                                             else -> listOf(pendingLinePoints.first(), point)
                                         }
                                         statusMessage = if (pendingLinePoints.size < 2) {
