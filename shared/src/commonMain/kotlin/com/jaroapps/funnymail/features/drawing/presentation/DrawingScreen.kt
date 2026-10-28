@@ -223,6 +223,7 @@ fun DrawingScreen(
     var editorTextUnderline by remember { mutableStateOf(false) }
     var photoMode by remember { mutableStateOf("CONTOURS") }
     var contourStrokes by remember { mutableStateOf<List<DrawingStroke>>(emptyList()) }
+    var tracingStrokes by remember { mutableStateOf<List<DrawingStroke>>(emptyList()) }
     var redoStrokes by remember(effectiveInitialDrawingJson) { mutableStateOf<List<DrawingStroke>>(emptyList()) }
     var savedDrawingJson by remember(effectiveInitialDrawingJson) { mutableStateOf(effectiveInitialDrawingJson) }
     var isSaving by remember { mutableStateOf(false) }
@@ -373,6 +374,7 @@ fun DrawingScreen(
                         val convertedDrawing = converted.document
                         sourceGrayImage = converted.sourceImage
                         contourStrokes = convertedDrawing.strokes
+                        tracingStrokes = emptyList()
                         photoMode = "CONTOURS"
                         appliedPhotoQualitySettings = settingsForImport
                         diagnosticEdgeMap = converted.edgeMap
@@ -683,8 +685,7 @@ fun DrawingScreen(
                                 }
                                 // Quality controls regenerate the whole photo-derived vector.
                                 // Close them before a manual stroke can be added or overwritten.
-                                if (photoMode != "TRACE") sourceGrayImage = null
-                                showPhotoQualitySettings = false
+                                                                showPhotoQualitySettings = false
                             }
                             isDrawingGestureActive = false
                             activePoints = emptyList()
@@ -851,8 +852,7 @@ fun DrawingScreen(
                         if (strokes.isNotEmpty()) {
                             redoStrokes = redoStrokes + strokes.last()
                             strokes = strokes.dropLast(1)
-                            if (photoMode != "TRACE") sourceGrayImage = null
-                            showPhotoQualitySettings = false
+                                                        showPhotoQualitySettings = false
                             statusMessage = null
                         }
                     },
@@ -870,8 +870,7 @@ fun DrawingScreen(
                         if (redoStrokes.isNotEmpty()) {
                             strokes = strokes + redoStrokes.last()
                             redoStrokes = redoStrokes.dropLast(1)
-                            if (photoMode != "TRACE") sourceGrayImage = null
-                            showPhotoQualitySettings = false
+                                                        showPhotoQualitySettings = false
                             statusMessage = null
                         }
                     },
@@ -933,8 +932,8 @@ fun DrawingScreen(
                     onClick = {
                         if (photoMode != "TRACE") {
                             contourStrokes = strokes
-                            strokes = emptyList()
                             photoMode = "TRACE"
+                            strokes = tracingStrokes
                             showPhotoQualitySettings = false
                             statusMessage = "Калька: рисуйте поверх полупрозрачной фотографии"
                         }
@@ -944,6 +943,7 @@ fun DrawingScreen(
                     background = if (photoMode == "CONTOURS") Color(0xFFFFF0C2) else Color.White,
                     onClick = {
                         if (photoMode != "CONTOURS") {
+                            tracingStrokes = strokes
                             photoMode = "CONTOURS"
                             strokes = contourStrokes
                             showPhotoQualitySettings = false
