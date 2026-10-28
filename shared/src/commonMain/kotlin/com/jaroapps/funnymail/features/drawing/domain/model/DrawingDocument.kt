@@ -14,6 +14,9 @@ data class DrawingDocument(
     val version: Int = CURRENT_VERSION,
     val canvas: DrawingCanvas = DrawingCanvas(),
     val strokes: List<DrawingStroke> = emptyList(),
+    /** Optional short caption shown under this drawing in chat. */
+    val title: String = "",
+    val caption: String = "",
 ) {
     companion object {
         const val CURRENT_VERSION: Int = 1
