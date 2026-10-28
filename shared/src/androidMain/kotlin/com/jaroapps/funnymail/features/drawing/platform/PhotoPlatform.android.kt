@@ -281,7 +281,7 @@ private object DexiNedRuntime {
             FloatBuffer.wrap(tensorData),
             longArrayOf(1, 3, INPUT_SIZE.toLong(), INPUT_SIZE.toLong()),
         )
-        inputTensor.use {
+        return inputTensor.use {
             val outputNames = session.outputNames.toList()
             val result = session.run(mapOf(inputName to inputTensor), outputNames.toSet())
             result.use { outputs ->
