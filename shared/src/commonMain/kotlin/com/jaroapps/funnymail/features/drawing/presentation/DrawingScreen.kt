@@ -573,8 +573,8 @@ fun DrawingScreen(
                             if (isDrawingGestureActive && activePoints.isNotEmpty()) {
                                 if (eraserEnabled) {
                                     val eraseRadius = (brushWidth.toDouble() / min(canvasWidth, canvasHeight).coerceAtLeast(1)) * 1.8
-                                    val erased = strokes.filter { stroke ->
-                                        stroke.points.any { point ->
+                                    val erasedIndices = strokes.indices.filter { strokeIndex ->
+                                        strokes[strokeIndex].points.any { point ->
                                             activePoints.any { eraserPoint ->
                                                 val dx = point[0] - eraserPoint[0]
                                                 val dy = point[1] - eraserPoint[1]
@@ -582,9 +582,9 @@ fun DrawingScreen(
                                             }
                                         }
                                     }
-                                    if (erased.isNotEmpty()) {
-                                        redoStrokes = redoStrokes + erased
-                                        strokes = strokes - erased.toSet()
+                                    if (erasedIndices.isNotEmpty()) {
+                                        redoStrokes = redoStrokes + erasedIndices.map { strokes[it] }
+                                        strokes = strokes.filterIndexed { index, _ -> index !in erasedIndices }
                                     }
                                 } else {
                                     strokes = strokes + DrawingStroke(
