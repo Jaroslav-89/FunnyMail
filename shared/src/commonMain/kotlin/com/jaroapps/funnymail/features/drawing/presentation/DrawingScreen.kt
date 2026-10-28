@@ -43,6 +43,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Slider
@@ -202,6 +203,8 @@ fun DrawingScreen(
     var isSending by remember { mutableStateOf(false) }
     var activePoints by remember { mutableStateOf<List<List<Double>>>(emptyList()) }
     var selectedColor by remember(initialDrawingJson) { mutableStateOf("#000000") }
+    var drawingTitle by remember(initialDrawingJson) { mutableStateOf(initialDrawing?.title.orEmpty().take(20)) }
+    var drawingCaption by remember(initialDrawingJson) { mutableStateOf(initialDrawing?.caption.orEmpty().take(80)) }
     var brushWidth by remember { mutableStateOf(12f) }
     var eraserEnabled by remember { mutableStateOf(false) }
     var activePopup by remember { mutableStateOf<DrawingPopup?>(null) }
@@ -261,6 +264,8 @@ fun DrawingScreen(
         strokes,
         canvasWidth,
         canvasHeight,
+        drawingTitle,
+        drawingCaption,
         backgroundMode,
         backgroundColor,
         gradientDirection,
@@ -281,6 +286,8 @@ fun DrawingScreen(
                     gradientEndColor = gradientEndColor,
                 ),
                 strokes = strokes,
+                title = drawingTitle,
+                caption = drawingCaption,
             )
         }
     }
@@ -1303,7 +1310,26 @@ fun DrawingScreen(
             containerColor = Color.White,
             titleContentColor = Color(0xFF202124),
             textContentColor = Color(0xFF202124),
-            text = { Text(stringResource(Res.string.finish_drawing_hint)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(stringResource(Res.string.finish_drawing_hint))
+                    OutlinedTextField(
+                        value = drawingTitle,
+                        onValueChange = { drawingTitle = it.take(20) },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        label = { Text("Заголовок (до 20 символов)") },
+                        supportingText = { Text("${drawingTitle.length}/20") },
+                    )
+                    OutlinedTextField(
+                        value = drawingCaption,
+                        onValueChange = { drawingCaption = it.take(80) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Подпись (до 80 символов)") },
+                        supportingText = { Text("${drawingCaption.length}/80") },
+                    )
+                }
+            },
             confirmButton = {
                 Column(
                     horizontalAlignment = Alignment.End,
