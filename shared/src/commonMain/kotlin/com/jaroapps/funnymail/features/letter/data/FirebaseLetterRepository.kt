@@ -213,6 +213,6 @@ class FirebaseLetterRepository(
         const val LETTERS_COLLECTION = "letters"
         const val LETTER_TTL_MILLIS = 7L * 24L * 60L * 60L * 1_000L
         const val QUERY_CLOCK_SAFETY_MILLIS = 6L * 60L * 1_000L
-        const val MAX_DRAWING_JSON_BYTES = 256 * 1_024
+        const val MAX_DRAWING_JSON_BYTES = 250 * 1_024
     }
 }
