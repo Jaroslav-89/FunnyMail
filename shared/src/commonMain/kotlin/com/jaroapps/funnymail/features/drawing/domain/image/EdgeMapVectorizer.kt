@@ -66,8 +66,9 @@ class EdgeMapVectorizer(
             val strokeColor = "#$grayHex$grayHex$grayHex"
             strokes += DrawingStroke(
                 color = strokeColor,
-                // The map preview is pixel-thin. Keep the vectorized result thin as well.
-                width = 1.0f,
+                // Use two display pixels for map-derived contours: one pixel looked too faint
+                // compared with the "Карта найденных границ" preview.
+                width = 2.0f,
                 points = normalized,
             )
             pointCount += normalized.size
