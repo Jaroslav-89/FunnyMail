@@ -56,7 +56,7 @@ class EdgeMapVectorizer(
                 )
             }
             val strength = (candidate.averageStrength / 255.0).coerceIn(0.0, 1.0)
-            val lineWidth = (0.75 + strength * 0.8).toFloat()
+            val lineWidth = (2.0 + strength * 1.5).toFloat()
             strokes += DrawingStroke(
                 color = "#202124",
                 width = lineWidth,
