@@ -17,6 +17,7 @@ import kotlin.math.roundToInt
 class EdgeMapVectorizer(
     private val maxStrokes: Int = 120_000,
     private val maxPoints: Int = 500_000,
+    private val settings: PhotoSketchSettings = PhotoSketchSettings(),
 ) {
     fun convert(edgeMap: EdgeMap): DrawingDocument {
         // The diagnostic map shows the maximum edge strength in each display cell. Vectorize
@@ -26,19 +27,28 @@ class EdgeMapVectorizer(
         val width = displayMap.width
         val height = displayMap.height
         val edgePixels = BooleanArray(displayMap.strength.size) {
-            (displayMap.strength[it].toInt() and 0xFF) > 0
+            val strength = displayMap.strength[it].toInt() and 0xFF
+            strength > 0 && strength >= settings.minimumEdgeStrength
         }
-        discardWeakIsolatedCells(edgePixels, displayMap.strength, width, height)
-        val rawPaths = tracePaths(edgePixels, width, height)
-        val candidates = rawPaths.map { raw ->
+        discardWeakIsolatedCells(
+            edgePixels = edgePixels,
+            strengths = displayMap.strength,
+            width = width,
+            height = height,
+            removalPercent = settings.isolatedPointRemovalPercent,
+        )
+        val rawPaths = if (settings.mergePointsIntoLines) {
+            tracePaths(edgePixels, width, height)
+        } else {
+            edgePixels.indices.filter { edgePixels[it] }.map { listOf(it) }
+        }
+        val rawCandidates = rawPaths.map { raw ->
             val averageStrength = raw
                 .map { displayMap.strength[it].toInt() and 0xFF }
                 .average()
-            Candidate(simplifyPath(raw, width), averageStrength)
+            Candidate(raw, averageStrength)
         }
-
-        // Apply geometry reduction before checking limits. Remaining strokes/points are never
-        // dropped merely to make the document fit its persistence limits.
+        val candidates = simplifyToBudget(rawCandidates, width)
         val pointCount = candidates.sumOf { it.points.size }
         require(candidates.size <= maxStrokes) {
             "Карта содержит ${candidates.size} контуров — это превышает лимит $maxStrokes. Детали не были удалены."
@@ -74,7 +84,7 @@ class EdgeMapVectorizer(
                 color = strokeColor,
                 // Use two display pixels for map-derived contours: one pixel looked too faint
                 // compared with the "Карта найденных границ" preview.
-                width = 2.6f,
+                width = settings.strokeWidth,
                 points = normalized,
             )
         }
@@ -106,19 +116,71 @@ class EdgeMapVectorizer(
     )
 
     /**
-     * Drops only the weakest fifth of truly isolated edge cells. Isolated cells are those with no
-     * 8-connected edge neighbour; cells attached to contours are never removed by this pass.
+     * Simplifies paths more aggressively when needed to hit the requested point budget.
+     * If even very aggressive simplification cannot reach the budget (for example, because there
+     * are thousands of tiny contours), weak/short paths are dropped only as a last resort.
+     */
+    private fun simplifyToBudget(raw: List<Candidate>, width: Int): List<Candidate> {
+        val pointBudget = settings.maxPoints.coerceAtMost(maxPoints)
+        val strokeBudget = min(maxStrokes, pointBudget)
+        if (raw.isEmpty()) return emptyList()
+
+        fun simplify(tolerance: Double): List<Candidate> = raw.map { candidate ->
+            candidate.copy(points = simplifyPath(candidate.points, width, tolerance))
+        }
+
+        var tolerance = settings.simplificationTolerance
+        var candidates = simplify(tolerance)
+        var pointCount = candidates.sumOf { it.points.size }
+        var attempt = 0
+        while ((pointCount > pointBudget || candidates.size > strokeBudget) &&
+            tolerance < MAX_AUTO_SIMPLIFICATION_TOLERANCE && attempt < MAX_AUTO_SIMPLIFICATION_ATTEMPTS
+        ) {
+            tolerance = if (tolerance <= 0.0) 0.25 else (tolerance * 1.5).coerceAtMost(
+                MAX_AUTO_SIMPLIFICATION_TOLERANCE,
+            )
+            candidates = simplify(tolerance)
+            pointCount = candidates.sumOf { it.points.size }
+            attempt++
+        }
+
+        if (pointCount <= pointBudget && candidates.size <= strokeBudget) return candidates
+
+        // The point budget is an explicit editor setting. Keep the visually strongest paths first
+        // and omit weaker paths only when simplification alone cannot meet the selected budget.
+        val ranked = candidates.sortedWith(
+            compareByDescending<Candidate> { it.averageStrength * it.points.size }
+                .thenByDescending { it.averageStrength }
+                .thenByDescending { it.points.size },
+        )
+        val kept = ArrayList<Candidate>()
+        var remainingPoints = pointBudget
+        var remainingStrokes = strokeBudget
+        for (candidate in ranked) {
+            if (remainingStrokes == 0) break
+            if (candidate.points.size > remainingPoints) continue
+            kept += candidate
+            remainingPoints -= candidate.points.size
+            remainingStrokes--
+        }
+        return kept
+    }
+
+    /**
+     * Removes the selected percentage of weakest truly isolated edge cells. Cells attached to a
+     * contour are not removed by this filter.
      */
     private fun discardWeakIsolatedCells(
         edges: BooleanArray,
         strengths: ByteArray,
         width: Int,
         height: Int,
+        removalPercent: Int,
     ) {
         val isolated = edges.indices.filter { index ->
             edges[index] && neighbours(index, width, height, edges).isEmpty()
         }
-        val discardCount = isolated.size / 5
+        val discardCount = isolated.size * removalPercent.coerceIn(0, 80) / 100
         if (discardCount == 0) return
         isolated
             .sortedWith(compareBy<Int> { strengths[it].toInt() and 0xFF }.thenBy { it })
@@ -130,8 +192,8 @@ class EdgeMapVectorizer(
      * Simplifies long paths in display-cell coordinates, not normalized canvas coordinates.
      * This makes the tolerance meaningful (one preview-map cell) regardless of photo aspect ratio.
      */
-    private fun simplifyPath(path: List<Int>, width: Int): List<Int> {
-        if (path.size <= 4) return path
+    private fun simplifyPath(path: List<Int>, width: Int, tolerance: Double): List<Int> {
+        if (tolerance <= 0.0 || path.size <= 4) return path
 
         // RDP's endpoints are identical on a closed loop, so split the loop at the vertex farthest
         // from its start and simplify both halves independently to preserve the loop's shape.
@@ -147,28 +209,28 @@ class EdgeMapVectorizer(
             } ?: return path
             if (pivotIndex == 0) return path
 
-            val firstHalf = simplifyOpenPath(loop.subList(0, pivotIndex + 1), width)
+            val firstHalf = simplifyOpenPath(loop.subList(0, pivotIndex + 1), width, tolerance)
             val secondHalf = ArrayList<Int>(loop.size - pivotIndex + 1)
             for (i in pivotIndex until loop.size) secondHalf += loop[i]
             secondHalf += loop.first()
-            val simplifiedSecond = simplifyOpenPath(secondHalf, width)
+            val simplifiedSecond = simplifyOpenPath(secondHalf, width, tolerance)
             return firstHalf + simplifiedSecond.drop(1)
         }
-        return simplifyOpenPath(path, width)
+        return simplifyOpenPath(path, width, tolerance)
     }
 
     /**
      * Iterative Ramer–Douglas–Peucker simplification. A 1-cell tolerance removes raster stair-steps
      * along nearly straight lines but retains meaningful corners and wider contour turns.
      */
-    private fun simplifyOpenPath(path: List<Int>, width: Int): List<Int> {
+    private fun simplifyOpenPath(path: List<Int>, width: Int, tolerance: Double): List<Int> {
         if (path.size <= 3) return path
         val keep = BooleanArray(path.size)
         keep[0] = true
         keep[path.lastIndex] = true
         val pending = ArrayList<Pair<Int, Int>>()
         pending += 0 to path.lastIndex
-        val toleranceSquared = SIMPLIFICATION_TOLERANCE * SIMPLIFICATION_TOLERANCE
+        val toleranceSquared = tolerance * tolerance
 
         while (pending.isNotEmpty()) {
             val (firstIndex, lastIndex) = pending.removeAt(pending.lastIndex)
@@ -354,6 +416,7 @@ class EdgeMapVectorizer(
         (value * 10_000.0).roundToInt().coerceIn(0, 10_000) / 10_000.0
 
     private companion object {
-        const val SIMPLIFICATION_TOLERANCE = 1.0
+        const val MAX_AUTO_SIMPLIFICATION_TOLERANCE = 64.0
+        const val MAX_AUTO_SIMPLIFICATION_ATTEMPTS = 16
     }
 }
