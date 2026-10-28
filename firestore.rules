@@ -176,7 +176,7 @@ service cloud.firestore {
         && request.resource.data.authorUserId == request.auth.uid
         && request.resource.data.drawingJson is string
         && request.resource.data.drawingJson.size() > 0
-        && request.resource.data.drawingJson.size() <= 262144
+        && request.resource.data.drawingJson.size() <= 256000
         && request.resource.data.createdAt == request.time
         && request.resource.data.expiresAt is timestamp
         && request.resource.data.expiresAt
