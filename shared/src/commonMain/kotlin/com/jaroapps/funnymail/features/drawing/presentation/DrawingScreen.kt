@@ -527,17 +527,26 @@ fun DrawingScreen(
                     )
                 }
 
-                RoundToolButton(
-                    enabled = !isProcessingImage,
-                    onClick = {
-                        useDexiNed = !useDexiNed
-                        statusMessage = if (useDexiNed) {
-                            "Режим DexiNed: первая загрузка модели может занять время."
-                        } else {
-                            "Режим классического детектора."
-                        }
-                        statusIsError = false
-                    },
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(Color.White)
+                        .border(
+                            1.dp,
+                            if (useDexiNed) Color(0xFF188038) else Color(0xFFDADCE0),
+                            CircleShape,
+                        )
+                        .clickable(enabled = !isProcessingImage) {
+                            useDexiNed = !useDexiNed
+                            statusMessage = if (useDexiNed) {
+                                "DexiNed: первая загрузка модели (~47 МБ) может занять время."
+                            } else {
+                                "Режим классического детектора."
+                            }
+                            statusIsError = false
+                        },
+                    contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         if (useDexiNed) "AI" else "CV",
@@ -547,10 +556,16 @@ fun DrawingScreen(
                 }
 
                 if (diagnosticEdgeMap != null) {
-                    RoundToolButton(
-                        onClick = { showEdgeMapPreview = true },
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(Color.White)
+                            .border(1.dp, Color(0xFFDADCE0), CircleShape)
+                            .clickable { showEdgeMapPreview = true },
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Text("Карта", color = Color(0xFF202124), fontSize = 9.sp)
+                        Text("Карта", color = Color(0xFF202124), fontSize = 8.sp)
                     }
                 }
 
