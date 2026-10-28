@@ -295,10 +295,13 @@ fun DrawingScreen(
                     } catch (error: CancellationException) {
                         throw error
                     } catch (error: Exception) {
-                        statusMessage = if (error is NoContoursFoundException) {
-                            photoNoContoursMessage
-                        } else {
-                            photoImportFailedMessage
+                        val detailLimitMessage = error.message?.takeIf {
+                            it.startsWith("Карта содержит") || it.startsWith("Рисунок слишком большой")
+                        }
+                        statusMessage = when {
+                            error is NoContoursFoundException -> photoNoContoursMessage
+                            detailLimitMessage != null -> detailLimitMessage
+                            else -> photoImportFailedMessage
                         }
                         statusIsError = true
                     } finally {
