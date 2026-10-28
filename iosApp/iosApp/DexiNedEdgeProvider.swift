@@ -35,17 +35,37 @@ final class DexiNedEdgeProvider: NSObject, NeuralEdgeInferenceProvider {
             // Match the OpenCV Zoo reference preprocessing: NCHW, 512x512, scale 1.0,
             // B/G/R channels with means 103.5, 116.2, 123.6. V11's shared input is grayscale,
             // so luminance is replicated into the three channels before mean subtraction.
-            var inputFloats = [Float](repeating: 0, count: 3 * inputPixelCount)
             let means: [Float] = [103.5, 116.2, 123.6]
+            var resizedLuminance = [Float](repeating: 0, count: inputPixelCount)
+            for y in 0..<inputSize {
+                let sourceY = min(
+                    Double(height - 1),
+                    max(0, (Double(y) + 0.5) * Double(height) / Double(inputSize) - 0.5)
+                )
+                let y0 = Int(sourceY)
+                let y1 = min(height - 1, y0 + 1)
+                let fy = Float(sourceY - Double(y0))
+                for x in 0..<inputSize {
+                    let sourceX = min(
+                        Double(width - 1),
+                        max(0, (Double(x) + 0.5) * Double(width) / Double(inputSize) - 0.5)
+                    )
+                    let x0 = Int(sourceX)
+                    let x1 = min(width - 1, x0 + 1)
+                    let fx = Float(sourceX - Double(x0))
+                    let top = Float(image.pixels.get(index: Int32(y0 * width + x0))) * (1 - fx) +
+                        Float(image.pixels.get(index: Int32(y0 * width + x1))) * fx
+                    let bottom = Float(image.pixels.get(index: Int32(y1 * width + x0))) * (1 - fx) +
+                        Float(image.pixels.get(index: Int32(y1 * width + x1))) * fx
+                    resizedLuminance[y * inputSize + x] = top * (1 - fy) + bottom * fy
+                }
+            }
+
+            var inputFloats = [Float](repeating: 0, count: 3 * inputPixelCount)
             for channel in 0..<3 {
                 let channelOffset = channel * inputPixelCount
-                for y in 0..<inputSize {
-                    let sourceY = min(height - 1, y * height / inputSize)
-                    for x in 0..<inputSize {
-                        let sourceX = min(width - 1, x * width / inputSize)
-                        let luminance = Float(image.pixels.get(index: Int32(sourceY * width + sourceX)))
-                        inputFloats[channelOffset + y * inputSize + x] = luminance - means[channel]
-                    }
+                for index in 0..<inputPixelCount {
+                    inputFloats[channelOffset + index] = resizedLuminance[index] - means[channel]
                 }
             }
 
@@ -107,11 +127,29 @@ final class DexiNedEdgeProvider: NSObject, NeuralEdgeInferenceProvider {
             let outputHeight = max(3, Int((Double(height) * scale).rounded()))
             let bytes = KotlinByteArray(size: Int32(outputWidth * outputHeight))
             for y in 0..<outputHeight {
-                let sourceY = min(inputSize - 1, y * inputSize / outputHeight)
+                let sourceY = min(
+                    Double(inputSize - 1),
+                    max(0, (Double(y) + 0.5) * Double(inputSize) / Double(outputHeight) - 0.5)
+                )
+                let y0 = Int(sourceY)
+                let y1 = min(inputSize - 1, y0 + 1)
+                let fy = Float(sourceY - Double(y0))
                 for x in 0..<outputWidth {
-                    let sourceX = min(inputSize - 1, x * inputSize / outputWidth)
-                    let value = confidence512[sourceY * inputSize + sourceX]
-                    bytes.set(index: Int32(y * outputWidth + x), value: Int8(bitPattern: value))
+                    let sourceX = min(
+                        Double(inputSize - 1),
+                        max(0, (Double(x) + 0.5) * Double(inputSize) / Double(outputWidth) - 0.5)
+                    )
+                    let x0 = Int(sourceX)
+                    let x1 = min(inputSize - 1, x0 + 1)
+                    let fx = Float(sourceX - Double(x0))
+                    let top = Float(confidence512[y0 * inputSize + x0]) * (1 - fx) +
+                        Float(confidence512[y0 * inputSize + x1]) * fx
+                    let bottom = Float(confidence512[y1 * inputSize + x0]) * (1 - fx) +
+                        Float(confidence512[y1 * inputSize + x1]) * fx
+                    let interpolated = UInt8(
+                        min(255, max(0, Int((top * (1 - fy) + bottom * fy).rounded())))
+                    )
+                    bytes.set(index: Int32(y * outputWidth + x), value: Int8(bitPattern: interpolated))
                 }
             }
             return EdgeMap(
