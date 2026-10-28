@@ -364,7 +364,11 @@ fun DrawingScreen(
     LaunchedEffect(sourceGrayImage, photoQualitySettings) {
         val source = sourceGrayImage ?: return@LaunchedEffect
         val targetSettings = photoQualitySettings
-        if (targetSettings == appliedPhotoQualitySettings) return@LaunchedEffect
+        if (targetSettings == appliedPhotoQualitySettings) {
+            photoQualityError = null
+            isReprocessingPhoto = false
+            return@LaunchedEffect
+        }
 
         // Slider drags can emit many updates; debounce so the detector runs after the user pauses.
         delay(220)
