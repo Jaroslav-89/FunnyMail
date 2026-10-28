@@ -15,13 +15,13 @@ import kotlin.math.sqrt
 class PhotoEdgeDetector(
     private val relativeHighThreshold: Float = 0.12f,
     private val lowThresholdRatio: Float = 0.38f,
-) {
+) : EdgeMapDetector {
     init {
         require(relativeHighThreshold in 0.01f..0.95f)
         require(lowThresholdRatio in 0.05f..0.95f)
     }
 
-    fun detect(image: GrayImage): EdgeMap {
+    override fun detect(image: GrayImage): EdgeMap {
         val width = image.width
         val height = image.height
         val blurred = gaussianBlur3x3(image.pixels, width, height)
