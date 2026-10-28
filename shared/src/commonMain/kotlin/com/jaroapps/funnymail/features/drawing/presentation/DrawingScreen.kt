@@ -1051,7 +1051,11 @@ fun DrawingScreen(
             ) {
                 CircularProgressIndicator(color = Color(0xFFF5A800))
                 Text(
-                    text = processingImageLabel,
+                    text = if (useDexiNed) {
+                        "Обработка DexiNed… при первом запуске загружается модель (~47 МБ)."
+                    } else {
+                        processingImageLabel
+                    },
                     color = Color(0xFF202124),
                     style = MaterialTheme.typography.bodyMedium,
                 )
