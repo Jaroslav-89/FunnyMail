@@ -1,6 +1,7 @@
 package com.jaroapps.funnymail.features.chat.presentation
 
 import org.jetbrains.compose.resources.stringResource
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,6 +30,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.features.chat.domain.model.Chat
@@ -200,13 +203,16 @@ fun ChatsScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         Text(stringResource(Res.string.invite_code), style = MaterialTheme.typography.titleMedium)
-                        SelectionContainer {
-                            Text(
-                                invite.code,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
+                        val clipboard = LocalClipboardManager.current
+                        Text(
+                            invite.code,
+                            modifier = Modifier.combinedClickable(
+                                onClick = {},
+                                onLongClick = { clipboard.setText(AnnotatedString(invite.code)) },
+                            ),
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
                         Text(
                             stringResource(Res.string.chats_invite_help),
                             style = MaterialTheme.typography.bodySmall,
