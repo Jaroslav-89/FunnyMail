@@ -8,9 +8,11 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * Converts the same visible cells used by the "Карта найденных границ" preview into editable
- * strokes. No contour-length filtering, simplification, or point downsampling is performed:
- * short contours and isolated detected cells must remain visible in the final drawing.
+ * Converts the "Карта найденных границ" preview into editable strokes.
+ *
+ * Long contours are simplified with a pixel-space Ramer–Douglas–Peucker pass so nearly-collinear
+ * map cells become a compact polyline. Weak isolated cells are removed conservatively: at most
+ * 20% of isolated cells, starting with the weakest. Short contours and junctions are preserved.
  */
 class EdgeMapVectorizer(
     private val maxStrokes: Int = 120_000,
@@ -26,17 +28,17 @@ class EdgeMapVectorizer(
         val edgePixels = BooleanArray(displayMap.strength.size) {
             (displayMap.strength[it].toInt() and 0xFF) > 0
         }
+        discardWeakIsolatedCells(edgePixels, displayMap.strength, width, height)
         val rawPaths = tracePaths(edgePixels, width, height)
         val candidates = rawPaths.map { raw ->
             val averageStrength = raw
                 .map { displayMap.strength[it].toInt() and 0xFF }
                 .average()
-            Candidate(raw, averageStrength)
+            Candidate(simplifyPath(raw, width), averageStrength)
         }
 
-        // Never silently drop details to fit the document limits. The limits are checked before
-        // making the drawing; if they are exceeded, import fails clearly rather than trimming
-        // short contours first or keeping only the largest paths.
+        // Apply geometry reduction before checking limits. Remaining strokes/points are never
+        // dropped merely to make the document fit its persistence limits.
         val pointCount = candidates.sumOf { it.points.size }
         require(candidates.size <= maxStrokes) {
             "Карта содержит ${candidates.size} контуров — это превышает лимит $maxStrokes. Детали не были удалены."
@@ -72,7 +74,7 @@ class EdgeMapVectorizer(
                 color = strokeColor,
                 // Use two display pixels for map-derived contours: one pixel looked too faint
                 // compared with the "Карта найденных границ" preview.
-                width = 2.0f,
+                width = 2.6f,
                 points = normalized,
             )
         }
@@ -103,7 +105,119 @@ class EdgeMapVectorizer(
         val averageStrength: Double,
     )
 
-    private fun tracePaths(edges: BooleanArray, width: Int, height: Int): List<List<Int>> {
+    /**
+     * Drops only the weakest fifth of truly isolated edge cells. Isolated cells are those with no
+     * 8-connected edge neighbour; cells attached to contours are never removed by this pass.
+     */
+    private fun discardWeakIsolatedCells(
+        edges: BooleanArray,
+        strengths: ByteArray,
+        width: Int,
+        height: Int,
+    ) {
+        val isolated = edges.indices.filter { index ->
+            edges[index] && neighbours(index, width, height, edges).isEmpty()
+        }
+        val discardCount = isolated.size / 5
+        if (discardCount == 0) return
+        isolated
+            .sortedWith(compareBy<Int> { strengths[it].toInt() and 0xFF }.thenBy { it })
+            .take(discardCount)
+            .forEach { edges[it] = false }
+    }
+
+    /**
+     * Simplifies long paths in display-cell coordinates, not normalized canvas coordinates.
+     * This makes the tolerance meaningful (one preview-map cell) regardless of photo aspect ratio.
+     */
+    private fun simplifyPath(path: List<Int>, width: Int): List<Int> {
+        if (path.size <= 4) return path
+
+        // RDP's endpoints are identical on a closed loop, so split the loop at the vertex farthest
+        // from its start and simplify both halves independently to preserve the loop's shape.
+        if (path.first() == path.last()) {
+            val loop = path.dropLast(1)
+            if (loop.size <= 4) return path
+            val startX = loop.first() % width
+            val startY = loop.first() / width
+            val pivotIndex = loop.indices.maxByOrNull { i ->
+                val dx = (loop[i] % width - startX).toDouble()
+                val dy = (loop[i] / width - startY).toDouble()
+                dx * dx + dy * dy
+            } ?: return path
+            if (pivotIndex == 0) return path
+
+            val firstHalf = simplifyOpenPath(loop.subList(0, pivotIndex + 1), width)
+            val secondHalf = ArrayList<Int>(loop.size - pivotIndex + 1)
+            for (i in pivotIndex until loop.size) secondHalf += loop[i]
+            secondHalf += loop.first()
+            val simplifiedSecond = simplifyOpenPath(secondHalf, width)
+            return firstHalf + simplifiedSecond.drop(1)
+        }
+        return simplifyOpenPath(path, width)
+    }
+
+    /**
+     * Iterative Ramer–Douglas–Peucker simplification. A 1-cell tolerance removes raster stair-steps
+     * along nearly straight lines but retains meaningful corners and wider contour turns.
+     */
+    private fun simplifyOpenPath(path: List<Int>, width: Int): List<Int> {
+        if (path.size <= 3) return path
+        val keep = BooleanArray(path.size)
+        keep[0] = true
+        keep[path.lastIndex] = true
+        val pending = ArrayList<Pair<Int, Int>>()
+        pending += 0 to path.lastIndex
+        val toleranceSquared = SIMPLIFICATION_TOLERANCE * SIMPLIFICATION_TOLERANCE
+
+        while (pending.isNotEmpty()) {
+            val (firstIndex, lastIndex) = pending.removeAt(pending.lastIndex)
+            if (lastIndex - firstIndex <= 1) continue
+
+            var farthestIndex = -1
+            var farthestDistanceSquared = toleranceSquared
+            val first = path[firstIndex]
+            val last = path[lastIndex]
+            for (i in firstIndex + 1 until lastIndex) {
+                val distanceSquared = distanceToSegmentSquared(path[i], first, last, width)
+                if (distanceSquared > farthestDistanceSquared) {
+                    farthestDistanceSquared = distanceSquared
+                    farthestIndex = i
+                }
+            }
+            if (farthestIndex >= 0) {
+                keep[farthestIndex] = true
+                pending += firstIndex to farthestIndex
+                pending += farthestIndex to lastIndex
+            }
+        }
+        return path.indices.filter { keep[it] }.map { path[it] }
+    }
+
+    private fun distanceToSegmentSquared(point: Int, start: Int, end: Int, width: Int): Double {
+        val px = (point % width).toDouble()
+        val py = (point / width).toDouble()
+        val sx = (start % width).toDouble()
+        val sy = (start / width).toDouble()
+        val ex = (end % width).toDouble()
+        val ey = (end / width).toDouble()
+        val vx = ex - sx
+        val vy = ey - sy
+        val lengthSquared = vx * vx + vy * vy
+        if (lengthSquared == 0.0) {
+            val dx = px - sx
+            val dy = py - sy
+            return dx * dx + dy * dy
+        }
+        val projection = (((px - sx) * vx + (py - sy) * vy) / lengthSquared).coerceIn(0.0, 1.0)
+        val nearestX = sx + projection * vx
+        val nearestY = sy + projection * vy
+        val dx = px - nearestX
+        val dy = py - nearestY
+        return dx * dx + dy * dy
+    }
+
+    private fun tracePaths(edges: BooleanArray, width: Int, height: Int): List<List<Int>> {    private fun tracePaths(edges: BooleanArray, width: Int, height: Int): List<List<Int>> {
         val degree = ByteArray(edges.size)
         for (index in edges.indices) {
             if (edges[index]) degree[index] = neighbours(index, width, height, edges).size.toByte()
@@ -238,4 +352,8 @@ class EdgeMapVectorizer(
 
     private fun quantize(value: Double): Double =
         (value * 10_000.0).roundToInt().coerceIn(0, 10_000) / 10_000.0
+
+    private companion object {
+        const val SIMPLIFICATION_TOLERANCE = 1.0
+    }
 }
