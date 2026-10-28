@@ -122,7 +122,7 @@ private fun FunnyMailContent(
     var chatFeedReturnIndex by rememberSaveable { mutableStateOf(0) }
     var chatFeedReturnOffset by rememberSaveable { mutableStateOf(0) }
     var editingDrawingId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var editingDrawingJson by remember { mutableStateOf<String?>(null) }
+    var editingDrawingJson by rememberSaveable { mutableStateOf<String?>(null) }
     var drawingReturnDestination by rememberSaveable { mutableStateOf(AppDestination.ChatDetail) }
     var drawingViewerReturnDestination by rememberSaveable { mutableStateOf(AppDestination.ChatDetail) }
     val localDrawingRepository = koinInject<LocalDrawingRepository>()
