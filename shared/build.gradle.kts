@@ -125,8 +125,9 @@ androidComponents {
 }
 
 // Ensure Android asset merging happens only after the bundled model is present and verified.
+// Use the task path string here so the callback does not capture a script-level TaskProvider.
 tasks.configureEach {
     if (name == "preBuild" || (name.startsWith("merge") && name.endsWith("Assets"))) {
-        dependsOn(ensureDexiNedModel)
+        dependsOn("ensureDexiNedModel")
     }
 }
