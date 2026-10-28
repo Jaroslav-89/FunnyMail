@@ -97,9 +97,12 @@ class DrawingCodec(
     }
 
     private companion object {
-        const val DEFAULT_MAX_JSON_BYTES = 256 * 1024
-        const val DEFAULT_MAX_STROKES = 2_000
-        const val DEFAULT_MAX_POINTS = 20_000
+        // Detailed edge-map vector drawings may use more points than hand-drawn sketches.
+        // Keep the encoded drawing below Firestore's 1 MiB document ceiling while allowing
+        // substantially more detected detail than the previous 256 KiB limit.
+        const val DEFAULT_MAX_JSON_BYTES = 768 * 1024
+        const val DEFAULT_MAX_STROKES = 5_000
+        const val DEFAULT_MAX_POINTS = 30_000
         const val MAX_CANVAS_DIMENSION = 4_096
         const val MIN_STROKE_WIDTH = 0.1f
         const val MAX_STROKE_WIDTH = 100f
