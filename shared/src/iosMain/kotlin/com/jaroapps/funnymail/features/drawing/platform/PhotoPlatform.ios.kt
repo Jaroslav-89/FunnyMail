@@ -26,6 +26,10 @@ import platform.CoreGraphics.CGImageGetWidth
 import platform.CoreGraphics.CGRectMake
 import platform.CoreGraphics.CGSizeMake
 import platform.Foundation.NSData
+import platform.Foundation.NSString
+import platform.Foundation.NSTemporaryDirectory
+import platform.Foundation.NSUTF8StringEncoding
+import platform.Foundation.NSURL
 import platform.UIKit.UIImage
 import platform.UIKit.UIImageJPEGRepresentation
 import platform.UIKit.UIImagePickerController
@@ -36,6 +40,7 @@ import platform.UIKit.UINavigationControllerDelegateProtocol
 import platform.UIKit.UIGraphicsBeginImageContextWithOptions
 import platform.UIKit.UIGraphicsEndImageContext
 import platform.UIKit.UIGraphicsGetImageFromCurrentImageContext
+import platform.UIKit.UIActivityViewController
 import platform.UIKit.UIViewController
 import platform.darwin.NSObject
 import kotlin.math.max
@@ -212,6 +217,32 @@ actual suspend fun decodePhotoToGrayscale(
         } finally {
             CGContextRelease(context)
             CGColorSpaceRelease(colorSpace)
+        }
+    }
+}
+
+
+@Composable
+actual fun rememberDrawingShareLauncher(): (svg: String, title: String) -> Unit {
+    val viewController = LocalUIViewController.current
+    return remember(viewController) {
+        { svg, title ->
+            runCatching {
+                val path = NSTemporaryDirectory() + "funnymail-" + kotlin.random.Random.nextLong() + ".svg"
+                NSString.create(string = svg).writeToFile(
+                    path,
+                    atomically = true,
+                    encoding = NSUTF8StringEncoding,
+                    error = null,
+                )
+                val url = NSURL.fileURLWithPath(path)
+                val activity = UIActivityViewController(
+                    activityItems = listOf(url),
+                    applicationActivities = null,
+                )
+                activity.popoverPresentationController?.sourceView = viewController.view
+                viewController.presentViewController(activity, animated = true, completion = null)
+            }
         }
     }
 }

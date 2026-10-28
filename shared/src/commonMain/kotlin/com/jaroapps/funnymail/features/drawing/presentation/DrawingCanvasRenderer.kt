@@ -110,18 +110,22 @@ private fun String.toDrawingRenderColor(): androidx.compose.ui.graphics.Color {
 fun DrawingAnnotationsOverlay(
     drawing: DrawingDocument,
     modifier: Modifier = Modifier,
+    contentInsetFraction: Float = 0f,
 ) {
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val logicalWidth = drawing.canvas.width.coerceAtLeast(1)
         val logicalHeight = drawing.canvas.height.coerceAtLeast(1)
+        val inset = minOf(maxWidth.value, maxHeight.value) * contentInsetFraction.coerceIn(0f, 0.2f)
+        val availableWidth = (maxWidth.value - inset * 2f).coerceAtLeast(0f)
+        val availableHeight = (maxHeight.value - inset * 2f).coerceAtLeast(0f)
         val scale = minOf(
-            maxWidth.value / logicalWidth.toFloat(),
-            maxHeight.value / logicalHeight.toFloat(),
+            availableWidth / logicalWidth.toFloat(),
+            availableHeight / logicalHeight.toFloat(),
         ).takeIf { it.isFinite() && it > 0f } ?: return@BoxWithConstraints
         val contentWidth = (logicalWidth * scale).dp
         val contentHeight = (logicalHeight * scale).dp
-        val offsetX = (maxWidth - contentWidth) / 2
-        val offsetY = (maxHeight - contentHeight) / 2
+        val offsetX = inset.dp + (availableWidth.dp - contentWidth) / 2
+        val offsetY = inset.dp + (availableHeight.dp - contentHeight) / 2
 
         drawing.texts.forEach { annotation ->
             Text(
