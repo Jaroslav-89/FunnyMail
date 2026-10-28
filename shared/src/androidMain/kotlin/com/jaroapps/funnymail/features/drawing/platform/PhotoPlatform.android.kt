@@ -21,13 +21,9 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import com.jaroapps.funnymail.features.drawing.domain.image.EdgeMap
 import com.jaroapps.funnymail.features.drawing.domain.image.GrayImage
-import java.io.BufferedInputStream
-import java.io.BufferedOutputStream
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
-import java.net.HttpURLConnection
-import java.net.URL
 import java.nio.FloatBuffer
 import java.security.MessageDigest
 import kotlinx.coroutines.Dispatchers
@@ -206,8 +202,6 @@ private object DexiNedRuntime {
     @Volatile
     var applicationContext: Context? = null
 
-    private const val MODEL_URL =
-        "https://huggingface.co/opencv/edge_detection_dexined/resolve/main/edge_detection_dexined_2024sep.onnx"
     private const val MODEL_NAME = "edge_detection_dexined_2024sep.onnx"
     private const val MODEL_SHA256 =
         "a50d01dc8481549c7dedb9eb3e0123b810a016520df75e4669a504609982cdd0"
@@ -373,42 +367,25 @@ private object DexiNedRuntime {
         ) {
             return target
         }
+
         target.delete()
-        val temporary = java.io.File(directory, "$MODEL_NAME.download")
+        val temporary = java.io.File(directory, "$MODEL_NAME.copying")
         temporary.delete()
-        val connection = (URL(MODEL_URL).openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = 20_000
-            readTimeout = 120_000
-            instanceFollowRedirects = true
-            setRequestProperty("User-Agent", "FunnyMail-PhotoSketch/1.0")
-        }
         try {
-            check(connection.responseCode in 200..299) {
-                "DexiNed model download failed: HTTP ${connection.responseCode}"
-            }
-            val digest = MessageDigest.getInstance("SHA-256")
-            BufferedInputStream(connection.inputStream).use { input ->
-                BufferedOutputStream(FileOutputStream(temporary)).use { output ->
-                    val buffer = ByteArray(128 * 1024)
-                    while (true) {
-                        val count = input.read(buffer)
-                        if (count < 0) break
-                        digest.update(buffer, 0, count)
-                        output.write(buffer, 0, count)
-                    }
+            context.assets.open(MODEL_NAME).use { input ->
+                FileOutputStream(temporary).use { output ->
+                    input.copyTo(output, 128 * 1024)
                 }
             }
-            val checksum = digest.digest().joinToString("") { byte ->
-                (byte.toInt() and 0xFF).toString(16).padStart(2, '0')
+            check(temporary.isFile && temporary.length() > 40_000_000L) {
+                "Bundled DexiNed model is missing or incomplete"
             }
-            check(checksum.equals(MODEL_SHA256, ignoreCase = true)) {
-                "DexiNed model checksum mismatch"
+            check(fileSha256(temporary).equals(MODEL_SHA256, ignoreCase = true)) {
+                "Bundled DexiNed model checksum mismatch"
             }
-            check(temporary.renameTo(target)) { "Cannot move verified model into cache" }
+            check(temporary.renameTo(target)) { "Cannot move bundled model into cache" }
             return target
         } finally {
-            connection.disconnect()
             temporary.delete()
         }
     }
