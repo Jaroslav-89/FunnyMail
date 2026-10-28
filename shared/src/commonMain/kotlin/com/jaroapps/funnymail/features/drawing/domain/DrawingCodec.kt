@@ -37,7 +37,8 @@ class DrawingCodec(
      */
     fun encodeWithSize(drawing: DrawingDocument): Pair<Result<String>, Int> {
         val serializedResult = runCatching { json.encodeToString(drawing) }
-        val serialized = serializedResult.getOrElse { return serializedResult to 0 }
+        if (serializedResult.isFailure) return serializedResult to 0
+        val serialized = serializedResult.getOrThrow()
         val sizeBytes = serialized.encodeToByteArray().size
         val result = runCatching {
             validate(drawing)
