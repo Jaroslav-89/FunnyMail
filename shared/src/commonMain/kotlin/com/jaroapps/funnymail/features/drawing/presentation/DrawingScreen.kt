@@ -218,6 +218,8 @@ fun DrawingScreen(
     var drawingCaption by remember(effectiveInitialDrawingJson) { mutableStateOf(initialDrawing?.caption.orEmpty().take(80)) }
     var brushWidth by remember { mutableStateOf(12f) }
     var eraserEnabled by remember { mutableStateOf(false) }
+    var lineToolEnabled by remember { mutableStateOf(false) }
+    var pendingLinePoints by remember { mutableStateOf<List<List<Double>>>(emptyList()) }
     var activePopup by remember { mutableStateOf<DrawingPopup?>(null) }
     var backgroundMode by remember(effectiveInitialDrawingJson) {
         mutableStateOf(initialDrawing?.canvas?.backgroundMode ?: "SOLID")
@@ -489,7 +491,41 @@ fun DrawingScreen(
                         canvasAspectInitialized = true
                     }
                 }
+                .pointerInput(lineToolEnabled, canvasSize.width, canvasSize.height, canvasWidth, canvasHeight) {
+                    if (lineToolEnabled) {
+                        detectTapGestures { tap ->
+                            val viewportScale = min(
+                                size.width.toFloat() / canvasWidth.toFloat(),
+                                size.height.toFloat() / canvasHeight.toFloat(),
+                            ).coerceAtLeast(0.0001f)
+                            val viewportWidth = canvasWidth.toFloat() * viewportScale
+                            val viewportHeight = canvasHeight.toFloat() * viewportScale
+                            val viewportLeft = (size.width.toFloat() - viewportWidth) / 2f
+                            val viewportTop = (size.height.toFloat() - viewportHeight) / 2f
+                            if (tap.x in viewportLeft..(viewportLeft + viewportWidth) &&
+                                tap.y in viewportTop..(viewportTop + viewportHeight)
+                            ) {
+                                val point = listOf(
+                                    ((tap.x - viewportLeft) / viewportWidth).coerceIn(0f, 1f).toDouble(),
+                                    ((tap.y - viewportTop) / viewportHeight).coerceIn(0f, 1f).toDouble(),
+                                )
+                                pendingLinePoints = when (pendingLinePoints.size) {
+                                    0 -> listOf(point)
+                                    1 -> pendingLinePoints + point
+                                    else -> listOf(pendingLinePoints.first(), point)
+                                }
+                                statusMessage = if (pendingLinePoints.size < 2) {
+                                    "Поставьте вторую точку линии"
+                                } else {
+                                    "Передвиньте вторую точку касанием, затем нажмите ✓"
+                                }
+                                statusIsError = false
+                            }
+                        }
+                    }
+                }
                 .pointerInput(
+                    lineToolEnabled,
                     paintColor,
                     brushWidth,
                     canvasSize.width,
@@ -520,7 +556,7 @@ fun DrawingScreen(
                     detectDragGestures(
                         onDragStart = { offset ->
                             statusMessage = null
-                            isDrawingGestureActive = isInsideViewport(offset.x, offset.y)
+                            isDrawingGestureActive = !lineToolEnabled && isInsideViewport(offset.x, offset.y)
                             activePoints = if (isDrawingGestureActive) {
                                 listOf(normalizedPoint(offset.x, offset.y))
                             } else {
@@ -588,15 +624,27 @@ fun DrawingScreen(
                     backgroundAlpha = backgroundAlpha,
                 ),
             )
-            val visibleStrokes = if (activePoints.isEmpty() || eraserEnabled) {
-                strokes
-            } else {
-                strokes + DrawingStroke(
-                    color = paintColor,
-                    width = brushWidth,
-                    alpha = brushAlpha,
-                    points = activePoints,
-                )
+            val visibleStrokes = buildList {
+                addAll(strokes)
+                if (pendingLinePoints.isNotEmpty()) {
+                    add(
+                        DrawingStroke(
+                            color = selectedColor,
+                            width = brushWidth,
+                            alpha = brushAlpha,
+                            points = pendingLinePoints,
+                        ),
+                    )
+                } else if (activePoints.isNotEmpty() && !eraserEnabled && !lineToolEnabled) {
+                    add(
+                        DrawingStroke(
+                            color = paintColor,
+                            width = brushWidth,
+                            alpha = brushAlpha,
+                            points = activePoints,
+                        ),
+                    )
+                }
             }
             drawDrawingStrokes(
                 strokes = visibleStrokes,
@@ -651,6 +699,21 @@ fun DrawingScreen(
                     }
                 }
 
+                RoundToolButton(
+                    background = if (lineToolEnabled) Color(0xFFFFF0C2) else Color.White,
+                    onClick = {
+                        lineToolEnabled = !lineToolEnabled
+                        pendingLinePoints = emptyList()
+                        activePoints = emptyList()
+                        statusMessage = if (lineToolEnabled) {
+                            "Коснитесь двух точек. Нажмите ✓ для фиксации линии."
+                        } else null
+                        statusIsError = false
+                    },
+                ) {
+                    Text("Линия", color = Color(0xFF202124), fontSize = 9.sp)
+                }
+
                 if (diagnosticEdgeMap != null) {
                     RoundToolButton(
                         onClick = { showEdgeMapPreview = true },
@@ -702,7 +765,24 @@ fun DrawingScreen(
 
             RoundToolButton(
                 onClick = {
-                    if (currentDrawingJson == null) {
+                    if (lineToolEnabled) {
+                        if (pendingLinePoints.size == 2) {
+                            strokes = strokes + DrawingStroke(
+                                color = selectedColor,
+                                width = brushWidth,
+                                alpha = brushAlpha,
+                                points = pendingLinePoints,
+                            )
+                            redoStrokes = emptyList()
+                            pendingLinePoints = emptyList()
+                            lineToolEnabled = false
+                            statusMessage = "Прямая линия зафиксирована"
+                            statusIsError = false
+                        } else {
+                            statusMessage = "Поставьте две точки линии"
+                            statusIsError = true
+                        }
+                    } else if (currentDrawingJson == null) {
                         statusMessage = currentDrawingError ?: drawSomethingMessage
                         statusIsError = true
                     } else {
