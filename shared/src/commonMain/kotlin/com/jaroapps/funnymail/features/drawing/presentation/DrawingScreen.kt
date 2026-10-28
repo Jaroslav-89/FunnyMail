@@ -321,7 +321,7 @@ fun DrawingScreen(
                         appliedPhotoQualitySettings = settingsForImport
                         diagnosticEdgeMap = converted.edgeMap
                         photoQualityError = null
-                        showPhotoQualitySettings = true
+                        showPhotoQualitySettings = false
                         canvasWidth = convertedDrawing.canvas.width
                         canvasHeight = convertedDrawing.canvas.height
                         canvasAspectInitialized = true
