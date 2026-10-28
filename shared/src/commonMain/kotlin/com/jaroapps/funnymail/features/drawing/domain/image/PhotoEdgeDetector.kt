@@ -1,6 +1,7 @@
 package com.jaroapps.funnymail.features.drawing.domain.image
 
 import kotlin.math.atan2
+import kotlin.math.PI
 import kotlin.math.max
 import kotlin.math.sqrt
 
@@ -58,7 +59,7 @@ class PhotoEdgeDetector(
                 val current = magnitude[index]
                 if (current <= 0f) continue
 
-                var angle = atan2(gy[index].toDouble(), gx[index].toDouble()) * 180.0 / Math.PI
+                var angle = atan2(gy[index].toDouble(), gx[index].toDouble()) * 180.0 / PI
                 if (angle < 0.0) angle += 180.0
                 val first: Int
                 val second: Int
