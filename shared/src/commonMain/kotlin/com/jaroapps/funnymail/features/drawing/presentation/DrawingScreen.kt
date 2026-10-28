@@ -687,7 +687,6 @@ fun DrawingScreen(
                         },
                         onDragCancel = {
                             isDrawingGestureActive = false
-                            movingLineEndpointIndex = null
                             activePoints = emptyList()
                         },
                     )
@@ -737,6 +736,33 @@ fun DrawingScreen(
                 canvasWidth = canvasWidth,
                 canvasHeight = canvasHeight,
             )
+            if (lineToolEnabled && pendingLinePoints.isNotEmpty()) {
+                val previewScale = min(
+                    size.width / canvasWidth.toFloat(),
+                    size.height / canvasHeight.toFloat(),
+                ).coerceAtLeast(0.0001f)
+                val previewWidth = canvasWidth * previewScale
+                val previewHeight = canvasHeight * previewScale
+                val previewLeft = (size.width - previewWidth) / 2f
+                val previewTop = (size.height - previewHeight) / 2f
+                pendingLinePoints.forEachIndexed { index, point ->
+                    val center = Offset(
+                        x = previewLeft + point[0].toFloat() * previewWidth,
+                        y = previewTop + point[1].toFloat() * previewHeight,
+                    )
+                    drawCircle(
+                        color = Color.White,
+                        radius = 12.dp.toPx(),
+                        center = center,
+                    )
+                    drawCircle(
+                        color = if (index == 0) Color(0xFF188038) else Color(0xFF1A73E8),
+                        radius = 10.dp.toPx(),
+                        center = center,
+                        style = Stroke(width = 2.dp.toPx()),
+                    )
+                }
+            }
         }
 
         currentDrawing?.let { document ->
