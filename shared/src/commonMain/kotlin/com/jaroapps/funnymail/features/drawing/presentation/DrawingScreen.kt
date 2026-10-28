@@ -207,6 +207,12 @@ fun DrawingScreen(
     var isSending by remember { mutableStateOf(false) }
     var activePoints by remember { mutableStateOf<List<List<Double>>>(emptyList()) }
     var selectedColor by remember(effectiveInitialDrawingJson) { mutableStateOf("#000000") }
+    var brushAlpha by remember(effectiveInitialDrawingJson) { mutableStateOf(1f) }
+    var backgroundAlpha by remember(effectiveInitialDrawingJson) {
+        mutableStateOf(initialDrawing?.canvas?.backgroundAlpha ?: 1f)
+    }
+    var pendingBrushAlpha by remember { mutableStateOf(1f) }
+    var pendingBackgroundAlpha by remember { mutableStateOf(1f) }
     var drawingTitle by remember(effectiveInitialDrawingJson) { mutableStateOf(initialDrawing?.title.orEmpty().take(20)) }
     var drawingCaption by remember(effectiveInitialDrawingJson) { mutableStateOf(initialDrawing?.caption.orEmpty().take(80)) }
     var brushWidth by remember { mutableStateOf(12f) }
@@ -272,6 +278,9 @@ fun DrawingScreen(
         gradientDirection,
         gradientStartColor,
         gradientEndColor,
+        backgroundAlpha,
+        drawingTitle,
+        drawingCaption,
     ) {
         if (strokes.isEmpty()) {
             null
@@ -285,6 +294,7 @@ fun DrawingScreen(
                     gradientDirection = gradientDirection,
                     gradientStartColor = gradientStartColor,
                     gradientEndColor = gradientEndColor,
+                    backgroundAlpha = backgroundAlpha,
                 ),
                 strokes = strokes,
                 title = drawingTitle,
@@ -545,6 +555,7 @@ fun DrawingScreen(
                                     strokes = strokes + DrawingStroke(
                                         color = paintColor,
                                         width = brushWidth,
+                                        alpha = brushAlpha,
                                         points = activePoints,
                                     )
                                     redoStrokes = emptyList()
@@ -573,6 +584,7 @@ fun DrawingScreen(
                     gradientDirection = gradientDirection,
                     gradientStartColor = gradientStartColor,
                     gradientEndColor = gradientEndColor,
+                    backgroundAlpha = backgroundAlpha,
                 ),
             )
             val visibleStrokes = if (activePoints.isEmpty() || eraserEnabled) {
@@ -581,6 +593,7 @@ fun DrawingScreen(
                 strokes + DrawingStroke(
                     color = paintColor,
                     width = brushWidth,
+                    alpha = brushAlpha,
                     points = activePoints,
                 )
             }
