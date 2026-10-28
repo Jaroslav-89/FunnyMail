@@ -115,7 +115,7 @@ private fun FunnyMailContent(
     var selectedChat by remember { mutableStateOf<Chat?>(null) }
     var selectedChatId by rememberSaveable { mutableStateOf<String?>(null) }
     var viewingDrawing by remember { mutableStateOf<DrawingDocument?>(null) }
-    var editingDrawingId by remember { mutableStateOf<Long?>(null) }
+    var editingDrawingId by rememberSaveable { mutableStateOf<Long?>(null) }
     var editingDrawingJson by remember { mutableStateOf<String?>(null) }
     var drawingReturnDestination by remember { mutableStateOf(AppDestination.ChatDetail) }
     var drawingViewerReturnDestination by remember { mutableStateOf(AppDestination.ChatDetail) }
@@ -164,6 +164,17 @@ private fun FunnyMailContent(
         if (selectedChat?.id == chatId) return@LaunchedEffect
         chatRepository.observeChats(userId).collect { chats ->
             chats.firstOrNull { it.id == chatId }?.let { selectedChat = it }
+        }
+    }
+
+    // The id is small enough for saved instance state; reload the potentially large JSON from Room.
+    LaunchedEffect(editingDrawingId, destination) {
+        val drawingId = editingDrawingId ?: return@LaunchedEffect
+        if (destination != AppDestination.Drawing || editingDrawingJson != null) return@LaunchedEffect
+        localDrawingRepository.observeDrawings().collect { drawings ->
+            drawings.firstOrNull { it.id == drawingId }?.let { saved ->
+                editingDrawingJson = saved.drawingJson
+            }
         }
     }
 
