@@ -5,6 +5,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.window.LocalUIViewController
 import com.jaroapps.funnymail.features.drawing.domain.image.GrayImage
+import com.jaroapps.funnymail.features.drawing.domain.image.EdgeMap
+import com.jaroapps.funnymail.features.drawing.domain.image.NeuralEdgeInferenceProviderRegistry
+import kotlinx.coroutines.CancellationException
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.UByteVar
 import kotlinx.cinterop.addressOf
@@ -215,3 +218,20 @@ actual suspend fun decodePhotoToGrayscale(
         }
     }
 }
+
+
+/**
+ * Uses the Swift Package Manager ONNX Runtime bridge when the app has registered it.
+ * If the optional model isn't cached or cannot be downloaded, return null and keep the
+ * shared classic detector as a fallback.
+ */
+actual suspend fun detectPhotoEdgesWithDexiNed(image: GrayImage): EdgeMap? =
+    withContext(Dispatchers.Default) {
+        try {
+            NeuralEdgeInferenceProviderRegistry.provider?.detect(image)?.thresholdAndLink()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
+        }
+    }
