@@ -19,7 +19,8 @@ class EdgeMapVectorizer(
     fun convert(edgeMap: EdgeMap): DrawingDocument {
         // The diagnostic map shows the maximum edge strength in each display cell. Vectorize
         // that same map instead of using a higher-resolution source and then discarding detail.
-        val displayMap = mapAtPreviewResolution(edgeMap)
+        val preview = mapAtPreviewResolution(edgeMap)
+        val displayMap = preview.edgeMap
         val width = displayMap.width
         val height = displayMap.height
         val edgePixels = BooleanArray(displayMap.strength.size) {
@@ -47,9 +48,15 @@ class EdgeMapVectorizer(
         val strokes = ArrayList<DrawingStroke>(candidates.size)
         for (candidate in candidates) {
             val normalized = candidate.points.map { index ->
+                val cellX = index % width
+                val cellY = index / width
+                val sourceX = cellX * preview.stepX
+                val sourceY = cellY * preview.stepY
+                val cellWidth = min(preview.stepX, preview.sourceWidth - sourceX)
+                val cellHeight = min(preview.stepY, preview.sourceHeight - sourceY)
                 listOf(
-                    quantize(((index % width) + 0.5) / width.toDouble()),
-                    quantize(((index / width) + 0.5) / height.toDouble()),
+                    quantize((sourceX + cellWidth / 2.0) / preview.sourceWidth),
+                    quantize((sourceY + cellHeight / 2.0) / preview.sourceHeight),
                 )
             }
             // The "Карта" preview draws each edge in black with alpha based on its
@@ -68,18 +75,17 @@ class EdgeMapVectorizer(
                 width = 2.0f,
                 points = normalized,
             )
-            pointCount += normalized.size
         }
         if (strokes.isEmpty()) throw NoContoursFoundException()
 
         val canvasWidth: Int
         val canvasHeight: Int
-        if (width >= height) {
+        if (preview.sourceWidth >= preview.sourceHeight) {
             canvasWidth = 1_000
-            canvasHeight = (1_000.0 * height / width).roundToInt().coerceAtLeast(1)
+            canvasHeight = (1_000.0 * preview.sourceHeight / preview.sourceWidth).roundToInt().coerceAtLeast(1)
         } else {
             canvasHeight = 1_000
-            canvasWidth = (1_000.0 * width / height).roundToInt().coerceAtLeast(1)
+            canvasWidth = (1_000.0 * preview.sourceWidth / preview.sourceHeight).roundToInt().coerceAtLeast(1)
         }
         return DrawingDocument(
             canvas = DrawingCanvas(
@@ -184,7 +190,15 @@ class EdgeMapVectorizer(
         return result
     }
 
-    private fun mapAtPreviewResolution(source: EdgeMap): EdgeMap {
+    private data class PreviewMap(
+        val edgeMap: EdgeMap,
+        val sourceWidth: Int,
+        val sourceHeight: Int,
+        val stepX: Int,
+        val stepY: Int,
+    )
+
+    private fun mapAtPreviewResolution(source: EdgeMap): PreviewMap {
         val stepX = (source.width / 320).coerceAtLeast(1)
         val stepY = (source.height / 320).coerceAtLeast(1)
         val width = (source.width + stepX - 1) / stepX
@@ -213,7 +227,13 @@ class EdgeMapVectorizer(
             }
             displayY++
         }
-        return EdgeMap(width, height, strength)
+        return PreviewMap(
+            edgeMap = EdgeMap(width, height, strength),
+            sourceWidth = source.width,
+            sourceHeight = source.height,
+            stepX = stepX,
+            stepY = stepY,
+        )
     }
 
     private fun quantize(value: Double): Double =
