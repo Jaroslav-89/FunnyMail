@@ -545,7 +545,7 @@ fun DrawingScreen(
                         .clickable(enabled = !isProcessingImage) {
                             useDexiNed = !useDexiNed
                             statusMessage = if (useDexiNed) {
-                                "DexiNed: первая загрузка модели (~47 МБ) может занять время."
+                                "DexiNed: модель включена в приложение; интернет для обработки не нужен."
                             } else {
                                 "Режим классического детектора."
                             }
@@ -1057,7 +1057,7 @@ fun DrawingScreen(
                 CircularProgressIndicator(color = Color(0xFFF5A800))
                 Text(
                     text = if (useDexiNed) {
-                        "Обработка DexiNed… при первом запуске загружается модель (~47 МБ)."
+                        "Обработка DexiNed… модель уже включена в приложение."
                     } else {
                         processingImageLabel
                     },
