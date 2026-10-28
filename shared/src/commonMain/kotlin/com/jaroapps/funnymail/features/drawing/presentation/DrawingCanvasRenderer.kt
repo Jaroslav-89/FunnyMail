@@ -132,8 +132,8 @@ fun DrawingAnnotationsOverlay(
                 text = annotation.text,
                 modifier = Modifier
                     .offset(
-                        x = offsetX + (annotation.x * logicalWidth * scale).dp,
-                        y = offsetY + (annotation.y * logicalHeight * scale).dp,
+                        x = offsetX + (annotation.x * logicalWidth.toDouble() * scale.toDouble()).dp,
+                        y = offsetY + (annotation.y * logicalHeight.toDouble() * scale.toDouble()).dp,
                     )
                     .rotate(annotation.rotationDegrees),
                 style = TextStyle(
@@ -158,8 +158,8 @@ fun DrawingAnnotationsOverlay(
                 },
                 modifier = Modifier
                     .offset(
-                        x = offsetX + (sticker.x * logicalWidth * scale).dp,
-                        y = offsetY + (sticker.y * logicalHeight * scale).dp,
+                        x = offsetX + (sticker.x * logicalWidth.toDouble() * scale.toDouble()).dp,
+                        y = offsetY + (sticker.y * logicalHeight.toDouble() * scale.toDouble()).dp,
                     )
                     .rotate(sticker.rotationDegrees),
                 fontSize = (72f * scale * sticker.scale).sp,
