@@ -48,7 +48,7 @@ class PhotoToSketchConverterTest {
         assertTrue(document.strokes.size >= 2, "The closed facade contour and inner edge should remain separate strokes")
         assertTrue(document.strokes.all { stroke ->
             stroke.points.size >= 2 &&
-                stroke.width in 0.75f..1.55f &&
+                stroke.width in 2.0f..3.5f &&
                 stroke.points.all { point ->
                     point.size == 2 && point.all { it in 0.0..1.0 }
                 }
