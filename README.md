@@ -122,3 +122,14 @@ For iOS, open `iosApp/iosApp.xcodeproj` in Xcode and run on an iOS simulator or 
 - Letter creation/expiry timestamps and invite validation must be controlled by trusted backend logic, not only by the client clock.
 - The target retention period for letters is seven days. Rules validate `expiresAt` on creation and deny expired direct-document reads; the app filters query results and a Firestore TTL policy on collection group `letters`, field `expiresAt` must be enabled for automatic deletion. For strict server-side expiry on collection queries, add a trusted backend endpoint instead of relying only on client filters.
 - Client-side validation is not a substitute for Firestore Security Rules and server-side authorization.
+
+
+## Drawing tools v15
+
+The drawing format now supports saved rich-text elements (font size, rotation, bold, italic and underline) and emoji stickers with stable codes and scale. Text and stickers are rendered in editor previews, the gallery preview and chat's full-screen drawing viewer. The viewer can share a standalone SVG export through the native Android or iOS share sheet.
+
+The editor also adds photo tracing mode alongside vector contour conversion, exposes contour settings/map only in contour mode, and allows dragging either endpoint of an unconfirmed straight line. The current tracing backdrop is decoded to a bounded grayscale buffer; it is a temporary editor aid rather than part of the saved drawing JSON.
+
+Invite codes in chat settings use long-press copy, the settings screen displays the 250 KiB per-drawing JSON cap, and chat detail state observes fresh membership snapshots. The editor continues to save drafts locally and retains the selected chat ID when an Activity is recreated.
+
+Run shared unit tests with `./gradlew :shared:allTests`, Android verification with `./gradlew :androidApp:assembleDebug`, and validate the iOS target in Xcode. Those build/runtime checks must be completed in a configured build environment before release.

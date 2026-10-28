@@ -242,7 +242,6 @@ fun DrawingScreen(
     var eraserEnabled by remember { mutableStateOf(false) }
     var lineToolEnabled by remember { mutableStateOf(false) }
     var pendingLinePoints by remember { mutableStateOf<List<List<Double>>>(emptyList()) }
-    var movingLineEndpointIndex by remember { mutableStateOf<Int?>(null) }
     var activePopup by remember { mutableStateOf<DrawingPopup?>(null) }
     var backgroundMode by remember(effectiveInitialDrawingJson) {
         mutableStateOf(initialDrawing?.canvas?.backgroundMode ?: "SOLID")
@@ -625,7 +624,6 @@ fun DrawingScreen(
                                     ?.takeIf { it.second <= 44f * 44f }
                                     ?.first
                             } else null
-                            movingLineEndpointIndex = draggingEndpoint
                             isDrawingGestureActive = !lineToolEnabled && draggingEndpoint == null &&
                                 isInsideViewport(offset.x, offset.y)
                             activePoints = if (isDrawingGestureActive) {
@@ -653,7 +651,6 @@ fun DrawingScreen(
                                 statusMessage = "Точка линии перемещена. Нажмите ✓ для фиксации"
                                 statusIsError = false
                                 draggingEndpoint = null
-                                movingLineEndpointIndex = null
                             }
                             if (isDrawingGestureActive && activePoints.isNotEmpty()) {
                                 if (eraserEnabled) {
@@ -686,7 +683,6 @@ fun DrawingScreen(
                                 showPhotoQualitySettings = false
                             }
                             isDrawingGestureActive = false
-                            movingLineEndpointIndex = null
                             activePoints = emptyList()
                         },
                         onDragCancel = {
