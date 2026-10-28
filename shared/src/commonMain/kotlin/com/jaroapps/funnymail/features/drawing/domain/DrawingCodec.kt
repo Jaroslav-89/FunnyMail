@@ -72,6 +72,12 @@ class DrawingCodec(
         require(drawing.version == DrawingDocument.CURRENT_VERSION) {
             "Неподдерживаемая версия рисунка: ${drawing.version}."
         }
+        require(drawing.title.length <= MAX_TITLE_LENGTH) {
+            "Заголовок рисунка не должен превышать $MAX_TITLE_LENGTH символов."
+        }
+        require(drawing.caption.length <= MAX_CAPTION_LENGTH) {
+            "Описание рисунка не должно превышать $MAX_CAPTION_LENGTH символов."
+        }
         require(drawing.canvas.width in 1..MAX_CANVAS_DIMENSION) {
             "Некорректная ширина холста."
         }
@@ -123,10 +129,12 @@ class DrawingCodec(
     private companion object {
         // Detailed edge-map vector drawings may use more points than hand-drawn sketches.
         // Leave roughly 256 KiB for the surrounding letter/message fields in Firestore.
-        const val DEFAULT_MAX_JSON_BYTES = 900 * 1024
+        const val DEFAULT_MAX_JSON_BYTES = 250 * 1024
         const val DEFAULT_MAX_STROKES = 120_000
         const val DEFAULT_MAX_POINTS = 500_000
         const val MAX_CANVAS_DIMENSION = 4_096
+        const val MAX_TITLE_LENGTH = 20
+        const val MAX_CAPTION_LENGTH = 80
         const val MIN_STROKE_WIDTH = 0.1f
         const val MAX_STROKE_WIDTH = 100f
         val HEX_COLOR = Regex("^#[0-9A-Fa-f]{6}$")
