@@ -17,3 +17,8 @@ data class EdgeMap(
 
     fun edgeCount(): Int = strength.count { (it.toInt() and 0xFF) > 0 }
 }
+
+/** Pluggable map producer. Neural and classical detectors can share the same vectorizer. */
+fun interface EdgeMapDetector {
+    fun detect(image: GrayImage): EdgeMap
+}
