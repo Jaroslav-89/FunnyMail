@@ -39,6 +39,9 @@ import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.repository.LocalDrawingRepository
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingStrokes
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingBackground
+import com.jaroapps.funnymail.features.drawing.presentation.DrawingAnnotationsOverlay
+import com.jaroapps.funnymail.features.drawing.domain.toSvg
+import com.jaroapps.funnymail.features.drawing.platform.rememberDrawingShareLauncher
 import com.jaroapps.funnymail.resources.back_to_chat
 import com.jaroapps.funnymail.resources.Res
 
@@ -54,6 +57,7 @@ fun DrawingViewerScreen(
     val repository = koinInject<LocalDrawingRepository>()
     val codec = remember { DrawingCodec() }
     val scope = rememberCoroutineScope()
+    val shareDrawing = rememberDrawingShareLauncher()
     var isSaving by remember { mutableStateOf(false) }
     var saveMessage by remember { mutableStateOf<String?>(null) }
     Box(
@@ -70,6 +74,7 @@ fun DrawingViewerScreen(
                 contentInsetFraction = 0.02f,
             )
         }
+        DrawingAnnotationsOverlay(drawing = drawing, contentInsetFraction = 0.02f)
 
         AppBackButton(
             onClick = onBack,
@@ -89,24 +94,29 @@ fun DrawingViewerScreen(
                     modifier = Modifier.background(Color.White.copy(alpha = 0.92f), CircleShape).padding(horizontal = 12.dp, vertical = 6.dp),
                 )
             }
-            Button(
-                enabled = !isSaving,
-                onClick = {
-                    if (!isSaving) {
-                        isSaving = true
-                        saveMessage = null
-                        scope.launch {
-                            val result = codec.encode(drawing).fold(
-                                onSuccess = { encoded -> runCatching { repository.saveDrawing(encoded) } },
-                                onFailure = { error -> Result.failure(error) },
-                            )
-                            isSaving = false
-                            saveMessage = if (result.isSuccess) "Сохранено в галерею" else "Не удалось сохранить рисунок"
+            Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+                Button(
+                    enabled = !isSaving,
+                    onClick = {
+                        if (!isSaving) {
+                            isSaving = true
+                            saveMessage = null
+                            scope.launch {
+                                val result = codec.encode(drawing).fold(
+                                    onSuccess = { encoded -> runCatching { repository.saveDrawing(encoded) } },
+                                    onFailure = { error -> Result.failure(error) },
+                                )
+                                isSaving = false
+                                saveMessage = if (result.isSuccess) "Сохранено в галерею" else "Не удалось сохранить рисунок"
+                            }
                         }
-                    }
-                },
-            ) {
-                Text(if (isSaving) "Сохранение…" else "Сохранить в галерею")
+                    },
+                ) {
+                    Text(if (isSaving) "Сохранение…" else "Сохранить в галерею")
+                }
+                androidx.compose.material3.OutlinedButton(
+                    onClick = { shareDrawing(drawing.toSvg(), drawing.title.ifBlank { "FunnyMail — рисунок" }) },
+                ) { Text("Поделиться") }
             }
         }
     }

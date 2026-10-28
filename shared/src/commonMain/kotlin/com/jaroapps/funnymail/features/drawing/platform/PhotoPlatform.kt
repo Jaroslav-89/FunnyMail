@@ -10,6 +10,9 @@ interface PhotoPickerLauncher {
 
 /** Returns encoded bytes temporarily for local conversion; implementations do not persist them. */
 @Composable
+expect fun rememberDrawingShareLauncher(): (svg: String, title: String) -> Unit
+
+@Composable
 expect fun rememberPhotoPicker(
     onImagePicked: (ByteArray) -> Unit,
     onError: () -> Unit,
