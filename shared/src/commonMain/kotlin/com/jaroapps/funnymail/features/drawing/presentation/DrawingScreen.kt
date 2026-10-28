@@ -803,7 +803,9 @@ fun DrawingScreen(
                     value = photoQualitySettings.maxPoints.toFloat(),
                     valueLabel = photoQualitySettings.maxPoints.toString(),
                     valueRange = 1_000f..120_000f,
-                    steps = 22,
+                    // Continuous slider keeps the preferred default (6,500) selectable rather
+                    // than snapping to one of the evenly spaced discrete ticks.
+                    steps = 0,
                     onValueChange = { photoQualitySettings = photoQualitySettings.copy(maxPoints = it.roundToInt()) },
                 )
                 PhotoQualitySlider(
