@@ -73,7 +73,7 @@ class PhotoToSketchConverterTest {
             "Strong map contours should remain black")
         assertTrue(document.strokes.any { it.color == "#A1A1A1" },
             "Weak map contours should remain light gray like the map preview")
-        assertTrue(document.strokes.all { it.width == 1.0f },
+        assertTrue(document.strokes.all { it.width == 2.0f },
             "Map-derived contour strokes should use twice the previous display thickness")
     }
 
