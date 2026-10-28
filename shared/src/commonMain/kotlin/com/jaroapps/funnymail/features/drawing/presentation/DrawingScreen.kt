@@ -283,8 +283,9 @@ fun DrawingScreen(
                             val pipeline = PhotoToSketchConverter()
                             val edgeMap = pipeline.detectEdges(grayscale)
                             val document = pipeline.vectorize(edgeMap)
-                            // Validate early so an oversized result is reported as an import error.
-                            drawingCodec.encode(document).getOrThrow()
+                            // Keep the generated drawing editable even when its JSON is too large
+                            // for storage. The editor shows the exact JSON size and disables saving
+                            // with a clear reason, instead of discarding all the detected details.
                             PhotoConversionResult(document, edgeMap)
                         }
                         val convertedDrawing = converted.document
@@ -615,12 +616,19 @@ fun DrawingScreen(
                 fontSize = 11.sp,
             )
             Text(
-                text = "Штрихов: ${strokes.size} · Точек: $currentDrawingPointCount" +
-                    if (overLimit) " · превышен лимит" else "",
+                text = "Штрихов: ${strokes.size} · Точек: $currentDrawingPointCount",
                 color = if (overLimit) MaterialTheme.colorScheme.error else Color(0xFF5F6368),
                 style = MaterialTheme.typography.labelSmall,
                 fontSize = 10.sp,
             )
+            if (overLimit) {
+                Text(
+                    text = currentDrawingError ?: "Превышен лимит сохранения",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 10.sp,
+                )
+            }
         }
 
         Row(
