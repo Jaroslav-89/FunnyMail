@@ -117,7 +117,7 @@ private const val dexiNedModelUrl =
 private const val dexiNedModelSha256 =
     "a50d01dc8481549c7dedb9eb3e0123b810a016520df75e4669a504609982cdd0"
 private const val dexiNedModelRelativePath =
-    "shared/src/androidMain/assets/edge_detection_dexined_2024sep.onnx"
+    "models/edge_detection_dexined_2024sep.onnx"
 
 val ensureDexiNedModel by tasks.registering {
     val modelFile = rootProject.file(dexiNedModelRelativePath)
@@ -185,6 +185,13 @@ val ensureDexiNedModel by tasks.registering {
             connection.disconnect()
             temporary.delete()
         }
+    }
+}
+
+// The model lives once in the repository's root models/ directory, shared with the iOS bundle.
+androidComponents {
+    onVariants { variant ->
+        variant.sources.assets?.addStaticSourceDirectory("../models")
     }
 }
 
