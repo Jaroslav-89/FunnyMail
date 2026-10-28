@@ -35,12 +35,14 @@ data class DrawingCanvas(
     val gradientDirection: String = "TOP_TO_BOTTOM",
     val gradientStartColor: String = "#00AA00",
     val gradientEndColor: String = "#F5A800",
+    val backgroundAlpha: Float = 1f,
 )
 
 @Serializable
 data class DrawingStroke(
     val color: String = "#000000",
     val width: Float = 5f,
+    val alpha: Float = 1f,
     /** Each item must contain exactly two normalized coordinates: [x, y]. */
     val points: List<List<Double>>,
 )
