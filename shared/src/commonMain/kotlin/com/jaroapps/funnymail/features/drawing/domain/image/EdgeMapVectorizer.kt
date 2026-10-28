@@ -10,9 +10,9 @@ import kotlin.math.roundToInt
 /**
  * Converts the "Карта найденных границ" preview into editable strokes.
  *
- * Long contours are simplified with a pixel-space Ramer–Douglas–Peucker pass so nearly-collinear
- * map cells become a compact polyline. Weak isolated cells are removed conservatively: at most
- * 20% of isolated cells, starting with the weakest. Short contours and junctions are preserved.
+ * Long contours are simplified with a pixel-space Ramer–Douglas–Peucker pass. The editor can
+ * vary edge strength, simplification tolerance, output point budget, line width and path tracing.
+ * Only the configured percentage of weakest isolated cells is removed before contour tracing.
  */
 class EdgeMapVectorizer(
     private val maxStrokes: Int = 120_000,
