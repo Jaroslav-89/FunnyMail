@@ -48,7 +48,7 @@ class PhotoToSketchConverterTest {
         assertTrue(document.strokes.size >= 2, "The closed facade contour and inner edge should remain separate strokes")
         assertTrue(document.strokes.all { stroke ->
             stroke.points.size >= 2 &&
-                stroke.width == 1.0f &&
+                stroke.width == 2.0f &&
                 stroke.points.all { point ->
                     point.size == 2 && point.all { it in 0.0..1.0 }
                 }
@@ -74,7 +74,7 @@ class PhotoToSketchConverterTest {
         assertTrue(document.strokes.any { it.color == "#A1A1A1" },
             "Weak map contours should remain light gray like the map preview")
         assertTrue(document.strokes.all { it.width == 1.0f },
-            "Map-derived contour strokes should be thin")
+            "Map-derived contour strokes should use twice the previous display thickness")
     }
 
     @Test
