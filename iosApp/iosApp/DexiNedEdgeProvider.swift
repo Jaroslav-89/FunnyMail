@@ -13,10 +13,6 @@ final class DexiNedEdgeProvider: NSObject, NeuralEdgeInferenceProvider {
     private var session: ORTSession?
     private var sessionOptions: ORTSessionOptions?
 
-    private let modelName = "edge_detection_dexined_2024sep.onnx"
-    private let modelURL = URL(
-        string: "https://huggingface.co/opencv/edge_detection_dexined/resolve/main/edge_detection_dexined_2024sep.onnx"
-    )!
     private let expectedSHA256 =
         "a50d01dc8481549c7dedb9eb3e0123b810a016520df75e4669a504609982cdd0"
 
@@ -183,78 +179,28 @@ final class DexiNedEdgeProvider: NSObject, NeuralEdgeInferenceProvider {
     }
 
     private func ensureModelFile() throws -> URL {
-        let caches = try FileManager.default.url(
-            for: .cachesDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
-        let directory = caches.appendingPathComponent("FunnyMailEdgeModels", isDirectory: true)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let target = directory.appendingPathComponent(modelName)
-        if let attributes = try? FileManager.default.attributesOfItem(atPath: target.path),
-           let size = attributes[.size] as? NSNumber,
-           size.int64Value > 40_000_000,
-           let cachedData = try? Data(contentsOf: target, options: .mappedIfSafe),
-           sha256(cachedData).caseInsensitiveCompare(expectedSHA256) == .orderedSame {
-            return target
-        }
-        try? FileManager.default.removeItem(at: target)
-
-        let staging = directory.appendingPathComponent(modelName + ".download")
-        try? FileManager.default.removeItem(at: staging)
-        let state = DownloadState()
-        let semaphore = DispatchSemaphore(value: 0)
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.timeoutIntervalForRequest = 180
-        configuration.timeoutIntervalForResource = 300
-        let downloadSession = URLSession(configuration: configuration)
-        downloadSession.downloadTask(with: modelURL) { temporaryURL, response, error in
-            defer { semaphore.signal() }
-            if let error {
-                state.error = error
-                return
-            }
-            guard let response = response as? HTTPURLResponse,
-                  (200..<300).contains(response.statusCode),
-                  let temporaryURL else {
-                state.error = DexiNedDownloadError.badResponse
-                return
-            }
-            do {
-                try FileManager.default.moveItem(at: temporaryURL, to: staging)
-                state.file = staging
-            } catch {
-                state.error = error
-            }
-        }.resume()
-        semaphore.wait()
-        downloadSession.finishTasksAndInvalidate()
-        if let error = state.error { throw error }
-        guard FileManager.default.fileExists(atPath: staging.path) else {
-            throw DexiNedDownloadError.missingDownload
+        guard let modelURL = Bundle.main.url(
+            forResource: "edge_detection_dexined_2024sep",
+            withExtension: "onnx"
+        ) else {
+            throw DexiNedModelError.missingBundledModel
         }
 
-        let fileData = try Data(contentsOf: staging, options: .mappedIfSafe)
-        let checksum = sha256(fileData)
-        guard checksum.caseInsensitiveCompare(expectedSHA256) == .orderedSame else {
-            try? FileManager.default.removeItem(at: staging)
-            throw DexiNedDownloadError.checksumMismatch
+        // The model is copied into the app bundle at build time, so AI inference works offline.
+        // Verify the resource before passing it to ONNX Runtime.
+        let modelData = try Data(contentsOf: modelURL, options: .mappedIfSafe)
+        guard modelData.count > 40_000_000 else {
+            throw DexiNedModelError.invalidModelSize
         }
-
-        try? FileManager.default.removeItem(at: target)
-        try FileManager.default.moveItem(at: staging, to: target)
-        return target
+        guard sha256(modelData).caseInsensitiveCompare(expectedSHA256) == .orderedSame else {
+            throw DexiNedModelError.checksumMismatch
+        }
+        return modelURL
     }
 }
 
-private final class DownloadState {
-    var file: URL?
-    var error: Error?
-}
-
-private enum DexiNedDownloadError: Error {
-    case badResponse
-    case missingDownload
+private enum DexiNedModelError: Error {
+    case missingBundledModel
+    case invalidModelSize
     case checksumMismatch
 }
