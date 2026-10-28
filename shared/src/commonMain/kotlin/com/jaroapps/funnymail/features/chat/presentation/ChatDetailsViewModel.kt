@@ -105,7 +105,7 @@ class ChatDetailsViewModel(
             return
         }
         if (_state.value.isSending) return
-        if (drawing.strokes.isEmpty()) {
+        if (drawing.strokes.isEmpty() && drawing.texts.isEmpty() && drawing.stickers.isEmpty()) {
             showError(Res.string.letter_draw_something)
             return
         }
