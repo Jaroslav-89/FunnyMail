@@ -228,7 +228,10 @@ actual suspend fun decodePhotoToGrayscale(
 actual suspend fun detectPhotoEdgesWithDexiNed(image: GrayImage): EdgeMap? =
     withContext(Dispatchers.Default) {
         try {
-            NeuralEdgeInferenceProviderRegistry.provider?.detect(image)?.thresholdAndLink()
+            NeuralEdgeInferenceProviderRegistry.provider
+                ?.detect(image)
+                ?.thresholdAndLink()
+                ?.takeIf { it.edgeCount() >= 2 }
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
