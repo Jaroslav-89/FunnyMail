@@ -331,7 +331,7 @@ fun DrawingScreen(
     val saveDrawingAction: () -> Unit = {
         val json = currentDrawingJson
         if (json == null) {
-            statusMessage = drawSomethingMessage
+            statusMessage = currentDrawingError ?: drawSomethingMessage
             statusIsError = true
         } else if (!isSaving && !isCurrentDrawingSaved) {
             isSaving = true
@@ -356,7 +356,7 @@ fun DrawingScreen(
     val sendDrawingAction: () -> Unit = {
         val json = currentDrawingJson
         if (json == null) {
-            statusMessage = drawSomethingMessage
+            statusMessage = currentDrawingError ?: drawSomethingMessage
             statusIsError = true
         } else if (!isSending) {
             isSending = true
@@ -563,7 +563,7 @@ fun DrawingScreen(
             RoundToolButton(
                 onClick = {
                     if (currentDrawingJson == null) {
-                        statusMessage = drawSomethingMessage
+                        statusMessage = currentDrawingError ?: drawSomethingMessage
                         statusIsError = true
                     } else {
                         showFinishDialog = true
@@ -595,6 +595,32 @@ fun DrawingScreen(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
+        }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 76.dp, start = 12.dp, end = 12.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.White.copy(alpha = 0.96f))
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            val overLimit = currentDrawing != null && currentDrawingJson == null
+            Text(
+                text = "JSON: $currentDrawingJsonBytes Б ($currentDrawingJsonKiB КиБ) / $maxDrawingJsonKiB КиБ",
+                color = if (overLimit) MaterialTheme.colorScheme.error else Color(0xFF5F6368),
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 11.sp,
+            )
+            Text(
+                text = "Штрихов: ${strokes.size} · Точек: $currentDrawingPointCount" +
+                    if (overLimit) " · превышен лимит" else "",
+                color = if (overLimit) MaterialTheme.colorScheme.error else Color(0xFF5F6368),
+                style = MaterialTheme.typography.labelSmall,
+                fontSize = 10.sp,
+            )
         }
 
         Row(
