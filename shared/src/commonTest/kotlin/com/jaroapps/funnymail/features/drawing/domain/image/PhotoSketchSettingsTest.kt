@@ -83,9 +83,9 @@ class PhotoSketchSettingsTest {
         val width = 48
         val height = 20
         val edges = ByteArray(width * height)
-        edges[5 * width + 5] = 40
-        edges[10 * width + 20] = 120
-        edges[15 * width + 40] = 240
+        edges[5 * width + 5] = 40.toByte()
+        edges[10 * width + 20] = 120.toByte()
+        edges[15 * width + 40] = 240.toByte()
 
         val document = EdgeMapVectorizer(
             settings = PhotoSketchSettings(
