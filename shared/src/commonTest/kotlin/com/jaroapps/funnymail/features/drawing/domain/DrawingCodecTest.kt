@@ -71,6 +71,7 @@ class DrawingCodecTest {
 
     @Test
     fun acceptsMorePointsThanThePreviousDetailLimit() {
+        val codecWithRoomForPointBudget = DrawingCodec(maxJsonBytes = 768 * 1024)
         val drawing = DrawingDocument(
             strokes = listOf(
                 DrawingStroke(
@@ -79,10 +80,10 @@ class DrawingCodecTest {
             ),
         )
 
-        val encoded = codec.encode(drawing)
+        val encoded = codecWithRoomForPointBudget.encode(drawing)
 
         assertTrue(encoded.isSuccess)
-        val (checkedResult, sizeBytes) = codec.encodeWithSize(drawing)
+        val (checkedResult, sizeBytes) = codecWithRoomForPointBudget.encodeWithSize(drawing)
         assertTrue(checkedResult.isSuccess)
         assertTrue(sizeBytes > 30_001)
         assertEquals(sizeBytes, encoded.getOrThrow().encodeToByteArray().size)
@@ -97,4 +98,34 @@ class DrawingCodecTest {
 
         assertFalse(smallCodec.encode(drawing).isSuccess)
     }
+    @Test
+    fun enforces250KiBDrawingJsonLimit() {
+        val limitedCodec = DrawingCodec(maxJsonBytes = 250 * 1024)
+        val drawing = DrawingDocument(
+            strokes = listOf(
+                DrawingStroke(points = List(30_000) { listOf(0.1, 0.2) }),
+            ),
+        )
+        assertFalse(limitedCodec.encode(drawing).isSuccess)
+    }
+
+    @Test
+    fun validatesCaptionLengthLimits() {
+        assertFalse(codec.encode(DrawingDocument(title = "x".repeat(21))).isSuccess)
+        assertFalse(codec.encode(DrawingDocument(caption = "x".repeat(81))).isSuccess)
+        assertTrue(codec.encode(DrawingDocument(title = "A".repeat(20), caption = "B".repeat(80))).isSuccess)
+    }
+
+    @Test
+    fun validatesStrokeAndBackgroundOpacity() {
+        val invalidStroke = DrawingDocument(
+            strokes = listOf(
+                DrawingStroke(alpha = 1.1f, points = listOf(listOf(0.1, 0.2))),
+            ),
+        )
+        assertFalse(codec.encode(invalidStroke).isSuccess)
+        assertFalse(codec.encode(DrawingDocument(canvas = DrawingCanvas(backgroundAlpha = -0.1f))).isSuccess)
+        assertTrue(codec.encode(DrawingDocument(canvas = DrawingCanvas(backgroundAlpha = 0.5f))).isSuccess)
+    }
+
 }
