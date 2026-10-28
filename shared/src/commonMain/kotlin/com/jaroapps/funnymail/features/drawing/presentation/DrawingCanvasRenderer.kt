@@ -1,12 +1,25 @@
 package com.jaroapps.funnymail.features.drawing.presentation
 
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
+import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import kotlin.math.min
 
 /**
@@ -86,3 +99,70 @@ private fun String.toDrawingRenderColor(): androidx.compose.ui.graphics.Color {
         alpha = 1f,
     )
 }
+
+
+/**
+ * Shared annotation layer used by the editor, gallery previews and full-screen viewer.
+ * All saved positions are normalized in the same aspect-preserving coordinate space as strokes.
+ */
+@Composable
+fun DrawingAnnotationsOverlay(
+    drawing: DrawingDocument,
+    modifier: Modifier = Modifier,
+) {
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val logicalWidth = drawing.canvas.width.coerceAtLeast(1)
+        val logicalHeight = drawing.canvas.height.coerceAtLeast(1)
+        val scale = minOf(
+            maxWidth.value / logicalWidth.toFloat(),
+            maxHeight.value / logicalHeight.toFloat(),
+        ).takeIf { it.isFinite() && it > 0f } ?: return@BoxWithConstraints
+        val contentWidth = (logicalWidth * scale).dp
+        val contentHeight = (logicalHeight * scale).dp
+        val offsetX = (maxWidth - contentWidth) / 2
+        val offsetY = (maxHeight - contentHeight) / 2
+
+        drawing.texts.forEach { annotation ->
+            Text(
+                text = annotation.text,
+                modifier = Modifier
+                    .offset(
+                        x = offsetX + (annotation.x * logicalWidth * scale).dp,
+                        y = offsetY + (annotation.y * logicalHeight * scale).dp,
+                    )
+                    .androidxComposeRotate(annotation.rotationDegrees),
+                style = TextStyle(
+                    color = annotation.color.toDrawingRenderColor().copy(alpha = annotation.alpha.coerceIn(0f, 1f)),
+                    fontSize = (annotation.fontSize * scale).sp,
+                    fontWeight = if (annotation.bold) FontWeight.Bold else FontWeight.Normal,
+                    fontStyle = if (annotation.italic) FontStyle.Italic else FontStyle.Normal,
+                    textDecoration = if (annotation.underline) TextDecoration.Underline else TextDecoration.None,
+                ),
+            )
+        }
+        drawing.stickers.forEach { sticker ->
+            Text(
+                text = when (sticker.code) {
+                    ":smile:" -> "😊"
+                    ":heart:" -> "❤️"
+                    ":wink:" -> "😉"
+                    ":laugh:" -> "😂"
+                    ":sad:" -> "🙁"
+                    ":cool:" -> "😎"
+                    else -> "😊"
+                },
+                modifier = Modifier
+                    .offset(
+                        x = offsetX + (sticker.x * logicalWidth * scale).dp,
+                        y = offsetY + (sticker.y * logicalHeight * scale).dp,
+                    )
+                    .androidxComposeRotate(sticker.rotationDegrees),
+                fontSize = (72f * scale * sticker.scale).sp,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+private fun Modifier.androidxComposeRotate(degrees: Float): Modifier =
+    androidx.compose.ui.draw.rotate(degrees)
