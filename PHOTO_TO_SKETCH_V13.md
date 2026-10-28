@@ -4,7 +4,7 @@ V13 is based on the classic V12 pipeline. It does not use a neural model and doe
 
 ## Editor controls
 
-After importing a photo, the editor opens a compact quality panel. Settings regenerate the edge map/vector sketch automatically after a short debounce so the user can compare detail and JSON size before manual drawing.
+After importing a photo, the quality panel starts collapsed. Tap **Кач.** to open it. Defaults are 6,500 points, 25% edge sensitivity, minimum edge strength 0, simplification tolerance 2.75, stroke width 5.0, 80% removal of weak isolated points, and point merging enabled. Settings regenerate the edge map/vector sketch automatically after a short debounce so the user can compare detail and JSON size before manual drawing.
 
 - **Maximum points:** a target point budget. The vectorizer first increases simplification tolerance; if that is insufficient, it omits weaker/shorter paths to stay within the selected budget.
 - **Edge sensitivity:** changes the classic Sobel/hysteresis detector threshold. A lower threshold retains subtler contours; a higher threshold filters them.
@@ -20,4 +20,4 @@ Quality settings are available while the imported photo is still a generated ske
 
 ## Validation
 
-Common tests cover configurable stroke width, point-budget enforcement when dots cannot be simplified, minimum edge strength, and the merge-points toggle. CI/build execution must be checked separately.
+Common tests cover the preferred default profile, configurable stroke width, point-budget enforcement when dots cannot be simplified, minimum edge strength, contour simplification, and the merge-points toggle. CI/build execution must be checked separately.
