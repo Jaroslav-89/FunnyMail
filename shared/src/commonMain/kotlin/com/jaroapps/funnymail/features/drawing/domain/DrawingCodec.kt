@@ -104,6 +104,9 @@ class DrawingCodec(
         require(HEX_COLOR.matches(drawing.canvas.gradientEndColor)) {
             "Некорректный второй цвет градиента."
         }
+        require(drawing.canvas.backgroundAlpha.isFinite() && drawing.canvas.backgroundAlpha in 0f..1f) {
+            "Некорректная прозрачность фона."
+        }
         require(drawing.strokes.size <= maxStrokes) {
             "Слишком много штрихов."
         }
@@ -113,6 +116,9 @@ class DrawingCodec(
             require(HEX_COLOR.matches(stroke.color)) { "Некорректный цвет штриха." }
             require(stroke.width.isFinite() && stroke.width in MIN_STROKE_WIDTH..MAX_STROKE_WIDTH) {
                 "Некорректная толщина кисти."
+            }
+            require(stroke.alpha.isFinite() && stroke.alpha in 0f..1f) {
+                "Некорректная прозрачность штриха."
             }
             require(stroke.points.isNotEmpty()) { "Штрих должен содержать точки." }
             stroke.points.forEach { point ->
