@@ -11,6 +11,7 @@ final class DexiNedEdgeProvider: NSObject, NeuralEdgeInferenceProvider {
     private let lock = NSRecursiveLock()
     private var environment: ORTEnv?
     private var session: ORTSession?
+    private var sessionOptions: ORTSessionOptions?
 
     private let modelName = "edge_detection_dexined_2024sep.onnx"
     private let modelURL = URL(
@@ -98,19 +99,26 @@ final class DexiNedEdgeProvider: NSObject, NeuralEdgeInferenceProvider {
                 )
             }
 
-            // Return the model confidence map at the decoded photograph dimensions. Common code
-            // applies two-threshold hysteresis before contour tracing/vectorization.
-            let outputSize = width * height
-            let bytes = KotlinByteArray(size: Int32(outputSize))
-            for y in 0..<height {
-                let sourceY = min(inputSize - 1, y * inputSize / height)
-                for x in 0..<width {
-                    let sourceX = min(inputSize - 1, x * inputSize / width)
+            // Keep the decoded photo's aspect ratio and the model's native detail scale so 512px
+            // model edges don't turn into double-width blocks when the source photo is 1024px.
+            let outputLongSide = min(inputSize, max(width, height))
+            let scale = Double(outputLongSide) / Double(max(width, height))
+            let outputWidth = max(3, Int((Double(width) * scale).rounded()))
+            let outputHeight = max(3, Int((Double(height) * scale).rounded()))
+            let bytes = KotlinByteArray(size: Int32(outputWidth * outputHeight))
+            for y in 0..<outputHeight {
+                let sourceY = min(inputSize - 1, y * inputSize / outputHeight)
+                for x in 0..<outputWidth {
+                    let sourceX = min(inputSize - 1, x * inputSize / outputWidth)
                     let value = confidence512[sourceY * inputSize + sourceX]
-                    bytes.set(index: Int32(y * width + x), value: Int8(bitPattern: value))
+                    bytes.set(index: Int32(y * outputWidth + x), value: Int8(bitPattern: value))
                 }
             }
-            return EdgeMap(width: Int32(width), height: Int32(height), strength: bytes)
+            return EdgeMap(
+                width: Int32(outputWidth),
+                height: Int32(outputHeight),
+                strength: bytes
+            )
         } catch {
             NSLog("DexiNed iOS inference unavailable: %@", String(describing: error))
             return nil
@@ -125,6 +133,7 @@ final class DexiNedEdgeProvider: NSObject, NeuralEdgeInferenceProvider {
         try options.setIntraOpNumThreads(2)
         let session = try ORTSession(env: env, modelPath: modelFile.path, sessionOptions: options)
         self.environment = env
+        self.sessionOptions = options
         self.session = session
         return session
     }
@@ -149,7 +158,11 @@ final class DexiNedEdgeProvider: NSObject, NeuralEdgeInferenceProvider {
         try? FileManager.default.removeItem(at: staging)
         let state = DownloadState()
         let semaphore = DispatchSemaphore(value: 0)
-        URLSession.shared.downloadTask(with: modelURL) { temporaryURL, response, error in
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 180
+        configuration.timeoutIntervalForResource = 300
+        let downloadSession = URLSession(configuration: configuration)
+        downloadSession.downloadTask(with: modelURL) { temporaryURL, response, error in
             defer { semaphore.signal() }
             if let error {
                 state.error = error
@@ -169,6 +182,7 @@ final class DexiNedEdgeProvider: NSObject, NeuralEdgeInferenceProvider {
             }
         }.resume()
         semaphore.wait()
+        downloadSession.finishTasksAndInvalidate()
         if let error = state.error { throw error }
         guard FileManager.default.fileExists(atPath: staging.path) else {
             throw DexiNedDownloadError.missingDownload
