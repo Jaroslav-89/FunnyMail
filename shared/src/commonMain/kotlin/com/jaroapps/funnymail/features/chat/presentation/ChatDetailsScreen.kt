@@ -11,6 +11,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -53,6 +54,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
@@ -587,10 +590,16 @@ fun ChatDetailsScreen(
                         }
                         generatedInvite?.let { invite ->
                             Text(stringResource(Res.string.invite_code), style = MaterialTheme.typography.titleSmall)
-                            SelectionContainer {
-                                Text(invite.code, style = MaterialTheme.typography.headlineSmall,
-                                    color = MaterialTheme.colorScheme.primary)
-                            }
+                            val clipboard = LocalClipboardManager.current
+                            Text(
+                                invite.code,
+                                modifier = Modifier.combinedClickable(
+                                    onClick = {},
+                                    onLongClick = { clipboard.setText(AnnotatedString(invite.code)) },
+                                ),
+                                style = MaterialTheme.typography.headlineSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
                             Text(stringResource(Res.string.invite_code_expires), style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
