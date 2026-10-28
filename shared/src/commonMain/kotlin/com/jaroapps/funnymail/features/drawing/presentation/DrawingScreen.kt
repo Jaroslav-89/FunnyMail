@@ -766,6 +766,13 @@ fun DrawingScreen(
                     color = Color(0xFF5F6368),
                     style = MaterialTheme.typography.labelSmall,
                 )
+                if (currentDrawing != null && currentDrawingJson == null) {
+                    Text(
+                        currentDrawingError ?: "Рисунок превышает лимит сохранения.",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
                 if (isReprocessingPhoto || photoQualitySettings != appliedPhotoQualitySettings) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
