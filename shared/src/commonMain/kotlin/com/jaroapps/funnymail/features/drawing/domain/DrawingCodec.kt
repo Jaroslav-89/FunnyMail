@@ -21,19 +21,29 @@ class DrawingCodec(
         isLenient = false
     }
 
-    fun encode(drawing: DrawingDocument): Result<String> = runCatching {
-        validate(drawing)
-        val serialized = json.encodeToString(drawing)
-        require(serialized.encodeToByteArray().size <= maxJsonBytes) {
-            "Рисунок слишком большой. Максимальный размер — ${maxJsonBytes / 1024} KiB."
-        }
-        serialized
-    }
+    fun encode(drawing: DrawingDocument): Result<String> =
+        encodeWithSize(drawing).first
 
     /**
-     * Returns the exact UTF-8 JSON payload size even when the drawing exceeds persistence limits.
-     * Used by the editor to explain why a very detailed drawing cannot yet be saved or sent.
+     * Encodes the document once and returns both validation result and exact UTF-8 JSON byte size.
+     * The size remains available even when persistence limits reject the drawing, so the editor
+     * can display useful diagnostics instead of reporting a misleading zero size.
      */
+    fun encodeWithSize(drawing: DrawingDocument): Pair<Result<String>, Int> {
+        val serializedResult = runCatching { json.encodeToString(drawing) }
+        val serialized = serializedResult.getOrElse { return serializedResult to 0 }
+        val sizeBytes = serialized.encodeToByteArray().size
+        val result = runCatching {
+            validate(drawing)
+            require(sizeBytes <= maxJsonBytes) {
+                "Рисунок занимает ${sizeBytes / 1024} КиБ. Максимальный размер JSON — ${maxJsonBytes / 1024} КиБ."
+            }
+            serialized
+        }
+        return result to sizeBytes
+    }
+
+    /** Returns encoded size without validating persistence limits. */
     fun encodedSizeBytes(drawing: DrawingDocument): Int =
         json.encodeToString(drawing).encodeToByteArray().size
 
