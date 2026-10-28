@@ -21,8 +21,14 @@ class DrawingCodec(
         isLenient = false
     }
 
-    fun encode(drawing: DrawingDocument): Result<String> =
-        encodeWithSize(drawing).first
+    fun encode(drawing: DrawingDocument): Result<String> = runCatching {
+        validate(drawing)
+        val serialized = json.encodeToString(drawing)
+        require(serialized.encodeToByteArray().size <= maxJsonBytes) {
+            "Рисунок слишком большой. Максимальный размер — ${maxJsonBytes / 1024} КиБ."
+        }
+        serialized
+    }
 
     /**
      * Encodes the document once and returns both validation result and exact UTF-8 JSON byte size.
