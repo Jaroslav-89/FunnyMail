@@ -30,7 +30,7 @@ class PhotoSketchSettingsTest {
         val edges = ByteArray(width * height)
         // Forty isolated cells with different confidence; no line simplification can reduce them.
         for (i in 0 until 40) {
-            edges[10 * width + (3 + i * 4)] = ((i + 1) * 5).toByte()
+            edges[10 * width + (3 + i * 4)] = ((i + 1) * 255 / 40).toByte()
         }
 
         val document = EdgeMapVectorizer(
