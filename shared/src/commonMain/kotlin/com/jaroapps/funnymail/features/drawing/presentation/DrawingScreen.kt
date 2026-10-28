@@ -226,7 +226,7 @@ fun DrawingScreen(
     } else {
         selectedColor
     }
-    val currentDrawingJson = remember(
+    val currentDrawing = remember(
         strokes,
         canvasWidth,
         canvasHeight,
@@ -239,22 +239,31 @@ fun DrawingScreen(
         if (strokes.isEmpty()) {
             null
         } else {
-            drawingCodec.encode(
-                DrawingDocument(
-                    canvas = DrawingCanvas(
-                        width = canvasWidth,
-                        height = canvasHeight,
-                        backgroundColor = backgroundColor,
-                        backgroundMode = backgroundMode,
-                        gradientDirection = gradientDirection,
-                        gradientStartColor = gradientStartColor,
-                        gradientEndColor = gradientEndColor,
-                    ),
-                    strokes = strokes,
+            DrawingDocument(
+                canvas = DrawingCanvas(
+                    width = canvasWidth,
+                    height = canvasHeight,
+                    backgroundColor = backgroundColor,
+                    backgroundMode = backgroundMode,
+                    gradientDirection = gradientDirection,
+                    gradientStartColor = gradientStartColor,
+                    gradientEndColor = gradientEndColor,
                 ),
-            ).getOrNull()
+                strokes = strokes,
+            )
         }
     }
+    val currentDrawingEncoding = remember(currentDrawing) {
+        currentDrawing?.let { drawingCodec.encodeWithSize(it) }
+    }
+    val currentDrawingJson = currentDrawingEncoding?.first?.getOrNull()
+    val currentDrawingJsonBytes = currentDrawingEncoding?.second ?: 0
+    val currentDrawingError = currentDrawingEncoding?.first?.exceptionOrNull()?.message
+    val currentDrawingPointCount = remember(strokes) {
+        strokes.sumOf { it.points.size }
+    }
+    val currentDrawingJsonKiB = (currentDrawingJsonBytes / 1024.0 * 10.0).roundToInt() / 10.0
+    val maxDrawingJsonKiB = (drawingCodec.maxJsonBytes / 1024.0 * 10.0).roundToInt() / 10.0
     val isCurrentDrawingSaved = currentDrawingJson != null && currentDrawingJson == savedDrawingJson
 
     val photoPicker = rememberPhotoPicker(
