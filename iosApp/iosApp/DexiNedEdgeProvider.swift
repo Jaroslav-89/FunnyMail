@@ -138,6 +138,12 @@ final class DexiNedEdgeProvider: NSObject, NeuralEdgeInferenceProvider {
         return session
     }
 
+    private func sha256(_ data: Data) -> String {
+        SHA256.hash(data: data)
+            .map { String(format: "%02x", $0) }
+            .joined()
+    }
+
     private func ensureModelFile() throws -> URL {
         let caches = try FileManager.default.url(
             for: .cachesDirectory,
@@ -150,9 +156,12 @@ final class DexiNedEdgeProvider: NSObject, NeuralEdgeInferenceProvider {
         let target = directory.appendingPathComponent(modelName)
         if let attributes = try? FileManager.default.attributesOfItem(atPath: target.path),
            let size = attributes[.size] as? NSNumber,
-           size.int64Value > 40_000_000 {
+           size.int64Value > 40_000_000,
+           let cachedData = try? Data(contentsOf: target, options: .mappedIfSafe),
+           sha256(cachedData).caseInsensitiveCompare(expectedSHA256) == .orderedSame {
             return target
         }
+        try? FileManager.default.removeItem(at: target)
 
         let staging = directory.appendingPathComponent(modelName + ".download")
         try? FileManager.default.removeItem(at: staging)
@@ -189,9 +198,7 @@ final class DexiNedEdgeProvider: NSObject, NeuralEdgeInferenceProvider {
         }
 
         let fileData = try Data(contentsOf: staging, options: .mappedIfSafe)
-        let checksum = SHA256.hash(data: fileData)
-            .map { String(format: "%02x", $0) }
-            .joined()
+        let checksum = sha256(fileData)
         guard checksum.caseInsensitiveCompare(expectedSHA256) == .orderedSame else {
             try? FileManager.default.removeItem(at: staging)
             throw DexiNedDownloadError.checksumMismatch
