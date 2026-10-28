@@ -131,6 +131,17 @@ class DrawingCodecTest {
     }
 
     @Test
+    fun legacyJsonWithoutAnnotationsStillDecodes() {
+        val legacyJson = """{"version":1,"strokes":[]}"""
+
+        val decoded = codec.decode(legacyJson).getOrThrow()
+
+        assertTrue(decoded.strokes.isEmpty())
+        assertTrue(decoded.texts.isEmpty())
+        assertTrue(decoded.stickers.isEmpty())
+    }
+
+    @Test
     fun richTextAndStickersRoundTrip() {
         val drawing = DrawingDocument(
             texts = listOf(
