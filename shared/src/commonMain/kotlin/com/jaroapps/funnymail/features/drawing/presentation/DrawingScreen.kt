@@ -136,8 +136,8 @@ private val DrawingPalette = listOf(
     "#A142F4",
 )
 
-private val BrushWidths = listOf(3f, 7f, 12f, 19f, 27f)
-private val BrushDotSizes = listOf(6.dp, 9.dp, 13.dp, 17.dp, 22.dp)
+private val BrushWidths = listOf(2f, 5f, 9f, 15f, 23f, 36f, 52f, 72f)
+private val BrushDotSizes = listOf(4.dp, 6.dp, 9.dp, 12.dp, 15.dp, 19.dp, 23.dp, 27.dp)
 
 private data class PhotoConversionResult(
     val document: DrawingDocument,
@@ -255,11 +255,8 @@ fun DrawingScreen(
         mutableStateOf(initialDrawing != null)
     }
     var isDrawingGestureActive by remember { mutableStateOf(false) }
-    val paintColor = if (eraserEnabled) {
-        if (backgroundMode == "GRADIENT") gradientStartColor else backgroundColor
-    } else {
-        selectedColor
-    }
+    // Eraser removes nearby vector strokes; it never paints with the background color.
+    val paintColor = selectedColor
     val currentDrawing = remember(
         strokes,
         canvasWidth,
@@ -518,12 +515,29 @@ fun DrawingScreen(
                         },
                         onDragEnd = {
                             if (isDrawingGestureActive && activePoints.isNotEmpty()) {
-                                strokes = strokes + DrawingStroke(
-                                    color = paintColor,
-                                    width = brushWidth,
-                                    points = activePoints,
-                                )
-                                redoStrokes = emptyList()
+                                if (eraserEnabled) {
+                                    val eraseRadius = (brushWidth / min(canvasWidth, canvasHeight).coerceAtLeast(1)) * 1.8
+                                    val erased = strokes.filter { stroke ->
+                                        stroke.points.any { point ->
+                                            activePoints.any { eraserPoint ->
+                                                val dx = point[0] - eraserPoint[0]
+                                                val dy = point[1] - eraserPoint[1]
+                                                sqrt(dx * dx + dy * dy) <= eraseRadius
+                                            }
+                                        }
+                                    }
+                                    if (erased.isNotEmpty()) {
+                                        redoStrokes = redoStrokes + erased
+                                        strokes = strokes - erased.toSet()
+                                    }
+                                } else {
+                                    strokes = strokes + DrawingStroke(
+                                        color = paintColor,
+                                        width = brushWidth,
+                                        points = activePoints,
+                                    )
+                                    redoStrokes = emptyList()
+                                }
                                 // Quality controls regenerate the whole photo-derived vector.
                                 // Close them before a manual stroke can be added or overwritten.
                                 sourceGrayImage = null
@@ -550,7 +564,7 @@ fun DrawingScreen(
                     gradientEndColor = gradientEndColor,
                 ),
             )
-            val visibleStrokes = if (activePoints.isEmpty()) {
+            val visibleStrokes = if (activePoints.isEmpty() || eraserEnabled) {
                 strokes
             } else {
                 strokes + DrawingStroke(
