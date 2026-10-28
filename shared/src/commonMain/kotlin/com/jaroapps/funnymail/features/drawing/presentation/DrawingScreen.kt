@@ -71,6 +71,7 @@ import com.jaroapps.funnymail.features.drawing.domain.model.DrawingCanvas
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
 import com.jaroapps.funnymail.features.drawing.platform.decodePhotoToGrayscale
+import com.jaroapps.funnymail.features.drawing.platform.detectPhotoEdgesWithDexiNed
 import com.jaroapps.funnymail.features.drawing.platform.rememberPhotoPicker
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -130,6 +131,7 @@ private val BrushDotSizes = listOf(6.dp, 9.dp, 13.dp, 17.dp, 22.dp)
 private data class PhotoConversionResult(
     val document: DrawingDocument,
     val edgeMap: EdgeMap,
+    val usedDexiNed: Boolean,
 )
 
 private enum class DrawingPopup {
@@ -208,6 +210,8 @@ fun DrawingScreen(
     var isProcessingImage by remember { mutableStateOf(false) }
     var diagnosticEdgeMap by remember { mutableStateOf<EdgeMap?>(null) }
     var showEdgeMapPreview by remember { mutableStateOf(false) }
+    var useDexiNed by remember { mutableStateOf(false) }
+    var diagnosticUsedDexiNed by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var statusIsError by remember { mutableStateOf(false) }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
@@ -272,14 +276,21 @@ fun DrawingScreen(
                                 "The selected photo could not be decoded for edge detection.",
                             )
                             val pipeline = PhotoToSketchConverter()
-                            val edgeMap = pipeline.detectEdges(grayscale)
+                            val neuralMap = if (useDexiNed) {
+                                detectPhotoEdgesWithDexiNed(grayscale)
+                            } else {
+                                null
+                            }
+                            val usedDexiNed = neuralMap != null
+                            val edgeMap = neuralMap ?: pipeline.detectEdges(grayscale)
                             val document = pipeline.vectorize(edgeMap)
                             // Validate early so an oversized result is reported as an import error.
                             drawingCodec.encode(document).getOrThrow()
-                            PhotoConversionResult(document, edgeMap)
+                            PhotoConversionResult(document, edgeMap, usedDexiNed)
                         }
                         val convertedDrawing = converted.document
                         diagnosticEdgeMap = converted.edgeMap
+                        diagnosticUsedDexiNed = converted.usedDexiNed
                         canvasWidth = convertedDrawing.canvas.width
                         canvasHeight = convertedDrawing.canvas.height
                         canvasAspectInitialized = true
@@ -290,7 +301,11 @@ fun DrawingScreen(
                         backgroundColor = "#FFFFFF"
                         selectedColor = "#202124"
                         eraserEnabled = false
-                        statusMessage = photoConversionCompleteMessage
+                        statusMessage = if (useDexiNed && !converted.usedDexiNed) {
+                            "DexiNed недоступен — использован классический детектор."
+                        } else {
+                            photoConversionCompleteMessage
+                        }
                         statusIsError = false
                     } catch (error: CancellationException) {
                         throw error
@@ -500,6 +515,25 @@ fun DrawingScreen(
                         contentDescription = importImageTitle,
                         tint = Color(0xFF202124),
                         modifier = Modifier.size(22.dp),
+                    )
+                }
+
+                RoundToolButton(
+                    enabled = !isProcessingImage,
+                    onClick = {
+                        useDexiNed = !useDexiNed
+                        statusMessage = if (useDexiNed) {
+                            "Режим DexiNed: первая загрузка модели может занять время."
+                        } else {
+                            "Режим классического детектора."
+                        }
+                        statusIsError = false
+                    },
+                ) {
+                    Text(
+                        if (useDexiNed) "AI" else "CV",
+                        color = if (useDexiNed) Color(0xFF188038) else Color(0xFF202124),
+                        fontSize = 9.sp,
                     )
                 }
 
@@ -885,7 +919,7 @@ fun DrawingScreen(
         if (edgeMap != null) {
             AlertDialog(
                 onDismissRequest = { showEdgeMapPreview = false },
-                title = { Text("Карта найденных границ") },
+                title = { Text(if (diagnosticUsedDexiNed) "Карта DexiNed" else "Карта классического детектора") },
                 containerColor = Color.White,
                 titleContentColor = Color(0xFF202124),
                 textContentColor = Color(0xFF202124),
