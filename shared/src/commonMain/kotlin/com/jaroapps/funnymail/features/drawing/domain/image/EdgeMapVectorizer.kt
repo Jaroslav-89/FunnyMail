@@ -217,7 +217,7 @@ class EdgeMapVectorizer(
         return dx * dx + dy * dy
     }
 
-    private fun tracePaths(edges: BooleanArray, width: Int, height: Int): List<List<Int>> {    private fun tracePaths(edges: BooleanArray, width: Int, height: Int): List<List<Int>> {
+    private fun tracePaths(edges: BooleanArray, width: Int, height: Int): List<List<Int>> {
         val degree = ByteArray(edges.size)
         for (index in edges.indices) {
             if (edges[index]) degree[index] = neighbours(index, width, height, edges).size.toByte()
