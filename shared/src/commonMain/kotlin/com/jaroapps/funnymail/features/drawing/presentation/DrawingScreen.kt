@@ -1210,43 +1210,69 @@ fun DrawingScreen(
                     enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
                     exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom),
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
-                            .shadow(5.dp, RoundedCornerShape(28.dp))
-                            .clip(RoundedCornerShape(28.dp))
+                            .width(270.dp)
+                            .shadow(5.dp, RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(20.dp))
                             .background(Color.White)
-                            .border(1.dp, Color(0xFFE8EAED), RoundedCornerShape(28.dp))
-                            .padding(horizontal = 9.dp, vertical = 5.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            .border(1.dp, Color(0xFFE8EAED), RoundedCornerShape(20.dp))
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        BrushWidths.forEachIndexed { index, width ->
-                            val selected = brushWidth == width
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .clickable {
-                                        brushWidth = width
-                                        activePopup = null
-                                        statusMessage = null
-                                    },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (selected) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(BrushDotSizes[index] + 8.dp)
-                                            .border(2.dp, Color(0xFF1A73E8), CircleShape),
-                                    )
-                                }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            BrushWidths.forEachIndexed { index, width ->
+                                val selected = abs(brushWidth - width) < 0.1f
                                 Box(
                                     modifier = Modifier
-                                        .size(BrushDotSizes[index])
+                                        .size(27.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF202124)),
-                                )
+                                        .clickable {
+                                            brushWidth = width
+                                            eraserEnabled = false
+                                            statusMessage = null
+                                        },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    if (selected) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(BrushDotSizes[index] + 4.dp)
+                                                .border(2.dp, Color(0xFF1A73E8), CircleShape),
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(BrushDotSizes[index].coerceAtMost(20.dp))
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF202124)),
+                                    )
+                                }
                             }
+                        }
+                        Text(
+                            "Толщина кисти: ${brushWidth.roundToInt()}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF202124),
+                        )
+                        Slider(
+                            value = brushWidth,
+                            onValueChange = {
+                                brushWidth = it
+                                eraserEnabled = false
+                                statusMessage = null
+                            },
+                            valueRange = BrushWidths.first()..BrushWidths.last(),
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text("Тонкая", style = MaterialTheme.typography.labelSmall, color = Color(0xFF5F6368))
+                            Text("Толстая", style = MaterialTheme.typography.labelSmall, color = Color(0xFF5F6368))
                         }
                     }
                 }
