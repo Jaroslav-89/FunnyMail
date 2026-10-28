@@ -419,7 +419,7 @@ fun DrawingScreen(
         },
     )
 
-    LaunchedEffect(sourceGrayImage, photoQualitySettings, photoMode) {
+    LaunchedEffect(sourceGrayImage, photoQualitySettings) {
         if (photoMode != "CONTOURS") {
             isReprocessingPhoto = false
             return@LaunchedEffect
