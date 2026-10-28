@@ -49,7 +49,7 @@ class PhotoToSketchConverterTest {
         assertTrue(document.strokes.size >= 2, "The closed facade contour and inner edge should remain separate strokes")
         assertTrue(document.strokes.all { stroke ->
             stroke.points.size >= 2 &&
-                stroke.width == 2.0f &&
+                stroke.width == 2.6f &&
                 stroke.points.all { point ->
                     point.size == 2 && point.all { it in 0.0..1.0 }
                 }
@@ -74,8 +74,8 @@ class PhotoToSketchConverterTest {
             "Strong map contours should remain black")
         assertTrue(document.strokes.any { it.color == "#A1A1A1" },
             "Weak map contours should remain light gray like the map preview")
-        assertTrue(document.strokes.all { it.width == 2.0f },
-            "Map-derived contour strokes should use twice the previous display thickness")
+        assertTrue(document.strokes.all { it.width == 2.6f },
+            "Map-derived contour strokes should use thicker than the previous display thickness")
     }
 
     @Test
@@ -115,6 +115,43 @@ class PhotoToSketchConverterTest {
         assertTrue(document.canvas.width == 1_000 && document.canvas.height == 750,
             "Different preview grid steps must not distort the source aspect ratio")
         DrawingCodec().encode(document).getOrThrow()
+    }
+
+    @Test
+    fun simplifiesLongStraightContoursIntoCompactThickStrokes() {
+        val width = 160
+        val height = 16
+        val edges = ByteArray(width * height)
+        for (x in 10..130) edges[8 * width + x] = 255.toByte()
+
+        val document = EdgeMapVectorizer().convert(EdgeMap(width, height, edges))
+        val stroke = document.strokes.maxByOrNull { it.points.size }
+            ?: error("Expected the long edge to become a stroke")
+
+        assertTrue(
+            stroke.points.size <= 3,
+            "A straight edge should keep only its endpoints after path simplification",
+        )
+        assertTrue(stroke.width == 2.6f, "The simplified edge should use a thicker stroke")
+        assertTrue(document.strokes.sumOf { it.points.size } < 121 / 4,
+            "Long straight paths should use substantially fewer points than raw edge cells")
+    }
+
+    @Test
+    fun removesOnlyTheWeakestFifthOfIsolatedEdgeCells() {
+        val width = 100
+        val height = 20
+        val edges = ByteArray(width * height)
+        for (i in 0 until 10) {
+            edges[10 * width + (5 + i * 10)] = ((i + 1) * 10).toByte()
+        }
+
+        val document = EdgeMapVectorizer().convert(EdgeMap(width, height, edges))
+
+        assertTrue(document.strokes.size == 8,
+            "Only the two weakest of ten isolated edge cells should be removed")
+        assertTrue(document.strokes.all { it.points.size == 1 },
+            "Remaining isolated detections should still be represented as individual points")
     }
 
     @Test
