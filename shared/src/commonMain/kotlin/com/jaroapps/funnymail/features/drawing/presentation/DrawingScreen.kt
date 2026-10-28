@@ -264,6 +264,7 @@ fun DrawingScreen(
     val photoPicker = rememberPhotoPicker(
         onImagePicked = { imageBytes ->
             if (!isProcessingImage) {
+                val requestedDexiNed = useDexiNed
                 coroutineScope.launch {
                     isProcessingImage = true
                     statusMessage = null
@@ -276,7 +277,7 @@ fun DrawingScreen(
                                 "The selected photo could not be decoded for edge detection.",
                             )
                             val pipeline = PhotoToSketchConverter()
-                            val neuralMap = if (useDexiNed) {
+                            val neuralMap = if (requestedDexiNed) {
                                 detectPhotoEdgesWithDexiNed(grayscale)
                             } else {
                                 null
@@ -301,7 +302,7 @@ fun DrawingScreen(
                         backgroundColor = "#FFFFFF"
                         selectedColor = "#202124"
                         eraserEnabled = false
-                        statusMessage = if (useDexiNed && !converted.usedDexiNed) {
+                        statusMessage = if (requestedDexiNed && !converted.usedDexiNed) {
                             "DexiNed недоступен — использован классический детектор."
                         } else {
                             photoConversionCompleteMessage
