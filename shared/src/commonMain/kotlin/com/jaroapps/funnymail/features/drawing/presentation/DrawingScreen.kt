@@ -914,16 +914,27 @@ fun DrawingScreen(
                             val stepX = (edgeMap.width / 320).coerceAtLeast(1)
                             val stepY = (edgeMap.height / 320).coerceAtLeast(1)
                             for (y in 0 until edgeMap.height step stepY) {
+                                val cellHeight = min(stepY, edgeMap.height - y)
                                 for (x in 0 until edgeMap.width step stepX) {
-                                    val strength = edgeMap.strength[y * edgeMap.width + x].toInt() and 0xFF
+                                    val cellWidth = min(stepX, edgeMap.width - x)
+                                    var strength = 0
+                                    for (sampleY in y until y + cellHeight) {
+                                        for (sampleX in x until x + cellWidth) {
+                                            strength = maxOf(
+                                                strength,
+                                                edgeMap.strength[sampleY * edgeMap.width + sampleX]
+                                                    .toInt() and 0xFF,
+                                            )
+                                        }
+                                    }
                                     if (strength == 0) continue
                                     val alpha = (0.25f + 0.75f * strength / 255f).coerceIn(0f, 1f)
                                     drawRect(
                                         color = Color.Black.copy(alpha = alpha),
                                         topLeft = Offset(left + x * scale, top + y * scale),
                                         size = Size(
-                                            width = (stepX * scale).coerceAtLeast(1f),
-                                            height = (stepY * scale).coerceAtLeast(1f),
+                                            width = (cellWidth * scale).coerceAtLeast(1f),
+                                            height = (cellHeight * scale).coerceAtLeast(1f),
                                         ),
                                     )
                                 }
