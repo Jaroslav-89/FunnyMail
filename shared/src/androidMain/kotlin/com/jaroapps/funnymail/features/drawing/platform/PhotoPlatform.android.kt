@@ -252,10 +252,25 @@ private object DexiNedRuntime {
             }
             val channelOffset = channel * modelPixelCount
             for (y in 0 until INPUT_SIZE) {
-                val sourceY = (y.toLong() * image.height / INPUT_SIZE).toInt().coerceIn(0, image.height - 1)
+                // Match standard image-resize sampling rather than nearest-neighbour scaling.
+                val sourceY = (
+                    (y + 0.5) * image.height / INPUT_SIZE - 0.5
+                ).coerceIn(0.0, (image.height - 1).toDouble())
+                val y0 = sourceY.toInt()
+                val y1 = min(image.height - 1, y0 + 1)
+                val fy = (sourceY - y0).toFloat()
                 for (x in 0 until INPUT_SIZE) {
-                    val sourceX = (x.toLong() * image.width / INPUT_SIZE).toInt().coerceIn(0, image.width - 1)
-                    val luminance = image.pixels[sourceY * image.width + sourceX].toFloat()
+                    val sourceX = (
+                        (x + 0.5) * image.width / INPUT_SIZE - 0.5
+                    ).coerceIn(0.0, (image.width - 1).toDouble())
+                    val x0 = sourceX.toInt()
+                    val x1 = min(image.width - 1, x0 + 1)
+                    val fx = (sourceX - x0).toFloat()
+                    val top = image.pixels[y0 * image.width + x0] * (1f - fx) +
+                        image.pixels[y0 * image.width + x1] * fx
+                    val bottom = image.pixels[y1 * image.width + x0] * (1f - fx) +
+                        image.pixels[y1 * image.width + x1] * fx
+                    val luminance = top * (1f - fy) + bottom * fy
                     tensorData[channelOffset + y * INPUT_SIZE + x] = luminance - mean
                 }
             }
@@ -308,10 +323,25 @@ private object DexiNedRuntime {
                 val outputHeight = (image.height * scale).roundToInt().coerceAtLeast(3)
                 val restored = ByteArray(outputWidth * outputHeight)
                 for (y in 0 until outputHeight) {
-                    val sourceY = (y.toLong() * INPUT_SIZE / outputHeight).toInt().coerceIn(0, INPUT_SIZE - 1)
+                    val sourceY = (
+                        (y + 0.5) * INPUT_SIZE / outputHeight - 0.5
+                    ).coerceIn(0.0, (INPUT_SIZE - 1).toDouble())
+                    val y0 = sourceY.toInt()
+                    val y1 = min(INPUT_SIZE - 1, y0 + 1)
+                    val fy = (sourceY - y0).toFloat()
                     for (x in 0 until outputWidth) {
-                        val sourceX = (x.toLong() * INPUT_SIZE / outputWidth).toInt().coerceIn(0, INPUT_SIZE - 1)
-                        restored[y * outputWidth + x] = confidence512[sourceY * INPUT_SIZE + sourceX]
+                        val sourceX = (
+                            (x + 0.5) * INPUT_SIZE / outputWidth - 0.5
+                        ).coerceIn(0.0, (INPUT_SIZE - 1).toDouble())
+                        val x0 = sourceX.toInt()
+                        val x1 = min(INPUT_SIZE - 1, x0 + 1)
+                        val fx = (sourceX - x0).toFloat()
+                        val top = (confidence512[y0 * INPUT_SIZE + x0].toInt() and 0xFF) * (1f - fx) +
+                            (confidence512[y0 * INPUT_SIZE + x1].toInt() and 0xFF) * fx
+                        val bottom = (confidence512[y1 * INPUT_SIZE + x0].toInt() and 0xFF) * (1f - fx) +
+                            (confidence512[y1 * INPUT_SIZE + x1].toInt() and 0xFF) * fx
+                        restored[y * outputWidth + x] =
+                            (top * (1f - fy) + bottom * fy).roundToInt().coerceIn(0, 255).toByte()
                     }
                 }
                 EdgeMap(outputWidth, outputHeight, restored)
