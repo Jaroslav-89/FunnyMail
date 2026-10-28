@@ -15,7 +15,7 @@ V11 keeps the V10 classical edge detector as the default and adds DexiNed as an 
 The model is approximately 47.2 MB. It is included as an app resource, so AI inference is available offline after installation. The packaged app will be larger by roughly the model's size before archive compression.
 
 To keep the ONNX binary out of Git history, the model is downloaded **during the build**, not on the user's device:
-- Android Gradle build fetches it into `shared/src/androidMain/assets/`.
+- Android Gradle build fetches it into `models/`.
 - Xcode build fetches the same file into that shared assets location and copies it into the iOS app bundle.
 - Both paths verify the SHA-256 and fail the build if the download is incomplete or mismatched.
 - Once the model file exists locally and passes verification, ordinary builds reuse it without fetching it again.
