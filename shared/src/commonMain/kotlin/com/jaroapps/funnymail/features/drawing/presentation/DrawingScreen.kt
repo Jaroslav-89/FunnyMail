@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.material.icons.Icons
@@ -63,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jaroapps.funnymail.core.ui.AppBackButton
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
+import com.jaroapps.funnymail.features.drawing.domain.image.EdgeMap
 import com.jaroapps.funnymail.features.drawing.domain.image.NoContoursFoundException
 import com.jaroapps.funnymail.features.drawing.domain.image.PhotoToSketchConverter
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingCanvas
@@ -124,6 +126,11 @@ private val DrawingPalette = listOf(
 
 private val BrushWidths = listOf(3f, 7f, 12f, 19f, 27f)
 private val BrushDotSizes = listOf(6.dp, 9.dp, 13.dp, 17.dp, 22.dp)
+
+private data class PhotoConversionResult(
+    val document: DrawingDocument,
+    val edgeMap: EdgeMap,
+)
 
 private enum class DrawingPopup {
     Colors,
@@ -199,6 +206,8 @@ fun DrawingScreen(
     var showFinishDialog by remember { mutableStateOf(false) }
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
     var isProcessingImage by remember { mutableStateOf(false) }
+    var diagnosticEdgeMap by remember { mutableStateOf<EdgeMap?>(null) }
+    var showEdgeMapPreview by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var statusIsError by remember { mutableStateOf(false) }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
@@ -255,18 +264,22 @@ fun DrawingScreen(
                     isProcessingImage = true
                     statusMessage = null
                     try {
-                        val convertedDrawing = withContext(Dispatchers.Default) {
+                        val converted = withContext(Dispatchers.Default) {
                             val grayscale = decodePhotoToGrayscale(
                                 imageBytes,
                                 maxDimension = 1024,
                             ) ?: throw IllegalStateException(
                                 "The selected photo could not be decoded for edge detection.",
                             )
-                            val document = PhotoToSketchConverter().convert(grayscale)
+                            val pipeline = PhotoToSketchConverter()
+                            val edgeMap = pipeline.detectEdges(grayscale)
+                            val document = pipeline.vectorize(edgeMap)
                             // Validate early so an oversized result is reported as an import error.
                             drawingCodec.encode(document).getOrThrow()
-                            document
+                            PhotoConversionResult(document, edgeMap)
                         }
+                        val convertedDrawing = converted.document
+                        diagnosticEdgeMap = converted.edgeMap
                         canvasWidth = convertedDrawing.canvas.width
                         canvasHeight = convertedDrawing.canvas.height
                         canvasAspectInitialized = true
@@ -488,6 +501,14 @@ fun DrawingScreen(
                         tint = Color(0xFF202124),
                         modifier = Modifier.size(22.dp),
                     )
+                }
+
+                if (diagnosticEdgeMap != null) {
+                    RoundToolButton(
+                        onClick = { showEdgeMapPreview = true },
+                    ) {
+                        Text("EDGE", color = Color(0xFF202124), fontSize = 9.sp)
+                    }
                 }
 
                 RoundToolButton(
@@ -857,6 +878,71 @@ fun DrawingScreen(
                 TextButton(onClick = { showBackgroundDialog = false }) { Text(stringResource(Res.string.cancel), color = Color(0xFF202124)) }
             },
         )
+    }
+
+    if (showEdgeMapPreview) {
+        val edgeMap = diagnosticEdgeMap
+        if (edgeMap != null) {
+            AlertDialog(
+                onDismissRequest = { showEdgeMapPreview = false },
+                title = { Text("Карта найденных границ") },
+                containerColor = Color.White,
+                titleContentColor = Color(0xFF202124),
+                textContentColor = Color(0xFF202124),
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            "Пикселей границ: ${edgeMap.edgeCount()} · ${edgeMap.width} × ${edgeMap.height}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF5F6368),
+                        )
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(280.dp),
+                        ) {
+                            drawRect(Color.White)
+                            val scale = min(
+                                size.width / edgeMap.width.toFloat(),
+                                size.height / edgeMap.height.toFloat(),
+                            )
+                            val drawnWidth = edgeMap.width * scale
+                            val drawnHeight = edgeMap.height * scale
+                            val left = (size.width - drawnWidth) / 2f
+                            val top = (size.height - drawnHeight) / 2f
+                            // Downsample only this diagnostic view; the vector drawing uses every edge pixel.
+                            val stepX = (edgeMap.width / 320).coerceAtLeast(1)
+                            val stepY = (edgeMap.height / 320).coerceAtLeast(1)
+                            for (y in 0 until edgeMap.height step stepY) {
+                                for (x in 0 until edgeMap.width step stepX) {
+                                    val strength = edgeMap.strength[y * edgeMap.width + x].toInt() and 0xFF
+                                    if (strength == 0) continue
+                                    val alpha = (0.25f + 0.75f * strength / 255f).coerceIn(0f, 1f)
+                                    drawRect(
+                                        color = Color.Black.copy(alpha = alpha),
+                                        topLeft = Offset(left + x * scale, top + y * scale),
+                                        size = Size(
+                                            width = (stepX * scale).coerceAtLeast(1f),
+                                            height = (stepY * scale).coerceAtLeast(1f),
+                                        ),
+                                    )
+                                }
+                            }
+                        }
+                        Text(
+                            "Это промежуточная карта. Рисунок строится по полной карте границ.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF5F6368),
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { showEdgeMapPreview = false }) {
+                        Text("Закрыть", color = Color(0xFF202124))
+                    }
+                },
+            )
+        }
     }
 
     if (showPhotoSourceDialog) {
