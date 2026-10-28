@@ -52,6 +52,24 @@ class DrawingCodecTest {
     }
 
     @Test
+    fun reportsActualJsonSizeEvenWhenDrawingExceedsConfiguredLimit() {
+        val smallCodec = DrawingCodec(maxJsonBytes = 32)
+        val drawing = DrawingDocument(
+            strokes = listOf(
+                DrawingStroke(
+                    points = listOf(listOf(0.1, 0.2), listOf(0.35, 0.45)),
+                ),
+            ),
+        )
+
+        val (encoded, sizeBytes) = smallCodec.encodeWithSize(drawing)
+
+        assertFalse(encoded.isSuccess)
+        assertTrue(sizeBytes > 32)
+        assertEquals(sizeBytes, smallCodec.encodedSizeBytes(drawing))
+    }
+
+    @Test
     fun rejectsJsonLargerThanConfiguredLimit() {
         val smallCodec = DrawingCodec(maxJsonBytes = 32)
         val drawing = DrawingDocument(
