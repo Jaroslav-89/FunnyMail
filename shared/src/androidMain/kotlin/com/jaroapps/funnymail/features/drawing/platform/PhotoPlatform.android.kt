@@ -319,12 +319,30 @@ private object DexiNedRuntime {
         }
     }
 
+    private fun fileSha256(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().buffered(128 * 1024).use { input ->
+            val buffer = ByteArray(128 * 1024)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        return digest.digest().joinToString("") { byte ->
+            (byte.toInt() and 0xFF).toString(16).padStart(2, '0')
+        }
+    }
+
     private fun ensureModelFile(context: Context): java.io.File {
         val directory = java.io.File(context.filesDir, "edge-models")
         if (!directory.exists() && !directory.mkdirs()) error("Cannot create model cache directory")
         val target = java.io.File(directory, MODEL_NAME)
-        if (target.isFile && target.length() > 40_000_000L) return target
-
+        if (target.isFile && target.length() > 40_000_000L &&
+            fileSha256(target).equals(MODEL_SHA256, ignoreCase = true)
+        ) {
+            return target
+        }
         target.delete()
         val temporary = java.io.File(directory, "$MODEL_NAME.download")
         temporary.delete()
