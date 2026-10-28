@@ -7,7 +7,7 @@ import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
  * baseline can be compared with a future neural EdgeMap producer without changing the editor.
  */
 class PhotoToSketchConverter(
-    private val edgeDetector: PhotoEdgeDetector = PhotoEdgeDetector(),
+    private val edgeDetector: EdgeMapDetector = PhotoEdgeDetector(),
     private val vectorizer: EdgeMapVectorizer = EdgeMapVectorizer(),
 ) {
     fun detectEdges(image: GrayImage): EdgeMap = edgeDetector.detect(image)
