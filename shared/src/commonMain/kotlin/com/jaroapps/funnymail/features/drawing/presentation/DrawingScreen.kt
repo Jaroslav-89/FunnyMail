@@ -282,8 +282,6 @@ fun DrawingScreen(
         gradientStartColor,
         gradientEndColor,
         backgroundAlpha,
-        drawingTitle,
-        drawingCaption,
     ) {
         if (strokes.isEmpty()) {
             null
