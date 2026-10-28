@@ -15,22 +15,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import androidx.exifinterface.media.ExifInterface
-import com.jaroapps.funnymail.features.drawing.domain.image.NormalizedPhotoPoint
-import com.jaroapps.funnymail.features.drawing.domain.image.PortraitFeatureContour
-import com.jaroapps.funnymail.features.drawing.domain.image.PortraitFeatures
-import com.google.android.gms.tasks.Task
-import com.google.mlkit.vision.face.FaceContour
-import com.google.mlkit.vision.face.FaceDetection
-import com.google.mlkit.vision.face.FaceDetectorOptions
-import com.google.mlkit.vision.segmentation.Segmentation
-import com.google.mlkit.vision.segmentation.selfie.SelfieSegmenterOptions
-import java.nio.ByteOrder
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
+import com.jaroapps.funnymail.features.drawing.domain.image.GrayImage
 import java.io.ByteArrayInputStream
 import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -94,101 +83,32 @@ actual fun rememberPhotoPicker(
     }
 }
 
-private data class FaceContourSpec(
-    val type: Int,
-    val closed: Boolean = false,
-)
-
-private val portraitFaceContourSpecs = listOf(
-    FaceContourSpec(FaceContour.FACE, closed = true),
-    FaceContourSpec(FaceContour.LEFT_EYE, closed = true),
-    FaceContourSpec(FaceContour.RIGHT_EYE, closed = true),
-    FaceContourSpec(FaceContour.LEFT_EYEBROW_TOP),
-    FaceContourSpec(FaceContour.LEFT_EYEBROW_BOTTOM),
-    FaceContourSpec(FaceContour.RIGHT_EYEBROW_TOP),
-    FaceContourSpec(FaceContour.RIGHT_EYEBROW_BOTTOM),
-    FaceContourSpec(FaceContour.NOSE_BRIDGE),
-    FaceContourSpec(FaceContour.NOSE_BOTTOM),
-    FaceContourSpec(FaceContour.UPPER_LIP_TOP),
-    FaceContourSpec(FaceContour.UPPER_LIP_BOTTOM),
-    FaceContourSpec(FaceContour.LOWER_LIP_TOP),
-    FaceContourSpec(FaceContour.LOWER_LIP_BOTTOM),
-)
-
 /**
- * Runs bundled ML Kit models locally. A confidence mask gives the main person silhouette; ML
- * Kit's face contour detector contributes only named facial contours, not arbitrary texture edges.
+ * Decodes an orientation-corrected, bounded photo and returns a temporary grayscale pixel buffer.
+ * No image bytes or intermediate pixels are persisted.
  */
-actual suspend fun analyzePortraitLocally(
+actual suspend fun decodePhotoToGrayscale(
     imageBytes: ByteArray,
     maxDimension: Int,
-): PortraitFeatures? {
-    require(maxDimension >= 256)
-    if (imageBytes.isEmpty()) return null
-    val bitmap = runCatching { decodeAnalysisBitmap(imageBytes, maxDimension) }.getOrNull() ?: return null
-    val segmenter = Segmentation.getClient(
-        SelfieSegmenterOptions.Builder()
-            .setDetectorMode(SelfieSegmenterOptions.SINGLE_IMAGE_MODE)
-            .build(),
-    )
-    val faceDetector = FaceDetection.getClient(
-        FaceDetectorOptions.Builder()
-            .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_ACCURATE)
-            .setContourMode(FaceDetectorOptions.CONTOUR_MODE_ALL)
-            .build(),
-    )
-    return try {
-        val inputImage = com.google.mlkit.vision.common.InputImage.fromBitmap(bitmap, 0)
-        val mask = segmenter.process(inputImage).awaitResult()
-        val maskWidth = mask.width
-        val maskHeight = mask.height
-        val maskBuffer = mask.buffer.order(ByteOrder.nativeOrder())
-        maskBuffer.rewind()
-        val confidence = ByteArray(maskWidth * maskHeight)
-        for (index in confidence.indices) {
-            confidence[index] = (maskBuffer.getFloat().coerceIn(0f, 1f) * 255f).toInt().toByte()
+): GrayImage? {
+    if (imageBytes.isEmpty() || maxDimension < 64) return null
+    return withContext(Dispatchers.Default) {
+        val bitmap = runCatching { decodeAnalysisBitmap(imageBytes, maxDimension) }.getOrNull()
+            ?: return@withContext null
+        try {
+            val argb = IntArray(bitmap.width * bitmap.height)
+            bitmap.getPixels(argb, 0, bitmap.width, 0, 0, bitmap.width, bitmap.height)
+            val grayscale = IntArray(argb.size) { index ->
+                val color = argb[index]
+                val red = (color shr 16) and 0xFF
+                val green = (color shr 8) and 0xFF
+                val blue = color and 0xFF
+                (299 * red + 587 * green + 114 * blue + 500) / 1_000
+            }
+            GrayImage(bitmap.width, bitmap.height, grayscale)
+        } finally {
+            bitmap.recycle()
         }
-
-        val faceContours = try {
-            val faces = faceDetector.process(inputImage).awaitResult()
-            val face = faces.maxByOrNull { it.boundingBox.width() * it.boundingBox.height() }
-            face?.let { detectedFace ->
-                portraitFaceContourSpecs.mapNotNull { spec ->
-                    val points = detectedFace.getContour(spec.type)?.points.orEmpty()
-                        .map { point ->
-                            NormalizedPhotoPoint(
-                                x = (point.x / bitmap.width.toDouble()).coerceIn(0.0, 1.0),
-                                y = (point.y / bitmap.height.toDouble()).coerceIn(0.0, 1.0),
-                            )
-                        }
-                    if (points.size < 2) null else {
-                        PortraitFeatureContour(points, spec.closed)
-                    }
-                }
-            }.orEmpty()
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (_: Exception) {
-            emptyList()
-        }
-
-        return PortraitFeatures(
-            sourceWidth = bitmap.width,
-            sourceHeight = bitmap.height,
-            maskWidth = maskWidth,
-            maskHeight = maskHeight,
-            personMask = confidence,
-            faceContours = faceContours,
-        )
-    } catch (cancelled: CancellationException) {
-        throw cancelled
-    } catch (_: Exception) {
-        // The shared screen reports an import error; this branch has no classical conversion fallback.
-        null
-    } finally {
-        faceDetector.close()
-        segmenter.close()
-        bitmap.recycle()
     }
 }
 
@@ -250,15 +170,3 @@ private fun decodeAnalysisBitmap(imageBytes: ByteArray, maxDimension: Int): Bitm
     } else oriented
 }
 
-private suspend fun <T> Task<T>.awaitResult(): T =
-    suspendCancellableCoroutine { continuation ->
-        addOnSuccessListener { result ->
-            if (continuation.isActive) continuation.resume(result)
-        }
-        addOnFailureListener { error ->
-            if (continuation.isActive) continuation.resumeWithException(error)
-        }
-        addOnCanceledListener {
-            if (continuation.isActive) continuation.cancel()
-        }
-    }
