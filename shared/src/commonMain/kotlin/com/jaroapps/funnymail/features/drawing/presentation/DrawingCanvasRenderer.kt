@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.StrokeCap
@@ -130,7 +131,7 @@ fun DrawingAnnotationsOverlay(
                         x = offsetX + (annotation.x * logicalWidth * scale).dp,
                         y = offsetY + (annotation.y * logicalHeight * scale).dp,
                     )
-                    .androidxComposeRotate(annotation.rotationDegrees),
+                    .rotate(annotation.rotationDegrees),
                 style = TextStyle(
                     color = annotation.color.toDrawingRenderColor().copy(alpha = annotation.alpha.coerceIn(0f, 1f)),
                     fontSize = (annotation.fontSize * scale).sp,
@@ -156,13 +157,10 @@ fun DrawingAnnotationsOverlay(
                         x = offsetX + (sticker.x * logicalWidth * scale).dp,
                         y = offsetY + (sticker.y * logicalHeight * scale).dp,
                     )
-                    .androidxComposeRotate(sticker.rotationDegrees),
+                    .rotate(sticker.rotationDegrees),
                 fontSize = (72f * scale * sticker.scale).sp,
                 maxLines = 1,
             )
         }
     }
 }
-
-private fun Modifier.androidxComposeRotate(degrees: Float): Modifier =
-    androidx.compose.ui.draw.rotate(degrees)
