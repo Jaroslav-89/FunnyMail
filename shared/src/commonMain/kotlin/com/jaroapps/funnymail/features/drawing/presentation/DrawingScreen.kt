@@ -282,8 +282,12 @@ fun DrawingScreen(
                             val neuralResult = if (requestedDexiNed) {
                                 detectPhotoEdgesWithDexiNed(grayscale)?.let { neuralMap ->
                                     try {
-                                        neuralMap to pipeline.vectorize(neuralMap)
-                                    } catch (_: NoContoursFoundException) {
+                                        val neuralDocument = pipeline.vectorize(neuralMap)
+                                        drawingCodec.encode(neuralDocument).getOrThrow()
+                                        neuralMap to neuralDocument
+                                    } catch (_: Exception) {
+                                        // If neural edges produce no usable paths or exceed document
+                                        // limits, retry with the classic detector instead of failing.
                                         null
                                     }
                                 }
