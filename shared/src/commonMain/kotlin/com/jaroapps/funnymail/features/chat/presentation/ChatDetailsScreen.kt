@@ -129,7 +129,9 @@ fun ChatDetailsScreen(
     onEditChat: () -> Unit,
     onCreateDrawing: () -> Unit,
     onOpenDrawings: () -> Unit,
-    onViewDrawing: (DrawingDocument) -> Unit,
+    onViewDrawing: (DrawingDocument, Int, Int) -> Unit,
+    initialScrollIndex: Int = 0,
+    initialScrollOffset: Int = 0,
     onChatUpdated: (Chat) -> Unit,
     onCreateInvite: (String, (ChatInvite?, String?) -> Unit) -> Unit,
 ) {
@@ -154,7 +156,10 @@ fun ChatDetailsScreen(
     val myDrawingsDescription = stringResource(Res.string.open_my_drawings)
     val openActionsMenuDescription = stringResource(Res.string.drawing_menu_open)
     val closeActionsMenuDescription = stringResource(Res.string.drawing_menu_close)
-    val lettersListState = rememberLazyListState()
+    val lettersListState = rememberLazyListState(
+        initialFirstVisibleItemIndex = initialScrollIndex,
+        initialFirstVisibleItemScrollOffset = initialScrollOffset,
+    )
     var actionsExpanded by rememberSaveable { mutableStateOf(false) }
     var showInviteDialog by rememberSaveable { mutableStateOf(false) }
     var isCreatingInvite by remember { mutableStateOf(false) }
@@ -183,12 +188,6 @@ fun ChatDetailsScreen(
         val userId = state.currentUser?.id ?: return@LaunchedEffect
         chatRepository.observeChats(userId).collect { chats ->
             chats.firstOrNull { it.id == chat.id }?.let { activeChat = it }
-        }
-    }
-
-    LaunchedEffect(chat.id, state.letters.lastOrNull()?.id, state.isLoading) {
-        if (state.letters.isNotEmpty()) {
-            lettersListState.scrollToItem(0)
         }
     }
 
@@ -293,7 +292,13 @@ fun ChatDetailsScreen(
                             letter = letter,
                             currentUserId = state.currentUser?.id,
                             authorDisplayName = authorNames[letter.authorUserId],
-                            onClick = { onViewDrawing(letter.drawing) },
+                            onClick = {
+                                onViewDrawing(
+                                    letter.drawing,
+                                    lettersListState.firstVisibleItemIndex,
+                                    lettersListState.firstVisibleItemScrollOffset,
+                                )
+                            },
                             onDelete = {
                                 val userId = state.currentUser?.id
                                 if (userId != null) {
