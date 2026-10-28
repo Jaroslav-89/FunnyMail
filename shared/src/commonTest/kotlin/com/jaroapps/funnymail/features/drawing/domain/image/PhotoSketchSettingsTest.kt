@@ -52,6 +52,33 @@ class PhotoSketchSettingsTest {
     }
 
     @Test
+    fun simplificationToleranceControlsPolylineDetail() {
+        val width = 80
+        val height = 16
+        val edges = ByteArray(width * height)
+        for (x in 10..50) {
+            val y = if (x % 2 == 0) 6 else 7
+            edges[y * width + x] = 255.toByte()
+        }
+        val map = EdgeMap(width, height, edges)
+
+        val detailed = EdgeMapVectorizer(
+            settings = PhotoSketchSettings(
+                simplificationTolerance = 0.0,
+                isolatedPointRemovalPercent = 0,
+            ),
+        ).convert(map)
+        val simplified = EdgeMapVectorizer(
+            settings = PhotoSketchSettings(
+                simplificationTolerance = 3.0,
+                isolatedPointRemovalPercent = 0,
+            ),
+        ).convert(map)
+
+        assertTrue(detailed.strokes.sumOf { it.points.size } > simplified.strokes.sumOf { it.points.size })
+    }
+
+    @Test
     fun minimumEdgeStrengthRemovesWeakDetections() {
         val width = 48
         val height = 20
