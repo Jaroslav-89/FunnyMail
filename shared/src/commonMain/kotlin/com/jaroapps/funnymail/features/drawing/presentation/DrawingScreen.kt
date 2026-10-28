@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.jaroapps.funnymail.core.ui.AppBackButton
+import com.jaroapps.funnymail.core.storage.DrawingDraftStorage
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.image.EdgeMap
 import com.jaroapps.funnymail.features.drawing.domain.image.GrayImage
@@ -191,36 +192,39 @@ fun DrawingScreen(
     val photoImportFailedMessage = stringResource(Res.string.photo_import_failed)
     val photoNoContoursMessage = stringResource(Res.string.photo_no_contours)
     val coroutineScope = rememberCoroutineScope()
-    val initialDrawing = remember(initialDrawingJson) {
-        initialDrawingJson?.let { drawingCodec.decode(it).getOrNull() }
+    val effectiveInitialDrawingJson = remember(initialDrawingJson) {
+        initialDrawingJson ?: DrawingDraftStorage.load()
     }
-    var strokes by remember(initialDrawingJson) {
+    val initialDrawing = remember(effectiveInitialDrawingJson) {
+        effectiveInitialDrawingJson?.let { drawingCodec.decode(it).getOrNull() }
+    }
+    var strokes by remember(effectiveInitialDrawingJson) {
         mutableStateOf(initialDrawing?.strokes ?: emptyList())
     }
-    var redoStrokes by remember(initialDrawingJson) { mutableStateOf<List<DrawingStroke>>(emptyList()) }
-    var savedDrawingJson by remember(initialDrawingJson) { mutableStateOf(initialDrawingJson) }
+    var redoStrokes by remember(effectiveInitialDrawingJson) { mutableStateOf<List<DrawingStroke>>(emptyList()) }
+    var savedDrawingJson by remember(effectiveInitialDrawingJson) { mutableStateOf(effectiveInitialDrawingJson) }
     var isSaving by remember { mutableStateOf(false) }
     var isSending by remember { mutableStateOf(false) }
     var activePoints by remember { mutableStateOf<List<List<Double>>>(emptyList()) }
-    var selectedColor by remember(initialDrawingJson) { mutableStateOf("#000000") }
-    var drawingTitle by remember(initialDrawingJson) { mutableStateOf(initialDrawing?.title.orEmpty().take(20)) }
-    var drawingCaption by remember(initialDrawingJson) { mutableStateOf(initialDrawing?.caption.orEmpty().take(80)) }
+    var selectedColor by remember(effectiveInitialDrawingJson) { mutableStateOf("#000000") }
+    var drawingTitle by remember(effectiveInitialDrawingJson) { mutableStateOf(initialDrawing?.title.orEmpty().take(20)) }
+    var drawingCaption by remember(effectiveInitialDrawingJson) { mutableStateOf(initialDrawing?.caption.orEmpty().take(80)) }
     var brushWidth by remember { mutableStateOf(12f) }
     var eraserEnabled by remember { mutableStateOf(false) }
     var activePopup by remember { mutableStateOf<DrawingPopup?>(null) }
-    var backgroundMode by remember(initialDrawingJson) {
+    var backgroundMode by remember(effectiveInitialDrawingJson) {
         mutableStateOf(initialDrawing?.canvas?.backgroundMode ?: "SOLID")
     }
-    var backgroundColor by remember(initialDrawingJson) {
+    var backgroundColor by remember(effectiveInitialDrawingJson) {
         mutableStateOf(initialDrawing?.canvas?.backgroundColor ?: "#FFFFFF")
     }
-    var gradientDirection by remember(initialDrawingJson) {
+    var gradientDirection by remember(effectiveInitialDrawingJson) {
         mutableStateOf(initialDrawing?.canvas?.gradientDirection ?: "TOP_TO_BOTTOM")
     }
-    var gradientStartColor by remember(initialDrawingJson) {
+    var gradientStartColor by remember(effectiveInitialDrawingJson) {
         mutableStateOf(initialDrawing?.canvas?.gradientStartColor ?: "#00AA00")
     }
-    var gradientEndColor by remember(initialDrawingJson) {
+    var gradientEndColor by remember(effectiveInitialDrawingJson) {
         mutableStateOf(initialDrawing?.canvas?.gradientEndColor ?: "#F5A800")
     }
     var showLineColorDialog by remember { mutableStateOf(false) }
@@ -235,7 +239,7 @@ fun DrawingScreen(
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
     var isProcessingImage by remember { mutableStateOf(false) }
     var diagnosticEdgeMap by remember { mutableStateOf<EdgeMap?>(null) }
-    var sourceGrayImage by remember(initialDrawingJson) { mutableStateOf<GrayImage?>(null) }
+    var sourceGrayImage by remember(effectiveInitialDrawingJson) { mutableStateOf<GrayImage?>(null) }
     var photoQualitySettings by remember { mutableStateOf(PhotoSketchSettings()) }
     var appliedPhotoQualitySettings by remember { mutableStateOf(PhotoSketchSettings()) }
     var isReprocessingPhoto by remember { mutableStateOf(false) }
@@ -245,13 +249,13 @@ fun DrawingScreen(
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var statusIsError by remember { mutableStateOf(false) }
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
-    var canvasWidth by remember(initialDrawingJson) {
+    var canvasWidth by remember(effectiveInitialDrawingJson) {
         mutableStateOf(initialDrawing?.canvas?.width ?: 1000)
     }
-    var canvasHeight by remember(initialDrawingJson) {
+    var canvasHeight by remember(effectiveInitialDrawingJson) {
         mutableStateOf(initialDrawing?.canvas?.height ?: 1000)
     }
-    var canvasAspectInitialized by remember(initialDrawingJson) {
+    var canvasAspectInitialized by remember(effectiveInitialDrawingJson) {
         mutableStateOf(initialDrawing != null)
     }
     var isDrawingGestureActive by remember { mutableStateOf(false) }
@@ -293,6 +297,11 @@ fun DrawingScreen(
     }
     val currentDrawingJson = currentDrawingEncoding?.first?.getOrNull()
     val currentDrawingJsonBytes = currentDrawingEncoding?.second ?: 0
+
+    // Keep the in-progress drawing in local storage so rotation/recreation does not discard strokes.
+    LaunchedEffect(currentDrawingJson) {
+        if (currentDrawingJson != null) DrawingDraftStorage.save(currentDrawingJson)
+    }
     val currentDrawingError = currentDrawingEncoding?.first?.exceptionOrNull()?.message
     val currentDrawingPointCount = remember(strokes) {
         strokes.sumOf { it.points.size }
@@ -415,8 +424,9 @@ fun DrawingScreen(
             onSaveDrawing(json) { saveError ->
                 isSaving = false
                 if (saveError == null) {
+                    DrawingDraftStorage.clear()
                     savedDrawingJson = json
-                    statusMessage = if (initialDrawingJson != null) {
+                    statusMessage = if (effectiveInitialDrawingJson != null) {
                         drawingEditsSavedMessage
                     } else {
                         drawingSavedLocallyMessage
@@ -440,6 +450,7 @@ fun DrawingScreen(
             onSendDrawing(json) { sendError ->
                 isSending = false
                 if (sendError == null) {
+                    DrawingDraftStorage.clear()
                     statusMessage = drawingSentChatMessage
                     statusIsError = false
                 } else {
@@ -1360,8 +1371,8 @@ fun DrawingScreen(
                         Text(
                             when {
                                 isSaving -> stringResource(Res.string.saving)
-                                isCurrentDrawingSaved && initialDrawingJson != null -> stringResource(Res.string.changes_saved)
-                                initialDrawingJson != null -> stringResource(Res.string.save_changes)
+                                isCurrentDrawingSaved && effectiveInitialDrawingJson != null -> stringResource(Res.string.changes_saved)
+                                effectiveInitialDrawingJson != null -> stringResource(Res.string.save_changes)
                                 else -> stringResource(Res.string.save_drawing_local)
                             },
                         )
