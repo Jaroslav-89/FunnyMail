@@ -336,8 +336,12 @@ fun DrawingScreen(
     val currentDrawingJsonBytes = currentDrawingEncoding?.second ?: 0
 
     // Keep the in-progress drawing in local storage so rotation/recreation does not discard strokes.
-    LaunchedEffect(currentDrawingJson) {
-        if (currentDrawingJson != null) DrawingDraftStorage.save(currentDrawingJson)
+    LaunchedEffect(currentDrawingJson, currentDrawing) {
+        when {
+            currentDrawingJson != null -> DrawingDraftStorage.save(currentDrawingJson)
+            currentDrawing == null -> DrawingDraftStorage.clear()
+            // Keep the previous valid draft while the current in-memory drawing exceeds the JSON cap.
+        }
     }
     val currentDrawingError = currentDrawingEncoding?.first?.exceptionOrNull()?.message
     val currentDrawingPointCount = remember(strokes) {
