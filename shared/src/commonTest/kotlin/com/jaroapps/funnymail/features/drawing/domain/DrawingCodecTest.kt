@@ -70,6 +70,25 @@ class DrawingCodecTest {
     }
 
     @Test
+    fun acceptsMorePointsThanThePreviousDetailLimit() {
+        val drawing = DrawingDocument(
+            strokes = listOf(
+                DrawingStroke(
+                    points = List(30_001) { listOf(0.1, 0.2) },
+                ),
+            ),
+        )
+
+        val encoded = codec.encode(drawing)
+
+        assertTrue(encoded.isSuccess)
+        val (checkedResult, sizeBytes) = codec.encodeWithSize(drawing)
+        assertTrue(checkedResult.isSuccess)
+        assertTrue(sizeBytes > 30_001)
+        assertEquals(sizeBytes, encoded.getOrThrow().encodeToByteArray().size)
+    }
+
+    @Test
     fun rejectsJsonLargerThanConfiguredLimit() {
         val smallCodec = DrawingCodec(maxJsonBytes = 32)
         val drawing = DrawingDocument(
