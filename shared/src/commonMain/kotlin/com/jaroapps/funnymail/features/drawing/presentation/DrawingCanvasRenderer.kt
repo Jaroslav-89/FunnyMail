@@ -37,7 +37,7 @@ internal fun DrawScope.drawDrawingStrokes(
 
     strokes.forEach { stroke ->
         if (stroke.points.isEmpty()) return@forEach
-        val color = stroke.color.toDrawingRenderColor()
+        val color = stroke.color.toDrawingRenderColor().copy(alpha = stroke.alpha.coerceIn(0f, 1f))
         // Photo-derived map strokes use widths 1..2 as screen-pixel weights. Scaling them by
         // the normalized canvas scale would round both values down to the same one-pixel line,
         // making the requested thickness change invisible on a phone-sized canvas.
