@@ -365,7 +365,7 @@ private object DexiNedRuntime {
     }
 
     private fun ensureModelFile(context: Context): java.io.File {
-        val directory = java.io.File(context.filesDir, "edge-models")
+        val directory = java.io.File(context.noBackupFilesDir, "edge-models")
         if (!directory.exists() && !directory.mkdirs()) error("Cannot create model cache directory")
         val target = java.io.File(directory, MODEL_NAME)
         if (target.isFile && target.length() > 40_000_000L &&
