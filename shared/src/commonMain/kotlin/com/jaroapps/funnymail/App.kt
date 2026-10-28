@@ -436,6 +436,7 @@ private fun FunnyMailContent(
                                 onChatUpdated = { updatedChat -> selectedChat = updatedChat },
                                 onChatRemoved = {
                                     selectedChat = null
+                                    selectedChatId = null
                                     destination = AppDestination.Home
                                 },
                                 onCreateInvite = createInviteForChat,
