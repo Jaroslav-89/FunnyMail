@@ -11,7 +11,7 @@ import kotlinx.serialization.json.Json
  * Keep these limits conservative because the drawing is stored in the letter document.
  */
 class DrawingCodec(
-    private val maxJsonBytes: Int = DEFAULT_MAX_JSON_BYTES,
+    val maxJsonBytes: Int = DEFAULT_MAX_JSON_BYTES,
     private val maxStrokes: Int = DEFAULT_MAX_STROKES,
     private val maxPoints: Int = DEFAULT_MAX_POINTS,
 ) {
@@ -29,6 +29,13 @@ class DrawingCodec(
         }
         serialized
     }
+
+    /**
+     * Returns the exact UTF-8 JSON payload size even when the drawing exceeds persistence limits.
+     * Used by the editor to explain why a very detailed drawing cannot yet be saved or sent.
+     */
+    fun encodedSizeBytes(drawing: DrawingDocument): Int =
+        json.encodeToString(drawing).encodeToByteArray().size
 
     fun decode(serialized: String): Result<DrawingDocument> = runCatching {
         require(serialized.encodeToByteArray().size <= maxJsonBytes) {
@@ -99,9 +106,9 @@ class DrawingCodec(
     private companion object {
         // Detailed edge-map vector drawings may use more points than hand-drawn sketches.
         // Leave roughly 256 KiB for the surrounding letter/message fields in Firestore.
-        const val DEFAULT_MAX_JSON_BYTES = 768 * 1024
-        const val DEFAULT_MAX_STROKES = 5_000
-        const val DEFAULT_MAX_POINTS = 30_000
+        const val DEFAULT_MAX_JSON_BYTES = 900 * 1024
+        const val DEFAULT_MAX_STROKES = 20_000
+        const val DEFAULT_MAX_POINTS = 100_000
         const val MAX_CANVAS_DIMENSION = 4_096
         const val MIN_STROKE_WIDTH = 0.1f
         const val MAX_STROKE_WIDTH = 100f
