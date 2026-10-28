@@ -507,7 +507,7 @@ fun DrawingScreen(
                     RoundToolButton(
                         onClick = { showEdgeMapPreview = true },
                     ) {
-                        Text("EDGE", color = Color(0xFF202124), fontSize = 9.sp)
+                        Text("Карта", color = Color(0xFF202124), fontSize = 9.sp)
                     }
                 }
 
