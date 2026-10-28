@@ -538,7 +538,7 @@ fun DrawingScreen(
                         onDragEnd = {
                             if (isDrawingGestureActive && activePoints.isNotEmpty()) {
                                 if (eraserEnabled) {
-                                    val eraseRadius = (brushWidth / min(canvasWidth, canvasHeight).coerceAtLeast(1)) * 1.8
+                                    val eraseRadius = (brushWidth.toDouble() / min(canvasWidth, canvasHeight).coerceAtLeast(1)) * 1.8
                                     val erased = strokes.filter { stroke ->
                                         stroke.points.any { point ->
                                             activePoints.any { eraserPoint ->
