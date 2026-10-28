@@ -48,13 +48,33 @@ class PhotoToSketchConverterTest {
         assertTrue(document.strokes.size >= 2, "The closed facade contour and inner edge should remain separate strokes")
         assertTrue(document.strokes.all { stroke ->
             stroke.points.size >= 2 &&
-                stroke.width in 2.0f..3.5f &&
+                stroke.width == 1.0f &&
                 stroke.points.all { point ->
                     point.size == 2 && point.all { it in 0.0..1.0 }
                 }
         })
         val encoded = DrawingCodec().encode(document).getOrThrow()
         assertTrue(encoded.encodeToByteArray().size <= 256 * 1024)
+    }
+
+    @Test
+    fun vectorizedDrawingKeepsTheEdgeMapLightToDarkContrast() {
+        val width = 9
+        val height = 7
+        val edges = ByteArray(width * height)
+
+        // Two separated contours with different confidence values.
+        for (x in 1..5) edges[1 * width + x] = 40
+        for (x in 1..5) edges[5 * width + x] = 255.toByte()
+
+        val document = EdgeMapVectorizer().convert(EdgeMap(width, height, edges))
+
+        assertTrue(document.strokes.any { it.color == "#000000" },
+            "Strong map contours should remain black")
+        assertTrue(document.strokes.any { it.color == "#A1A1A1" },
+            "Weak map contours should remain light gray like the map preview")
+        assertTrue(document.strokes.all { it.width == 1.0f },
+            "Map-derived contour strokes should be thin")
     }
 
     @Test
