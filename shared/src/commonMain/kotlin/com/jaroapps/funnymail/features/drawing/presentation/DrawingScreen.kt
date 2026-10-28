@@ -615,6 +615,8 @@ fun DrawingScreen(
                         if (strokes.isNotEmpty()) {
                             redoStrokes = redoStrokes + strokes.last()
                             strokes = strokes.dropLast(1)
+                            sourceGrayImage = null
+                            showPhotoQualitySettings = false
                             statusMessage = null
                         }
                     },
@@ -632,6 +634,8 @@ fun DrawingScreen(
                         if (redoStrokes.isNotEmpty()) {
                             strokes = strokes + redoStrokes.last()
                             redoStrokes = redoStrokes.dropLast(1)
+                            sourceGrayImage = null
+                            showPhotoQualitySettings = false
                             statusMessage = null
                         }
                     },
@@ -810,7 +814,7 @@ fun DrawingScreen(
                 PhotoQualitySlider(
                     label = "Упрощение контуров",
                     value = photoQualitySettings.simplificationTolerance.toFloat(),
-                    valueLabel = "${"%.2f".format(photoQualitySettings.simplificationTolerance)}",
+                    valueLabel = "${(photoQualitySettings.simplificationTolerance * 100.0).roundToInt() / 100.0}",
                     valueRange = 0f..5f,
                     steps = 19,
                     onValueChange = { photoQualitySettings = photoQualitySettings.copy(simplificationTolerance = it.toDouble()) },
@@ -818,7 +822,7 @@ fun DrawingScreen(
                 PhotoQualitySlider(
                     label = "Толщина линий",
                     value = photoQualitySettings.strokeWidth,
-                    valueLabel = "${"%.1f".format(photoQualitySettings.strokeWidth)}",
+                    valueLabel = "${(photoQualitySettings.strokeWidth * 10f).roundToInt() / 10f}",
                     valueRange = 0.8f..6f,
                     steps = 25,
                     onValueChange = { photoQualitySettings = photoQualitySettings.copy(strokeWidth = it) },
