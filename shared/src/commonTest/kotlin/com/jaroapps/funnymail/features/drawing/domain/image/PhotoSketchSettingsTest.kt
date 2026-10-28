@@ -6,6 +6,19 @@ import kotlin.test.assertTrue
 
 class PhotoSketchSettingsTest {
     @Test
+    fun defaultsMatchPreferredPhotoQualityProfile() {
+        val settings = PhotoSketchSettings()
+
+        assertEquals(6_500, settings.maxPoints)
+        assertEquals(0.25f, settings.edgeSensitivity)
+        assertEquals(0, settings.minimumEdgeStrength)
+        assertEquals(2.75, settings.simplificationTolerance)
+        assertEquals(5.0f, settings.strokeWidth)
+        assertEquals(80, settings.isolatedPointRemovalPercent)
+        assertTrue(settings.mergePointsIntoLines)
+    }
+
+    @Test
     fun configurableLineThicknessIsAppliedToGeneratedStrokes() {
         val width = 48
         val height = 20
