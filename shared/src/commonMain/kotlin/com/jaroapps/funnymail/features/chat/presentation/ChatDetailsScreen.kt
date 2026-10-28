@@ -187,10 +187,7 @@ fun ChatDetailsScreen(
     LaunchedEffect(chat.id, state.currentUser?.id) {
         val userId = state.currentUser?.id ?: return@LaunchedEffect
         chatRepository.observeChats(userId).collect { chats ->
-            chats.firstOrNull { it.id == chat.id }?.let { latestChat ->
-                activeChat = latestChat
-                onChatUpdated(latestChat)
-            }
+            chats.firstOrNull { it.id == chat.id }?.let { activeChat = it }
         }
     }
 
@@ -492,7 +489,7 @@ fun ChatDetailsScreen(
                                                 foundUser = result
                                                 searchMessage = when {
                                                     result == null -> userNotFoundText
-                                                    result.id in activeChat.memberIds -> userAlreadyMemberText
+                                                    result.id in chat.memberIds -> userAlreadyMemberText
                                                     result.id == state.currentUser?.id -> youAlreadyMemberText
                                                     else -> null
                                                 }
@@ -541,7 +538,7 @@ fun ChatDetailsScreen(
                                         onClick = {
                                             val currentUserId = state.currentUser?.id
                                             if (currentUserId != null && !isAddingUser &&
-                                                user.id !in activeChat.memberIds && user.id != currentUserId
+                                                user.id !in chat.memberIds && user.id != currentUserId
                                             ) {
                                                 isAddingUser = true
                                                 searchMessage = null

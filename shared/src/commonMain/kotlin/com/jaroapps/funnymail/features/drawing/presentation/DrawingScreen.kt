@@ -242,6 +242,7 @@ fun DrawingScreen(
     var eraserEnabled by remember { mutableStateOf(false) }
     var lineToolEnabled by remember { mutableStateOf(false) }
     var pendingLinePoints by remember { mutableStateOf<List<List<Double>>>(emptyList()) }
+    var movingLineEndpointIndex by remember { mutableStateOf<Int?>(null) }
     var activePopup by remember { mutableStateOf<DrawingPopup?>(null) }
     var backgroundMode by remember(effectiveInitialDrawingJson) {
         mutableStateOf(initialDrawing?.canvas?.backgroundMode ?: "SOLID")
@@ -413,7 +414,11 @@ fun DrawingScreen(
         },
     )
 
-    LaunchedEffect(sourceGrayImage, photoQualitySettings) {
+    LaunchedEffect(sourceGrayImage, photoQualitySettings, photoMode) {
+        if (photoMode != "CONTOURS") {
+            isReprocessingPhoto = false
+            return@LaunchedEffect
+        }
         val source = sourceGrayImage ?: return@LaunchedEffect
         val targetSettings = photoQualitySettings
         if (targetSettings == appliedPhotoQualitySettings) {
@@ -564,7 +569,7 @@ fun DrawingScreen(
                                         statusMessage = if (pendingLinePoints.size < 2) {
                                             "Поставьте вторую точку линии"
                                         } else {
-                                            "Передвиньте вторую точку касанием, затем нажмите ✓"
+                                            "Перетаскивайте любую точку линии; ✓ фиксирует линию"
                                         }
                                     }
                                 }
@@ -602,10 +607,27 @@ fun DrawingScreen(
                         ((y - viewportTop) / viewportHeight).coerceIn(0f, 1f).toDouble(),
                     )
 
+                    var draggingEndpoint: Int? = null
                     detectDragGestures(
                         onDragStart = { offset ->
                             statusMessage = null
-                            isDrawingGestureActive = !lineToolEnabled && isInsideViewport(offset.x, offset.y)
+                            draggingEndpoint = if (lineToolEnabled && pendingLinePoints.size == 2) {
+                                pendingLinePoints.indices
+                                    .map { index ->
+                                        val point = pendingLinePoints[index]
+                                        val px = viewportLeft + (point[0] * viewportWidth).toFloat()
+                                        val py = viewportTop + (point[1] * viewportHeight).toFloat()
+                                        val dx = offset.x - px
+                                        val dy = offset.y - py
+                                        index to (dx * dx + dy * dy)
+                                    }
+                                    .minByOrNull { it.second }
+                                    ?.takeIf { it.second <= 44f * 44f }
+                                    ?.first
+                            } else null
+                            movingLineEndpointIndex = draggingEndpoint
+                            isDrawingGestureActive = !lineToolEnabled && draggingEndpoint == null &&
+                                isInsideViewport(offset.x, offset.y)
                             activePoints = if (isDrawingGestureActive) {
                                 listOf(normalizedPoint(offset.x, offset.y))
                             } else {
@@ -613,7 +635,13 @@ fun DrawingScreen(
                             }
                         },
                         onDrag = { change, _ ->
-                            if (isDrawingGestureActive) {
+                            if (draggingEndpoint != null && lineToolEnabled) {
+                                change.consume()
+                                val normalized = normalizedPoint(change.position.x, change.position.y)
+                                pendingLinePoints = pendingLinePoints.mapIndexed { index, point ->
+                                    if (index == draggingEndpoint) normalized else point
+                                }
+                            } else if (isDrawingGestureActive) {
                                 change.consume()
                                 activePoints = activePoints + listOf(
                                     normalizedPoint(change.position.x, change.position.y),
@@ -621,6 +649,12 @@ fun DrawingScreen(
                             }
                         },
                         onDragEnd = {
+                            if (draggingEndpoint != null) {
+                                statusMessage = "Точка линии перемещена. Нажмите ✓ для фиксации"
+                                statusIsError = false
+                                draggingEndpoint = null
+                                movingLineEndpointIndex = null
+                            }
                             if (isDrawingGestureActive && activePoints.isNotEmpty()) {
                                 if (eraserEnabled) {
                                     val eraseRadius = (brushWidth.toDouble() / min(canvasWidth, canvasHeight).coerceAtLeast(1)) * 1.8
@@ -652,10 +686,12 @@ fun DrawingScreen(
                                 showPhotoQualitySettings = false
                             }
                             isDrawingGestureActive = false
+                            movingLineEndpointIndex = null
                             activePoints = emptyList()
                         },
                         onDragCancel = {
                             isDrawingGestureActive = false
+                            movingLineEndpointIndex = null
                             activePoints = emptyList()
                         },
                     )
@@ -747,7 +783,7 @@ fun DrawingScreen(
                     )
                 }
 
-                if (sourceGrayImage != null) {
+                if (sourceGrayImage != null && photoMode == "CONTOURS") {
                     RoundToolButton(
                         enabled = !isProcessingImage && !isReprocessingPhoto,
                         onClick = { showPhotoQualitySettings = !showPhotoQualitySettings },
@@ -775,7 +811,7 @@ fun DrawingScreen(
                     Text("Линия", color = Color(0xFF202124), fontSize = 9.sp)
                 }
 
-                if (diagnosticEdgeMap != null) {
+                if (diagnosticEdgeMap != null && photoMode == "CONTOURS") {
                     RoundToolButton(
                         onClick = { showEdgeMapPreview = true },
                     ) {
@@ -943,7 +979,7 @@ fun DrawingScreen(
             }
         }
 
-        if (showPhotoQualitySettings && sourceGrayImage != null) {
+        if (showPhotoQualitySettings && sourceGrayImage != null && photoMode == "CONTOURS") {
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
