@@ -13,8 +13,8 @@ import kotlin.math.roundToInt
  * short contours and isolated detected cells must remain visible in the final drawing.
  */
 class EdgeMapVectorizer(
-    private val maxStrokes: Int = 20_000,
-    private val maxPoints: Int = 100_000,
+    private val maxStrokes: Int = 30_000,
+    private val maxPoints: Int = 200_000,
 ) {
     fun convert(edgeMap: EdgeMap): DrawingDocument {
         // The diagnostic map shows the maximum edge strength in each display cell. Vectorize
