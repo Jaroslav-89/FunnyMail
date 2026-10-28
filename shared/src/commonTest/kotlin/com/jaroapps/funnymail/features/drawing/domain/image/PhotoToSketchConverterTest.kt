@@ -2,6 +2,7 @@ package com.jaroapps.funnymail.features.drawing.domain.image
 
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class PhotoToSketchConverterTest {
@@ -55,6 +56,27 @@ class PhotoToSketchConverterTest {
         })
         val encoded = DrawingCodec().encode(document).getOrThrow()
         assertTrue(encoded.encodeToByteArray().size <= 256 * 1024)
+    }
+
+    @Test
+    fun neuralConfidenceMapKeepsWeakEdgesOnlyWhenConnectedToStrongEdges() {
+        val width = 24
+        val height = 20
+        val confidence = ByteArray(width * height)
+        for (x in 4..15) {
+            confidence[10 * width + x] = 200.toByte()
+            confidence[11 * width + x] = 55.toByte()
+            confidence[3 * width + x] = 55.toByte() // isolated weak response should be removed
+        }
+
+        val sparse = EdgeMap(width, height, confidence).thresholdAndLink(
+            lowThreshold = 40,
+            highThreshold = 100,
+        )
+
+        assertEquals(24, sparse.edgeCount())
+        assertTrue((0 until width).all { x -> sparse.strength[3 * width + x].toInt() == 0 })
+        assertTrue((4..15).all { x -> (sparse.strength[11 * width + x].toInt() and 0xFF) > 0 })
     }
 
     @Test
