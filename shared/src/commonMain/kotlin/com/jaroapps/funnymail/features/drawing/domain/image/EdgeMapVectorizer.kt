@@ -13,8 +13,8 @@ import kotlin.math.sqrt
  * gentle simplification and a moderate short-line filter to balance visual detail and cleanliness.
  */
 class EdgeMapVectorizer(
-    private val minPathLength: Double = 4.5,
-    private val simplifyEpsilon: Double = 0.85,
+    private val minPathLength: Double = 1.0,
+    private val simplifyEpsilon: Double = 0.35,
     private val maxStrokes: Int = 1_500,
     private val maxPoints: Int = 6_500,
 ) {
@@ -55,11 +55,19 @@ class EdgeMapVectorizer(
                     quantize((index / width).toDouble() / (height - 1).toDouble()),
                 )
             }
-            val strength = (candidate.averageStrength / 255.0).coerceIn(0.0, 1.0)
-            val lineWidth = (2.0 + strength * 1.5).toFloat()
+            // The "Карта" preview draws each edge in black with alpha based on its
+            // confidence. Convert that same alpha into a grayscale stroke so the editable
+            // drawing keeps the map's light-to-dark appearance rather than turning every
+            // detected contour into a uniformly black, thick line.
+            val edgeStrength = candidate.averageStrength.coerceIn(0.0, 255.0)
+            val previewAlpha = 0.25 + 0.75 * edgeStrength / 255.0
+            val gray = ((1.0 - previewAlpha) * 255.0).roundToInt().coerceIn(0, 255)
+            val grayHex = gray.toString(16).uppercase().padStart(2, '0')
+            val strokeColor = "#$grayHex$grayHex$grayHex"
             strokes += DrawingStroke(
-                color = "#202124",
-                width = lineWidth,
+                color = strokeColor,
+                // The map preview is pixel-thin. Keep the vectorized result thin as well.
+                width = 1.0f,
                 points = normalized,
             )
             pointCount += normalized.size
