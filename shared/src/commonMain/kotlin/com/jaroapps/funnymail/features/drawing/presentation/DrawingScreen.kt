@@ -22,9 +22,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Brush
@@ -42,7 +45,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,7 +71,11 @@ import androidx.compose.ui.unit.sp
 import com.jaroapps.funnymail.core.ui.AppBackButton
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.image.EdgeMap
+import com.jaroapps.funnymail.features.drawing.domain.image.GrayImage
+import com.jaroapps.funnymail.features.drawing.domain.image.EdgeMapVectorizer
 import com.jaroapps.funnymail.features.drawing.domain.image.NoContoursFoundException
+import com.jaroapps.funnymail.features.drawing.domain.image.PhotoEdgeDetector
+import com.jaroapps.funnymail.features.drawing.domain.image.PhotoSketchSettings
 import com.jaroapps.funnymail.features.drawing.domain.image.PhotoToSketchConverter
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingCanvas
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
@@ -74,6 +84,7 @@ import com.jaroapps.funnymail.features.drawing.platform.decodePhotoToGrayscale
 import com.jaroapps.funnymail.features.drawing.platform.rememberPhotoPicker
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.PI
@@ -130,7 +141,21 @@ private val BrushDotSizes = listOf(6.dp, 9.dp, 13.dp, 17.dp, 22.dp)
 private data class PhotoConversionResult(
     val document: DrawingDocument,
     val edgeMap: EdgeMap,
+    val sourceImage: GrayImage,
 )
+
+private fun convertPhotoToSketch(
+    grayscale: GrayImage,
+    settings: PhotoSketchSettings,
+): PhotoConversionResult {
+    val pipeline = PhotoToSketchConverter(
+        edgeDetector = PhotoEdgeDetector(relativeHighThreshold = settings.edgeSensitivity),
+        vectorizer = EdgeMapVectorizer(settings = settings),
+    )
+    val edgeMap = pipeline.detectEdges(grayscale)
+    val document = pipeline.vectorize(edgeMap)
+    return PhotoConversionResult(document, edgeMap, grayscale)
+}
 
 private enum class DrawingPopup {
     Colors,
@@ -207,6 +232,12 @@ fun DrawingScreen(
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
     var isProcessingImage by remember { mutableStateOf(false) }
     var diagnosticEdgeMap by remember { mutableStateOf<EdgeMap?>(null) }
+    var sourceGrayImage by remember(initialDrawingJson) { mutableStateOf<GrayImage?>(null) }
+    var photoQualitySettings by remember { mutableStateOf(PhotoSketchSettings()) }
+    var appliedPhotoQualitySettings by remember { mutableStateOf(PhotoSketchSettings()) }
+    var isReprocessingPhoto by remember { mutableStateOf(false) }
+    var photoQualityError by remember { mutableStateOf<String?>(null) }
+    var showPhotoQualitySettings by remember { mutableStateOf(false) }
     var showEdgeMapPreview by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var statusIsError by remember { mutableStateOf(false) }
@@ -273,6 +304,7 @@ fun DrawingScreen(
                     isProcessingImage = true
                     statusMessage = null
                     try {
+                        val settingsForImport = photoQualitySettings
                         val converted = withContext(Dispatchers.Default) {
                             val grayscale = decodePhotoToGrayscale(
                                 imageBytes,
@@ -280,16 +312,16 @@ fun DrawingScreen(
                             ) ?: throw IllegalStateException(
                                 "The selected photo could not be decoded for edge detection.",
                             )
-                            val pipeline = PhotoToSketchConverter()
-                            val edgeMap = pipeline.detectEdges(grayscale)
-                            val document = pipeline.vectorize(edgeMap)
-                            // Keep the generated drawing editable even when its JSON is too large
-                            // for storage. The editor shows the exact JSON size and disables saving
-                            // with a clear reason, instead of discarding all the detected details.
-                            PhotoConversionResult(document, edgeMap)
+                            // Keep the grayscale source in memory so the editor can regenerate the
+                            // edge map live when the user changes quality controls.
+                            convertPhotoToSketch(grayscale, settingsForImport)
                         }
                         val convertedDrawing = converted.document
+                        sourceGrayImage = converted.sourceImage
+                        appliedPhotoQualitySettings = settingsForImport
                         diagnosticEdgeMap = converted.edgeMap
+                        photoQualityError = null
+                        showPhotoQualitySettings = true
                         canvasWidth = convertedDrawing.canvas.width
                         canvasHeight = convertedDrawing.canvas.height
                         canvasAspectInitialized = true
@@ -328,6 +360,42 @@ fun DrawingScreen(
             statusIsError = true
         },
     )
+
+    LaunchedEffect(sourceGrayImage, photoQualitySettings) {
+        val source = sourceGrayImage ?: return@LaunchedEffect
+        val targetSettings = photoQualitySettings
+        if (targetSettings == appliedPhotoQualitySettings) return@LaunchedEffect
+
+        // Slider drags can emit many updates; debounce so the detector runs after the user pauses.
+        delay(220)
+        isReprocessingPhoto = true
+        photoQualityError = null
+        try {
+            val converted = withContext(Dispatchers.Default) {
+                convertPhotoToSketch(source, targetSettings)
+            }
+            if (sourceGrayImage === source && photoQualitySettings == targetSettings) {
+                val document = converted.document
+                diagnosticEdgeMap = converted.edgeMap
+                canvasWidth = document.canvas.width
+                canvasHeight = document.canvas.height
+                canvasAspectInitialized = true
+                strokes = document.strokes
+                activePoints = emptyList()
+                redoStrokes = emptyList()
+                appliedPhotoQualitySettings = targetSettings
+                statusMessage = null
+            }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Exception) {
+            if (sourceGrayImage === source && photoQualitySettings == targetSettings) {
+                photoQualityError = error.message ?: "Не удалось применить настройки качества."
+            }
+        } finally {
+            if (photoQualitySettings == targetSettings) isReprocessingPhoto = false
+        }
+    }
 
     val saveDrawingAction: () -> Unit = {
         val json = currentDrawingJson
@@ -445,6 +513,10 @@ fun DrawingScreen(
                                     points = activePoints,
                                 )
                                 redoStrokes = emptyList()
+                                // Quality controls regenerate the whole photo-derived vector.
+                                // Close them before a manual stroke can be added or overwritten.
+                                sourceGrayImage = null
+                                showPhotoQualitySettings = false
                             }
                             isDrawingGestureActive = false
                             activePoints = emptyList()
@@ -514,6 +586,19 @@ fun DrawingScreen(
                         tint = Color(0xFF202124),
                         modifier = Modifier.size(22.dp),
                     )
+                }
+
+                if (sourceGrayImage != null) {
+                    RoundToolButton(
+                        enabled = !isProcessingImage && !isReprocessingPhoto,
+                        onClick = { showPhotoQualitySettings = !showPhotoQualitySettings },
+                    ) {
+                        Text(
+                            if (showPhotoQualitySettings) "Готово" else "Кач.",
+                            color = Color(0xFF202124),
+                            fontSize = 9.sp,
+                        )
+                    }
                 }
 
                 if (diagnosticEdgeMap != null) {
@@ -598,7 +683,7 @@ fun DrawingScreen(
             }
         }
 
-        Column(
+        if (!showPhotoQualitySettings) Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 76.dp, start = 12.dp, end = 12.dp)
@@ -627,6 +712,150 @@ fun DrawingScreen(
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.labelSmall,
                     fontSize = 10.sp,
+                )
+            }
+        }
+
+        if (showPhotoQualitySettings && sourceGrayImage != null) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 76.dp, start = 12.dp, end = 12.dp)
+                    .fillMaxWidth()
+                    .heightIn(max = 460.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color.White.copy(alpha = 0.98f))
+                    .border(1.dp, Color(0xFFE8EAED), RoundedCornerShape(16.dp))
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Качество эскиза",
+                        color = Color(0xFF202124),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Spacer(Modifier.weight(1f))
+                    TextButton(
+                        onClick = {
+                            photoQualitySettings = PhotoSketchSettings()
+                            photoQualityError = null
+                        },
+                    ) { Text("Сброс", color = Color(0xFF1A73E8)) }
+                    TextButton(onClick = { showPhotoQualitySettings = false }) {
+                        Text("Свернуть", color = Color(0xFF202124))
+                    }
+                }
+                Text(
+                    "JSON: $currentDrawingJsonBytes Б ($currentDrawingJsonKiB КиБ) / $maxDrawingJsonKiB КиБ",
+                    color = if (currentDrawingJson == null && currentDrawing != null) {
+                        MaterialTheme.colorScheme.error
+                    } else Color(0xFF5F6368),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                Text(
+                    "Штрихов: ${strokes.size} · Точек: $currentDrawingPointCount",
+                    color = Color(0xFF5F6368),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+                if (isReprocessingPhoto || photoQualitySettings != appliedPhotoQualitySettings) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(15.dp),
+                            color = Color(0xFFF5A800),
+                            strokeWidth = 2.dp,
+                        )
+                        Text(
+                            "Перестраиваю контуры…",
+                            color = Color(0xFF5F6368),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+                photoQualityError?.let { message ->
+                    Text(message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+
+                PhotoQualitySlider(
+                    label = "Максимум точек",
+                    value = photoQualitySettings.maxPoints.toFloat(),
+                    valueLabel = photoQualitySettings.maxPoints.toString(),
+                    valueRange = 1_000f..120_000f,
+                    steps = 22,
+                    onValueChange = { photoQualitySettings = photoQualitySettings.copy(maxPoints = it.roundToInt()) },
+                )
+                PhotoQualitySlider(
+                    label = "Чувствительность границ (ниже = больше деталей)",
+                    value = photoQualitySettings.edgeSensitivity,
+                    valueLabel = "${(photoQualitySettings.edgeSensitivity * 100f).roundToInt()}%",
+                    valueRange = 0.04f..0.35f,
+                    steps = 30,
+                    onValueChange = { photoQualitySettings = photoQualitySettings.copy(edgeSensitivity = it) },
+                )
+                PhotoQualitySlider(
+                    label = "Минимальная сила границы",
+                    value = photoQualitySettings.minimumEdgeStrength.toFloat(),
+                    valueLabel = photoQualitySettings.minimumEdgeStrength.toString(),
+                    valueRange = 0f..200f,
+                    steps = 19,
+                    onValueChange = { photoQualitySettings = photoQualitySettings.copy(minimumEdgeStrength = it.roundToInt()) },
+                )
+                PhotoQualitySlider(
+                    label = "Упрощение контуров",
+                    value = photoQualitySettings.simplificationTolerance.toFloat(),
+                    valueLabel = "${"%.2f".format(photoQualitySettings.simplificationTolerance)}",
+                    valueRange = 0f..5f,
+                    steps = 19,
+                    onValueChange = { photoQualitySettings = photoQualitySettings.copy(simplificationTolerance = it.toDouble()) },
+                )
+                PhotoQualitySlider(
+                    label = "Толщина линий",
+                    value = photoQualitySettings.strokeWidth,
+                    valueLabel = "${"%.1f".format(photoQualitySettings.strokeWidth)}",
+                    valueRange = 0.8f..6f,
+                    steps = 25,
+                    onValueChange = { photoQualitySettings = photoQualitySettings.copy(strokeWidth = it) },
+                )
+                PhotoQualitySlider(
+                    label = "Удалить слабые одиночные точки",
+                    value = photoQualitySettings.isolatedPointRemovalPercent.toFloat(),
+                    valueLabel = "${photoQualitySettings.isolatedPointRemovalPercent}%",
+                    valueRange = 0f..80f,
+                    steps = 15,
+                    onValueChange = {
+                        photoQualitySettings = photoQualitySettings.copy(isolatedPointRemovalPercent = it.roundToInt())
+                    },
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Объединять точки в линии", color = Color(0xFF202124), style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "Выключите, чтобы видеть точки отдельно; лимит точек продолжит действовать.",
+                            color = Color(0xFF5F6368),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                    Switch(
+                        checked = photoQualitySettings.mergePointsIntoLines,
+                        onCheckedChange = {
+                            photoQualitySettings = photoQualitySettings.copy(mergePointsIntoLines = it)
+                        },
+                    )
+                }
+                Text(
+                    "Изменения применяются к предпросмотру автоматически. После начала ручного рисования панель качества закрывается, чтобы не перезаписать ваши штрихи.",
+                    color = Color(0xFF5F6368),
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
         }
@@ -938,7 +1167,10 @@ fun DrawingScreen(
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(
-                            "Пикселей границ: ${edgeMap.edgeCount()} · ${edgeMap.width} × ${edgeMap.height}",
+                            "Пикселей границ: ${edgeMap.strength.count {
+                                val strength = it.toInt() and 0xFF
+                                strength > 0 && strength >= photoQualitySettings.minimumEdgeStrength
+                            }} · ${edgeMap.width} × ${edgeMap.height}",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color(0xFF5F6368),
                         )
@@ -973,7 +1205,7 @@ fun DrawingScreen(
                                             )
                                         }
                                     }
-                                    if (strength == 0) continue
+                                    if (strength == 0 || strength < photoQualitySettings.minimumEdgeStrength) continue
                                     val alpha = (0.25f + 0.75f * strength / 255f).coerceIn(0f, 1f)
                                     drawRect(
                                         color = Color.Black.copy(alpha = alpha),
@@ -1373,4 +1605,40 @@ fun DrawScope.drawDrawingBackground(canvas: DrawingCanvas) {
         SolidColor(canvas.backgroundColor.toDrawingColor())
     }
     drawRect(brush = brush)
+}
+
+
+@Composable
+private fun PhotoQualitySlider(
+    label: String,
+    value: Float,
+    valueLabel: String,
+    valueRange: ClosedFloatingPointRange<Float>,
+    steps: Int,
+    onValueChange: (Float) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                label,
+                modifier = Modifier.weight(1f),
+                color = Color(0xFF202124),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                valueLabel,
+                color = Color(0xFF5F6368),
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            steps = steps,
+        )
+    }
 }
