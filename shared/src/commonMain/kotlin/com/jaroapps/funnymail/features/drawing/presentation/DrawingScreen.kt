@@ -207,6 +207,7 @@ fun DrawingScreen(
     var isSending by remember { mutableStateOf(false) }
     var activePoints by remember { mutableStateOf<List<List<Double>>>(emptyList()) }
     var selectedColor by remember(effectiveInitialDrawingJson) { mutableStateOf("#000000") }
+    var pendingLineColor by remember { mutableStateOf("#FFFFFF") }
     var brushAlpha by remember(effectiveInitialDrawingJson) { mutableStateOf(1f) }
     var backgroundAlpha by remember(effectiveInitialDrawingJson) {
         mutableStateOf(initialDrawing?.canvas?.backgroundAlpha ?: 1f)
@@ -933,6 +934,8 @@ fun DrawingScreen(
             RoundToolButton(
                 onClick = {
                     activePopup = null
+                    pendingLineColor = "#FFFFFF"
+                    pendingBrushAlpha = 1f
                     showLineColorDialog = true
                 },
             ) {
@@ -1019,10 +1022,11 @@ fun DrawingScreen(
                     .border(1.dp, Color(0xFFE8EAED), RoundedCornerShape(10.dp))
                     .clickable {
                         backgroundPickerTab = backgroundMode
-                        pendingBackgroundColor = backgroundColor
+                        pendingBackgroundColor = "#FFFFFF"
+                        pendingBackgroundAlpha = 1f
                         pendingGradientDirection = gradientDirection
-                        pendingGradientStartColor = gradientStartColor
-                        pendingGradientEndColor = gradientEndColor
+                        pendingGradientStartColor = "#FFFFFF"
+                        pendingGradientEndColor = "#FFFFFF"
                         pendingGradientEndpoint = 0
                         showBackgroundDialog = true
                         activePopup = null
@@ -1056,17 +1060,28 @@ fun DrawingScreen(
             titleContentColor = Color(0xFF202124),
             textContentColor = Color(0xFF202124),
             text = {
-                ColorWheel(
-                    selectedColor = selectedColor,
-                    onColorSelected = {
-                        selectedColor = it
-                        eraserEnabled = false
-                        statusMessage = null
-                    },
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    ColorWheel(
+                        selectedColor = pendingLineColor,
+                        onColorSelected = { pendingLineColor = it },
+                    )
+                    Text("Прозрачность ${(pendingBrushAlpha * 100f).roundToInt()}%", color = Color(0xFF202124))
+                    Slider(
+                        value = pendingBrushAlpha,
+                        onValueChange = { pendingBrushAlpha = it },
+                        valueRange = 0f..1f,
+                    )
+                }
             },
             confirmButton = {
-                TextButton(onClick = { showLineColorDialog = false }) { Text(stringResource(Res.string.done), color = Color(0xFF202124)) }
+                TextButton(
+                    onClick = {
+                        selectedColor = pendingLineColor
+                        brushAlpha = pendingBrushAlpha
+                        eraserEnabled = false
+                        showLineColorDialog = false
+                    },
+                ) { Text(stringResource(Res.string.done), color = Color(0xFF202124)) }
             },
         )
     }
@@ -1114,6 +1129,12 @@ fun DrawingScreen(
                         ColorWheel(
                             selectedColor = pendingBackgroundColor,
                             onColorSelected = { pendingBackgroundColor = it },
+                        )
+                        Text("Прозрачность ${(pendingBackgroundAlpha * 100f).roundToInt()}%", color = Color(0xFF202124))
+                        Slider(
+                            value = pendingBackgroundAlpha,
+                            onValueChange = { pendingBackgroundAlpha = it },
+                            valueRange = 0f..1f,
                         )
                     } else {
                         Row(
@@ -1195,6 +1216,12 @@ fun DrawingScreen(
                                 else pendingGradientEndColor = color
                             },
                         )
+                        Text("Прозрачность ${(pendingBackgroundAlpha * 100f).roundToInt()}%", color = Color(0xFF202124))
+                        Slider(
+                            value = pendingBackgroundAlpha,
+                            onValueChange = { pendingBackgroundAlpha = it },
+                            valueRange = 0f..1f,
+                        )
                     }
                 }
             },
@@ -1203,6 +1230,7 @@ fun DrawingScreen(
                     onClick = {
                         backgroundMode = backgroundPickerTab
                         backgroundColor = pendingBackgroundColor
+                        backgroundAlpha = pendingBackgroundAlpha
                         gradientDirection = pendingGradientDirection
                         gradientStartColor = pendingGradientStartColor
                         gradientEndColor = pendingGradientEndColor
@@ -1678,12 +1706,15 @@ fun DrawScope.drawDrawingBackground(canvas: DrawingCanvas) {
             else -> Offset(size.width / 2f, size.height)
         }
         Brush.linearGradient(
-            colors = listOf(canvas.gradientStartColor.toDrawingColor(), canvas.gradientEndColor.toDrawingColor()),
+            colors = listOf(
+                canvas.gradientStartColor.toDrawingColor().copy(alpha = canvas.backgroundAlpha),
+                canvas.gradientEndColor.toDrawingColor().copy(alpha = canvas.backgroundAlpha),
+            ),
             start = start,
             end = end,
         )
     } else {
-        SolidColor(canvas.backgroundColor.toDrawingColor())
+        SolidColor(canvas.backgroundColor.toDrawingColor().copy(alpha = canvas.backgroundAlpha))
     }
     drawRect(brush = brush)
 }
