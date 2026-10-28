@@ -27,7 +27,7 @@ Cross-platform handwritten drawing letters for Android and iOS.
 
 - [x] KMP Android and iOS targets
 - [x] Versioned drawing domain model
-- [x] JSON codec with validation for format version, normalized coordinates, colors, stroke width, canvas dimensions, stroke/point counts and a 256 KiB default JSON limit
+- [x] JSON codec with validation for format version, normalized coordinates, colors, stroke width, canvas dimensions, stroke/point counts and a 250 KiB default JSON limit
 - [x] Unit tests for drawing serialization and validation
 - [x] Koin initialization from the shared Compose root
 - [x] Koin module test for drawing services
