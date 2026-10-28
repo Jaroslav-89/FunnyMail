@@ -635,16 +635,55 @@ private fun ChatLetterCard(
                     }
                 }
             }
-            Text(
-                text = stringResource(Res.string.stroke_point_count, letter.drawing.strokes.size, letter.drawing.strokes.sumOf { it.points.size }),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(
+                        Res.string.stroke_point_count,
+                        letter.drawing.strokes.size,
+                        letter.drawing.strokes.sumOf { it.points.size },
+                    ),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                val jsonSizeBytes = remember(letter.drawing) {
+                    com.jaroapps.funnymail.features.drawing.domain.DrawingCodec().encodedSizeBytes(letter.drawing)
+                }
+                val jsonSizeKiB = (jsonSizeBytes / 1024.0 * 10.0).toInt() / 10.0
+                Text(
+                    text = "$jsonSizeBytes Б · $jsonSizeKiB КиБ",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             DrawingPreview(
                 drawing = letter.drawing,
                 modifier = Modifier.fillMaxWidth().height(220.dp)
                     .clickable(onClick = onClick)
                     .semantics { contentDescription = openDrawingFullscreenDescription },
+            )
+            if (letter.drawing.title.isNotBlank()) {
+                Text(
+                    text = letter.drawing.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            if (letter.drawing.caption.isNotBlank()) {
+                Text(
+                    text = letter.drawing.caption,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Text(
+                text = kotlin.time.Instant.fromEpochMilliseconds(letter.createdAtEpochMillis)
+                    .toString().replace('T', ' ').take(16),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
