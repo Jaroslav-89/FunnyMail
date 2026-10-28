@@ -117,8 +117,8 @@ class DrawingCodec(
         // Detailed edge-map vector drawings may use more points than hand-drawn sketches.
         // Leave roughly 256 KiB for the surrounding letter/message fields in Firestore.
         const val DEFAULT_MAX_JSON_BYTES = 900 * 1024
-        const val DEFAULT_MAX_STROKES = 20_000
-        const val DEFAULT_MAX_POINTS = 100_000
+        const val DEFAULT_MAX_STROKES = 30_000
+        const val DEFAULT_MAX_POINTS = 200_000
         const val MAX_CANVAS_DIMENSION = 4_096
         const val MIN_STROKE_WIDTH = 0.1f
         const val MAX_STROKE_WIDTH = 100f
