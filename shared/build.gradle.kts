@@ -112,11 +112,11 @@ compose.resources {
     packageOfResClass = "com.jaroapps.funnymail.resources"
 }
 
-private const val dexiNedModelUrl =
+val dexiNedModelUrl =
     "https://huggingface.co/opencv/edge_detection_dexined/resolve/main/edge_detection_dexined_2024sep.onnx"
-private const val dexiNedModelSha256 =
+val dexiNedModelSha256 =
     "a50d01dc8481549c7dedb9eb3e0123b810a016520df75e4669a504609982cdd0"
-private const val dexiNedModelRelativePath =
+val dexiNedModelRelativePath =
     "models/edge_detection_dexined_2024sep.onnx"
 
 val ensureDexiNedModel by tasks.registering {
