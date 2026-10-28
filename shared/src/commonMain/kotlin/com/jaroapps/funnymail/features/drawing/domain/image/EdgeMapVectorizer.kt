@@ -6,53 +6,50 @@ import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 
 /**
- * Converts a sparse edge map into editable vector strokes. The algorithm intentionally uses
- * gentle simplification and a moderate short-line filter to balance visual detail and cleanliness.
+ * Converts the same visible cells used by the "Карта найденных границ" preview into editable
+ * strokes. No contour-length filtering, simplification, or point downsampling is performed:
+ * short contours and isolated detected cells must remain visible in the final drawing.
  */
 class EdgeMapVectorizer(
-    private val minPathLength: Double = 1.0,
-    private val simplifyEpsilon: Double = 0.35,
-    private val maxStrokes: Int = 1_500,
-    private val maxPoints: Int = 6_500,
+    private val maxStrokes: Int = 2_000,
+    private val maxPoints: Int = 20_000,
 ) {
     fun convert(edgeMap: EdgeMap): DrawingDocument {
-        val width = edgeMap.width
-        val height = edgeMap.height
-        val edgePixels = BooleanArray(edgeMap.strength.size) {
-            (edgeMap.strength[it].toInt() and 0xFF) > 0
+        // The diagnostic map shows the maximum edge strength in each display cell. Vectorize
+        // that same map instead of using a higher-resolution source and then discarding detail.
+        val displayMap = mapAtPreviewResolution(edgeMap)
+        val width = displayMap.width
+        val height = displayMap.height
+        val edgePixels = BooleanArray(displayMap.strength.size) {
+            (displayMap.strength[it].toInt() and 0xFF) > 0
         }
         val rawPaths = tracePaths(edgePixels, width, height)
-        val candidates = rawPaths.mapNotNull { raw ->
-            val length = pathLength(raw, width)
-            if (length < minPathLength || raw.size < 2) return@mapNotNull null
-            val simplified = simplify(raw, width, simplifyEpsilon)
-            if (simplified.size < 2) return@mapNotNull null
-            val averageStrength = raw.map { edgeMap.strength[it].toInt() and 0xFF }.average()
-            Candidate(simplified, length, averageStrength)
-        }.sortedWith(
-            compareByDescending<Candidate> { it.length }
-                .thenByDescending { it.averageStrength },
-        )
+        val candidates = rawPaths.map { raw ->
+            val averageStrength = raw
+                .map { displayMap.strength[it].toInt() and 0xFF }
+                .average()
+            Candidate(raw, averageStrength)
+        }
 
-        val strokes = ArrayList<DrawingStroke>()
-        var pointCount = 0
+        // Never silently drop details to fit the document limits. The limits are checked before
+        // making the drawing; if they are exceeded, import fails clearly rather than trimming
+        // short contours first or keeping only the largest paths.
+        val pointCount = candidates.sumOf { it.points.size }
+        require(candidates.size <= maxStrokes) {
+            "Карта содержит ${candidates.size} контуров — это превышает лимит $maxStrokes. Детали не были удалены."
+        }
+        require(pointCount <= maxPoints) {
+            "Карта содержит $pointCount точек — это превышает лимит $maxPoints. Детали не были удалены."
+        }
+
+        val strokes = ArrayList<DrawingStroke>(candidates.size)
         for (candidate in candidates) {
-            if (strokes.size >= maxStrokes || pointCount >= maxPoints) break
-            val available = maxPoints - pointCount
-            val selected = when {
-                candidate.points.size <= available -> candidate.points
-                available >= 2 && candidate.points.size >= available -> downsample(candidate.points, available)
-                else -> continue
-            }
-            if (selected.size < 2) continue
-
-            val normalized = selected.map { index ->
+            val normalized = candidate.points.map { index ->
                 listOf(
-                    quantize((index % width).toDouble() / (width - 1).toDouble()),
-                    quantize((index / width).toDouble() / (height - 1).toDouble()),
+                    quantize(((index % width) + 0.5) / width.toDouble()),
+                    quantize(((index / width) + 0.5) / height.toDouble()),
                 )
             }
             // The "Карта" preview draws each edge in black with alpha based on its
@@ -97,7 +94,6 @@ class EdgeMapVectorizer(
 
     private data class Candidate(
         val points: List<Int>,
-        val length: Double,
         val averageStrength: Double,
     )
 
@@ -141,6 +137,11 @@ class EdgeMapVectorizer(
         }
 
         val paths = ArrayList<List<Int>>()
+        // A single isolated edge cell has no graph edge to trace, but it is still visible on the
+        // diagnostic map. Keep it as a one-point stroke rather than discarding it.
+        for (index in edges.indices) {
+            if (edges[index] && degree[index].toInt() == 0) paths += listOf(index)
+        }
         for (index in edges.indices) {
             if (!edges[index] || degree[index].toInt() == 2) continue
             for (neighbour in neighbours(index, width, height, edges)) {
@@ -183,66 +184,36 @@ class EdgeMapVectorizer(
         return result
     }
 
-    private fun pathLength(path: List<Int>, width: Int): Double {
-        var result = 0.0
-        for (index in 1 until path.size) {
-            val dx = (path[index] % width - path[index - 1] % width).toDouble()
-            val dy = (path[index] / width - path[index - 1] / width).toDouble()
-            result += sqrt(dx * dx + dy * dy)
-        }
-        return result
-    }
+    private fun mapAtPreviewResolution(source: EdgeMap): EdgeMap {
+        val stepX = (source.width / 320).coerceAtLeast(1)
+        val stepY = (source.height / 320).coerceAtLeast(1)
+        val width = (source.width + stepX - 1) / stepX
+        val height = (source.height + stepY - 1) / stepY
+        val strength = ByteArray(width * height)
 
-    private fun simplify(path: List<Int>, width: Int, epsilon: Double): List<Int> {
-        if (path.size <= 3 || epsilon <= 0.0) return path
-        val keep = BooleanArray(path.size)
-        keep[0] = true
-        keep[path.lastIndex] = true
-        val stack = ArrayList<Pair<Int, Int>>()
-        stack += 0 to path.lastIndex
-        while (stack.isNotEmpty()) {
-            val (start, end) = stack.removeAt(stack.lastIndex)
-            val a = path[start]
-            val b = path[end]
-            val x1 = (a % width).toDouble()
-            val y1 = (a / width).toDouble()
-            val x2 = (b % width).toDouble()
-            val y2 = (b / width).toDouble()
-            val dx = x2 - x1
-            val dy = y2 - y1
-            val denominator = dx * dx + dy * dy
-            var farthest = -1
-            var maxDistance = 0.0
-            for (index in start + 1 until end) {
-                val point = path[index]
-                val px = (point % width).toDouble()
-                val py = (point / width).toDouble()
-                val projection = if (denominator == 0.0) 0.0 else
-                    (((px - x1) * dx + (py - y1) * dy) / denominator).coerceIn(0.0, 1.0)
-                val nearestX = x1 + projection * dx
-                val nearestY = y1 + projection * dy
-                val distance = sqrt((px - nearestX) * (px - nearestX) + (py - nearestY) * (py - nearestY))
-                if (distance > maxDistance) {
-                    maxDistance = distance
-                    farthest = index
+        var displayY = 0
+        for (sourceY in 0 until source.height step stepY) {
+            val cellHeight = min(stepY, source.height - sourceY)
+            var displayX = 0
+            for (sourceX in 0 until source.width step stepX) {
+                val cellWidth = min(stepX, source.width - sourceX)
+                var maximumStrength = 0
+                for (sampleY in sourceY until sourceY + cellHeight) {
+                    for (sampleX in sourceX until sourceX + cellWidth) {
+                        maximumStrength = max(
+                            maximumStrength,
+                            source.strength[sampleY * source.width + sampleX].toInt() and 0xFF,
+                        )
+                    }
                 }
+                if (maximumStrength > 0) {
+                    strength[displayY * width + displayX] = maximumStrength.toByte()
+                }
+                displayX++
             }
-            if (farthest >= 0 && maxDistance > epsilon) {
-                keep[farthest] = true
-                stack += start to farthest
-                stack += farthest to end
-            }
+            displayY++
         }
-        return path.indices.filter { keep[it] }.map { path[it] }
-    }
-
-    private fun downsample(path: List<Int>, targetSize: Int): List<Int> {
-        if (targetSize >= path.size) return path
-        if (targetSize < 2) return emptyList()
-        val result = ArrayList<Int>(targetSize)
-        val step = (path.size - 1).toDouble() / (targetSize - 1).toDouble()
-        for (index in 0 until targetSize) result += path[(index * step).roundToInt()]
-        return result.distinct()
+        return EdgeMap(width, height, strength)
     }
 
     private fun quantize(value: Double): Double =
