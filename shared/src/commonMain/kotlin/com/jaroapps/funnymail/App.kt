@@ -225,8 +225,9 @@ private fun FunnyMailContent(
     }
 
     val sendDrawingToChat: (String, (String?) -> Unit) -> Unit = { json, reportResult ->
-        val chatId = selectedChat?.id
-        if (chatId == null) {
+        // Keep using the saveable chat id if Activity recreation cleared the in-memory Chat.
+        val chatId = selectedChat?.id ?: selectedChatId
+        if (chatId.isNullOrBlank()) {
             reportResult(sendDrawingOpenChatFirstText)
         } else {
             coroutineScope.launch {
