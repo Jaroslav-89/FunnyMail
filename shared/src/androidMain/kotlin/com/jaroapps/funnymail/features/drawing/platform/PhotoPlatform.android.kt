@@ -300,17 +300,21 @@ private object DexiNedRuntime {
                 val confidence512 = ByteArray(modelPixelCount) { index ->
                     (accum[index] / validOutputs).toInt().coerceIn(0, 255).toByte()
                 }
-                // Map the model confidence back to the photo's decoded dimensions before shared
-                // hysteresis and vectorization.
-                val restored = ByteArray(image.width * image.height)
-                for (y in 0 until image.height) {
-                    val sourceY = (y.toLong() * INPUT_SIZE / image.height).toInt().coerceIn(0, INPUT_SIZE - 1)
-                    for (x in 0 until image.width) {
-                        val sourceX = (x.toLong() * INPUT_SIZE / image.width).toInt().coerceIn(0, INPUT_SIZE - 1)
-                        restored[y * image.width + x] = confidence512[sourceY * INPUT_SIZE + sourceX]
+                // Keep the decoded photo's aspect ratio and the model's native detail scale.
+                // This avoids doubling every 512x512 edge pixel into a block on a 1024px map.
+                val outputLongSide = min(INPUT_SIZE, max(image.width, image.height))
+                val scale = outputLongSide.toDouble() / max(image.width, image.height).toDouble()
+                val outputWidth = (image.width * scale).roundToInt().coerceAtLeast(3)
+                val outputHeight = (image.height * scale).roundToInt().coerceAtLeast(3)
+                val restored = ByteArray(outputWidth * outputHeight)
+                for (y in 0 until outputHeight) {
+                    val sourceY = (y.toLong() * INPUT_SIZE / outputHeight).toInt().coerceIn(0, INPUT_SIZE - 1)
+                    for (x in 0 until outputWidth) {
+                        val sourceX = (x.toLong() * INPUT_SIZE / outputWidth).toInt().coerceIn(0, INPUT_SIZE - 1)
+                        restored[y * outputWidth + x] = confidence512[sourceY * INPUT_SIZE + sourceX]
                     }
                 }
-                EdgeMap(image.width, image.height, restored)
+                EdgeMap(outputWidth, outputHeight, restored)
             }
         }
     }
