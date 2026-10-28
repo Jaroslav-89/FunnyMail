@@ -38,7 +38,14 @@ internal fun DrawScope.drawDrawingStrokes(
     strokes.forEach { stroke ->
         if (stroke.points.isEmpty()) return@forEach
         val color = stroke.color.toDrawingRenderColor()
-        val lineWidth = (stroke.width * scale).coerceAtLeast(1f)
+        // Photo-derived map strokes use widths 1..2 as screen-pixel weights. Scaling them by
+        // the normalized canvas scale would round both values down to the same one-pixel line,
+        // making the requested thickness change invisible on a phone-sized canvas.
+        val lineWidth = if (stroke.width <= 2f) {
+            stroke.width.coerceAtLeast(1f)
+        } else {
+            (stroke.width * scale).coerceAtLeast(1f)
+        }
 
         if (stroke.points.size == 1) {
             val point = stroke.points.first()
