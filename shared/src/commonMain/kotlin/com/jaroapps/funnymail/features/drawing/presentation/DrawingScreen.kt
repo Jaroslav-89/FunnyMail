@@ -64,11 +64,11 @@ import androidx.compose.ui.unit.sp
 import com.jaroapps.funnymail.core.ui.AppBackButton
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.domain.image.NoContoursFoundException
-import com.jaroapps.funnymail.features.drawing.domain.image.PortraitToDrawingConverter
+import com.jaroapps.funnymail.features.drawing.domain.image.PhotoToSketchConverter
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingCanvas
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
-import com.jaroapps.funnymail.features.drawing.platform.analyzePortraitLocally
+import com.jaroapps.funnymail.features.drawing.platform.decodePhotoToGrayscale
 import com.jaroapps.funnymail.features.drawing.platform.rememberPhotoPicker
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -256,15 +256,14 @@ fun DrawingScreen(
                     statusMessage = null
                     try {
                         val convertedDrawing = withContext(Dispatchers.Default) {
-                            val portraitFeatures = analyzePortraitLocally(
+                            val grayscale = decodePhotoToGrayscale(
                                 imageBytes,
                                 maxDimension = 1024,
                             ) ?: throw IllegalStateException(
-                                "The local portrait model did not return features.",
+                                "The selected photo could not be decoded for edge detection.",
                             )
-                            // Test the semantic model output only. Do not mix it with classic
-                            // edge detection, so quality can be evaluated independently.
-                            val document = PortraitToDrawingConverter().convert(portraitFeatures)
+                            val document = PhotoToSketchConverter().convert(grayscale)
+                            // Validate early so an oversized result is reported as an import error.
                             drawingCodec.encode(document).getOrThrow()
                             document
                         }
