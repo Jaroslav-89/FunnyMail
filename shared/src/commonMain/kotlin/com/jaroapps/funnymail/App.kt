@@ -115,6 +115,8 @@ private fun FunnyMailContent(
     var selectedChat by remember { mutableStateOf<Chat?>(null) }
     var selectedChatId by rememberSaveable { mutableStateOf<String?>(null) }
     var viewingDrawing by remember { mutableStateOf<DrawingDocument?>(null) }
+    var chatFeedReturnIndex by rememberSaveable { mutableStateOf(0) }
+    var chatFeedReturnOffset by rememberSaveable { mutableStateOf(0) }
     var editingDrawingId by rememberSaveable { mutableStateOf<Long?>(null) }
     var editingDrawingJson by remember { mutableStateOf<String?>(null) }
     var drawingReturnDestination by remember { mutableStateOf(AppDestination.ChatDetail) }
@@ -404,11 +406,15 @@ private fun FunnyMailContent(
                                     editingDrawingJson = null
                                     destination = AppDestination.Letters
                                 },
-                                onViewDrawing = { drawing ->
+                                onViewDrawing = { drawing, index, offset ->
                                     viewingDrawing = drawing
+                                    chatFeedReturnIndex = index
+                                    chatFeedReturnOffset = offset
                                     drawingViewerReturnDestination = AppDestination.ChatDetail
                                     destination = AppDestination.DrawingViewer
                                 },
+                                initialScrollIndex = chatFeedReturnIndex,
+                                initialScrollOffset = chatFeedReturnOffset,
                                 onChatUpdated = { updatedChat -> selectedChat = updatedChat },
                                 onCreateInvite = createInviteForChat,
                             )
