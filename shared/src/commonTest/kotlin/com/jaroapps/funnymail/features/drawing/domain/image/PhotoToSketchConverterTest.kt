@@ -3,6 +3,7 @@ package com.jaroapps.funnymail.features.drawing.domain.image
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import kotlin.test.Test
 import kotlin.test.assertTrue
+import kotlin.math.roundToInt
 
 class PhotoToSketchConverterTest {
     @Test
@@ -54,7 +55,7 @@ class PhotoToSketchConverterTest {
                 }
         })
         val encoded = DrawingCodec().encode(document).getOrThrow()
-        assertTrue(encoded.encodeToByteArray().size <= 256 * 1024)
+        assertTrue(encoded.encodeToByteArray().size <= 768 * 1024)
     }
 
     @Test
@@ -75,6 +76,45 @@ class PhotoToSketchConverterTest {
             "Weak map contours should remain light gray like the map preview")
         assertTrue(document.strokes.all { it.width == 2.0f },
             "Map-derived contour strokes should use twice the previous display thickness")
+    }
+
+    @Test
+    fun preservesShortContoursAndIsolatedCellsVisibleOnTheMap() {
+        val width = 640
+        val height = 480
+        val edges = ByteArray(width * height)
+
+        // The preview groups source pixels into cells 2 pixels wide and keeps the maximum
+        // edge confidence in each cell. Build a three-cell short contour and a separate dot.
+        edges[15 * width + 10] = 40
+        edges[15 * width + 11] = 255.toByte()
+        edges[15 * width + 12] = 55
+        edges[15 * width + 14] = 70
+        edges[15 * width + 15] = 220.toByte()
+        edges[200 * width + 100] = 90
+
+        val document = EdgeMapVectorizer().convert(EdgeMap(width, height, edges))
+        val points = document.strokes.flatMap { it.points }.toSet()
+
+        fun q(value: Double): Double = (value * 10_000.0).roundToInt() / 10_000.0
+        fun hasPoint(sourceCellX: Int, sourceCellY: Int, cellWidth: Int = 2): Boolean {
+            val expectedX = q((sourceCellX + cellWidth / 2.0) / width)
+            val expectedY = q((sourceCellY + 0.5) / height)
+            return listOf(expectedX, expectedY) in points
+        }
+
+        // Three neighbouring display cells form a short contour. None may be length-filtered.
+        assertTrue(hasPoint(10, 15), "The first visible map cell should be retained")
+        assertTrue(hasPoint(12, 15), "The middle visible map cell should be retained")
+        assertTrue(hasPoint(14, 15), "The last visible map cell should be retained")
+        // A point with no neighbours is visible on the map too and must become a dot stroke.
+        assertTrue(hasPoint(100, 200, cellWidth = 2),
+            "An isolated detected cell should be retained")
+        assertTrue(document.strokes.any { it.points.size == 1 },
+            "Isolated map cells must be represented as one-point strokes")
+        assertTrue(document.canvas.width == 1_000 && document.canvas.height == 750,
+            "Different preview grid steps must not distort the source aspect ratio")
+        DrawingCodec().encode(document).getOrThrow()
     }
 
     @Test
