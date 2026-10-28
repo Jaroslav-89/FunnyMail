@@ -260,72 +260,75 @@ fun ChatEditScreen(
                 }
             }
 
+            if (isCreator || chat.description.isNotBlank()) {
             Text(
-                stringResource(Res.string.chat_description_title),
-                style = MaterialTheme.typography.titleMedium
-            )
-            if (isCreator) {
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it.take(120) },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !busy,
-                    singleLine = false,
-                    minLines = 3,
-                    maxLines = 10,
-                    label = { Text(stringResource(Res.string.description_label)) },
-                    supportingText = {
-                        Text(
-                            stringResource(
-                                Res.string.description_length,
-                                description.length
-                            )
-                        )
-                    },
+                    stringResource(Res.string.chat_description_title),
+                    style = MaterialTheme.typography.titleMedium
                 )
-                Button(
-                    onClick = {
-                        val userId = currentUserId
-                        val normalized = description.trim()
-                        if (userId != null && !busy && normalized.length <= 120 && normalized != chat.description) {
-                            busy = true
-                            message = null
-                            scope.launch {
-                                repository.updateChatDescription(chat.id, normalized, userId).fold(
-                                    onSuccess = { updatedChat ->
-                                        busy = false
-                                        description = updatedChat.description
-                                        onChatUpdated(updatedChat)
-                                        message = chatDescriptionSavedMessage
-                                        messageIsError = false
-                                    },
-                                    onFailure = { error ->
-                                        busy = false
-                                        message = chatDescriptionSaveFailedMessage
-                                        messageIsError = true
-                                    },
+                if (isCreator) {
+                    OutlinedTextField(
+                        value = description,
+                        onValueChange = { description = it.take(120) },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !busy,
+                        singleLine = false,
+                        minLines = 3,
+                        maxLines = 10,
+                        label = { Text(stringResource(Res.string.description_label)) },
+                        supportingText = {
+                            Text(
+                                stringResource(
+                                    Res.string.description_length,
+                                    description.length
                                 )
-                            }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !busy && description.trim().length <= 120 && description.trim() != chat.description,
-                ) { Text(if (busy) stringResource(Res.string.saving) else stringResource(Res.string.save_chat_description)) }
-            } else {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                ) {
-                    Text(
-                        text = chat.description.ifBlank { chatDescriptionMissingText },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
+                            )
+                        },
                     )
+                    Button(
+                        onClick = {
+                            val userId = currentUserId
+                            val normalized = description.trim()
+                            if (userId != null && !busy && normalized.length <= 120 && normalized != chat.description) {
+                                busy = true
+                                message = null
+                                scope.launch {
+                                    repository.updateChatDescription(chat.id, normalized, userId).fold(
+                                        onSuccess = { updatedChat ->
+                                            busy = false
+                                            description = updatedChat.description
+                                            onChatUpdated(updatedChat)
+                                            message = chatDescriptionSavedMessage
+                                            messageIsError = false
+                                        },
+                                        onFailure = { error ->
+                                            busy = false
+                                            message = chatDescriptionSaveFailedMessage
+                                            messageIsError = true
+                                        },
+                                    )
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !busy && description.trim().length <= 120 && description.trim() != chat.description,
+                    ) { Text(if (busy) stringResource(Res.string.saving) else stringResource(Res.string.save_chat_description)) }
+                } else {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                    ) {
+                        Text(
+                            text = chat.description.ifBlank { chatDescriptionMissingText },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
                 }
-            }
-
+    
+                }
+            
             if (isCreator || observedMaxLettersCount != null) {
                 val parsedLimit = maxLettersText.toIntOrNull()
                 val normalizedLimit = if (maxLettersText.isBlank()) null else parsedLimit
