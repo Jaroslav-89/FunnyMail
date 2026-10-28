@@ -47,6 +47,7 @@ import com.jaroapps.funnymail.features.placeholder.presentation.PlaceholderScree
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collect
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
@@ -112,6 +113,7 @@ private fun FunnyMailContent(
     val drawingUnavailableText = stringResource(Res.string.drawing_unavailable)
     val selectDrawingHintText = stringResource(Res.string.select_drawing_hint)
     var selectedChat by remember { mutableStateOf<Chat?>(null) }
+    var selectedChatId by rememberSaveable { mutableStateOf<String?>(null) }
     var viewingDrawing by remember { mutableStateOf<DrawingDocument?>(null) }
     var editingDrawingId by remember { mutableStateOf<Long?>(null) }
     var editingDrawingJson by remember { mutableStateOf<String?>(null) }
@@ -154,6 +156,16 @@ private fun FunnyMailContent(
     val chatRepository = koinInject<ChatRepository>()
     val letterRepository = koinInject<LetterRepository>()
     val coroutineScope = rememberCoroutineScope()
+
+    // Restore the latest Chat object after Activity recreation from its saveable id.
+    LaunchedEffect(selectedChatId, signedInUser?.id) {
+        val chatId = selectedChatId ?: return@LaunchedEffect
+        val userId = signedInUser?.id ?: return@LaunchedEffect
+        if (selectedChat?.id == chatId) return@LaunchedEffect
+        chatRepository.observeChats(userId).collect { chats ->
+            chats.firstOrNull { it.id == chatId }?.let { selectedChat = it }
+        }
+    }
 
     val closeDrawing: () -> Unit = {
         destination = drawingReturnDestination
@@ -303,6 +315,7 @@ private fun FunnyMailContent(
                         },
                         onOpenChat = { chat ->
                             selectedChat = chat
+                            selectedChatId = chat.id
                             destination = AppDestination.ChatDetail
                         },
                     )
