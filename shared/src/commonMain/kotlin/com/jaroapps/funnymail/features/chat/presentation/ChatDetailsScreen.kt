@@ -552,14 +552,14 @@ fun ChatDetailsScreen(
                                                 }
                                             }
                                         },
-                                        enabled = !isAddingUser && user.id !in chat.memberIds &&
+                                        enabled = !isAddingUser && user.id !in activeChat.memberIds &&
                                             user.id != state.currentUser?.id,
                                         modifier = Modifier.fillMaxWidth(),
                                     ) {
                                         if (isAddingUser) CircularProgressIndicator(
                                             modifier = Modifier.size(18.dp),
                                             strokeWidth = 2.dp,
-                                        ) else Text(if (user.id in chat.memberIds) stringResource(Res.string.already_in_chat) else stringResource(Res.string.add_to_chat))
+                                        ) else Text(if (user.id in activeChat.memberIds) stringResource(Res.string.already_in_chat) else stringResource(Res.string.add_to_chat))
                                     }
                                 }
                             }
