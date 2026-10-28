@@ -80,6 +80,7 @@ import kotlinx.coroutines.withContext
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.atan2
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -973,8 +974,8 @@ fun DrawingScreen(
                             val left = (size.width - drawnWidth) / 2f
                             val top = (size.height - drawnHeight) / 2f
                             // Downsample only this diagnostic view; the vector drawing uses every edge pixel.
-                            val stepX = (edgeMap.width / 320).coerceAtLeast(1)
-                            val stepY = (edgeMap.height / 320).coerceAtLeast(1)
+                            val stepX = ceil(edgeMap.width / 180.0).toInt().coerceAtLeast(1)
+                            val stepY = ceil(edgeMap.height / 180.0).toInt().coerceAtLeast(1)
                             for (y in 0 until edgeMap.height step stepY) {
                                 val cellHeight = min(stepY, edgeMap.height - y)
                                 for (x in 0 until edgeMap.width step stepX) {
