@@ -194,7 +194,7 @@ actual suspend fun detectPhotoEdgesWithDexiNed(image: GrayImage): EdgeMap? =
     withContext(Dispatchers.IO) {
         try {
             val context = DexiNedRuntime.applicationContext ?: return@withContext null
-            DexiNedRuntime.detect(context, image)?.thresholdAndLink()
+            DexiNedRuntime.detect(context, image)?.thresholdAndLink()?.takeIf { it.edgeCount() >= 2 }
         } catch (cancelled: kotlinx.coroutines.CancellationException) {
             throw cancelled
         } catch (_: Exception) {
@@ -217,6 +217,9 @@ private object DexiNedRuntime {
     @Volatile
     private var cachedSession: OrtSession? = null
 
+    // ONNX Runtime requires session options to outlive sessions created from them.
+    private var cachedSessionOptions: OrtSession.SessionOptions? = null
+
     private val environment: OrtEnvironment by lazy { OrtEnvironment.getEnvironment() }
 
     fun detect(context: Context, image: GrayImage): EdgeMap {
@@ -227,10 +230,12 @@ private object DexiNedRuntime {
                 try {
                     options.setIntraOpNumThreads(2)
                     environment.createSession(modelFile.absolutePath, options).also {
+                        cachedSessionOptions = options
                         cachedSession = it
                     }
-                } finally {
+                } catch (error: Exception) {
                     options.close()
+                    throw error
                 }
             }
         }
