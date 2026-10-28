@@ -277,14 +277,22 @@ fun DrawingScreen(
                                 "The selected photo could not be decoded for edge detection.",
                             )
                             val pipeline = PhotoToSketchConverter()
-                            val neuralMap = if (requestedDexiNed) {
-                                detectPhotoEdgesWithDexiNed(grayscale)
+                            // A valid confidence map can still collapse to short/noisy vector paths.
+                            // In that case retry the classic detector rather than failing the import.
+                            val neuralResult = if (requestedDexiNed) {
+                                detectPhotoEdgesWithDexiNed(grayscale)?.let { neuralMap ->
+                                    try {
+                                        neuralMap to pipeline.vectorize(neuralMap)
+                                    } catch (_: NoContoursFoundException) {
+                                        null
+                                    }
+                                }
                             } else {
                                 null
                             }
-                            val usedDexiNed = neuralMap != null
-                            val edgeMap = neuralMap ?: pipeline.detectEdges(grayscale)
-                            val document = pipeline.vectorize(edgeMap)
+                            val usedDexiNed = neuralResult != null
+                            val edgeMap = neuralResult?.first ?: pipeline.detectEdges(grayscale)
+                            val document = neuralResult?.second ?: pipeline.vectorize(edgeMap)
                             // Validate early so an oversized result is reported as an import error.
                             drawingCodec.encode(document).getOrThrow()
                             PhotoConversionResult(document, edgeMap, usedDexiNed)
