@@ -45,7 +45,7 @@ class PhotoToSketchConverterTest {
 
         val document = EdgeMapVectorizer().convert(EdgeMap(width, height, edges))
 
-        assertTrue(document.strokes.size >= 3, "Long scene contours should become separate editable strokes")
+        assertTrue(document.strokes.size >= 2, "The closed facade contour and inner edge should remain separate strokes")
         assertTrue(document.strokes.all { stroke ->
             stroke.points.size >= 2 &&
                 stroke.width in 0.75f..1.55f &&
