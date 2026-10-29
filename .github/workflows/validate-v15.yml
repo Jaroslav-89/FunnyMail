@@ -26,8 +26,8 @@ jobs:
           java-version: "17"
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
-      - name: Assemble Android app
-        run: ./gradlew --no-daemon :androidApp:assembleDebug
+      - name: Assemble Android release APK
+        run: ./gradlew --no-daemon :androidApp:assembleRelease
 
   shared-tests:
     name: Shared unit tests
