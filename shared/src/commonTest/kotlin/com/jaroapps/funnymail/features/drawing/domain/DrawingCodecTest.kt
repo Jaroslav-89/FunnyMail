@@ -3,6 +3,8 @@ package com.jaroapps.funnymail.features.drawing.domain
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingCanvas
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
+import com.jaroapps.funnymail.features.drawing.domain.model.DrawingText
+import com.jaroapps.funnymail.features.drawing.domain.model.DrawingSticker
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -128,4 +130,44 @@ class DrawingCodecTest {
         assertTrue(codec.encode(DrawingDocument(canvas = DrawingCanvas(backgroundAlpha = 0.5f))).isSuccess)
     }
 
+    @Test
+    fun legacyJsonWithoutAnnotationsStillDecodes() {
+        val legacyJson = """{"version":1,"strokes":[]}"""
+
+        val decoded = codec.decode(legacyJson).getOrThrow()
+
+        assertTrue(decoded.strokes.isEmpty())
+        assertTrue(decoded.texts.isEmpty())
+        assertTrue(decoded.stickers.isEmpty())
+    }
+
+    @Test
+    fun richTextAndStickersRoundTrip() {
+        val drawing = DrawingDocument(
+            texts = listOf(
+                DrawingText(
+                    text = "Hello",
+                    x = 0.25,
+                    y = 0.5,
+                    fontSize = 64f,
+                    rotationDegrees = -30f,
+                    bold = true,
+                    italic = true,
+                    underline = true,
+                ),
+            ),
+            stickers = listOf(DrawingSticker(code = ":heart:", x = 0.75, y = 0.2, scale = 1.5f)),
+        )
+        val encoded = codec.encode(drawing)
+        assertTrue(encoded.isSuccess)
+        assertEquals(drawing, codec.decode(encoded.getOrThrow()).getOrThrow())
+    }
+
+    @Test
+    fun rejectsInvalidTextAndStickerValues() {
+        assertFalse(codec.encode(DrawingDocument(texts = listOf(DrawingText(text = "x", x = 1.2, y = 0.2)))).isSuccess)
+        assertFalse(codec.encode(DrawingDocument(texts = listOf(DrawingText(text = "x", x = 0.2, y = 0.2, fontSize = Float.NaN)))).isSuccess)
+        assertFalse(codec.encode(DrawingDocument(stickers = listOf(DrawingSticker(code = "not-a-code", x = 0.2, y = 0.2)))).isSuccess)
+        assertFalse(codec.encode(DrawingDocument(stickers = listOf(DrawingSticker(code = ":smile:", x = 0.2, y = 0.2, scale = 5f)))).isSuccess)
+    }
 }

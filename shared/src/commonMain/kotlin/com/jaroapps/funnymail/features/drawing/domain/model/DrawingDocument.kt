@@ -17,6 +17,10 @@ data class DrawingDocument(
     /** Optional short caption shown under this drawing in chat. */
     val title: String = "",
     val caption: String = "",
+    /** Rich text placed on the canvas. Coordinates are normalized to [0, 1]. */
+    val texts: List<DrawingText> = emptyList(),
+    /** Emoji stickers use stable symbolic codes so their appearance survives serialization. */
+    val stickers: List<DrawingSticker> = emptyList(),
 ) {
     companion object {
         const val CURRENT_VERSION: Int = 1
@@ -45,4 +49,30 @@ data class DrawingStroke(
     val alpha: Float = 1f,
     /** Each item must contain exactly two normalized coordinates: [x, y]. */
     val points: List<List<Double>>,
+)
+
+
+@Serializable
+data class DrawingText(
+    val text: String,
+    val x: Double,
+    val y: Double,
+    val color: String = "#202124",
+    /** Font size in logical canvas units. */
+    val fontSize: Float = 48f,
+    val rotationDegrees: Float = 0f,
+    val bold: Boolean = false,
+    val italic: Boolean = false,
+    val underline: Boolean = false,
+    val alpha: Float = 1f,
+)
+
+@Serializable
+data class DrawingSticker(
+    /** Stable code, for example :smile: or :heart:. */
+    val code: String,
+    val x: Double,
+    val y: Double,
+    val scale: Float = 1f,
+    val rotationDegrees: Float = 0f,
 )

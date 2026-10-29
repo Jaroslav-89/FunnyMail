@@ -82,6 +82,8 @@ import com.jaroapps.funnymail.features.drawing.domain.image.PhotoToSketchConvert
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingCanvas
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingStroke
+import com.jaroapps.funnymail.features.drawing.domain.model.DrawingText
+import com.jaroapps.funnymail.features.drawing.domain.model.DrawingSticker
 import com.jaroapps.funnymail.features.drawing.platform.decodePhotoToGrayscale
 import com.jaroapps.funnymail.features.drawing.platform.rememberPhotoPicker
 import kotlinx.coroutines.CancellationException
@@ -201,6 +203,27 @@ fun DrawingScreen(
     var strokes by remember(effectiveInitialDrawingJson) {
         mutableStateOf(initialDrawing?.strokes ?: emptyList())
     }
+    var textAnnotations by remember(effectiveInitialDrawingJson) {
+        mutableStateOf(initialDrawing?.texts ?: emptyList())
+    }
+    var stickers by remember(effectiveInitialDrawingJson) {
+        mutableStateOf(initialDrawing?.stickers ?: emptyList())
+    }
+    var pendingTextPlacement by remember { mutableStateOf<DrawingText?>(null) }
+    var pendingStickerCode by remember { mutableStateOf<String?>(null) }
+    var stickerCode by remember { mutableStateOf(":smile:") }
+    var stickerScale by remember { mutableStateOf(1f) }
+    var showTextDialog by remember { mutableStateOf(false) }
+    var showStickerDialog by remember { mutableStateOf(false) }
+    var editorText by remember { mutableStateOf("") }
+    var editorTextSize by remember { mutableStateOf(64f) }
+    var editorTextRotation by remember { mutableStateOf(0f) }
+    var editorTextBold by remember { mutableStateOf(false) }
+    var editorTextItalic by remember { mutableStateOf(false) }
+    var editorTextUnderline by remember { mutableStateOf(false) }
+    var photoMode by remember { mutableStateOf("CONTOURS") }
+    var contourStrokes by remember { mutableStateOf<List<DrawingStroke>>(emptyList()) }
+    var tracingStrokes by remember { mutableStateOf<List<DrawingStroke>>(emptyList()) }
     var redoStrokes by remember(effectiveInitialDrawingJson) { mutableStateOf<List<DrawingStroke>>(emptyList()) }
     var savedDrawingJson by remember(effectiveInitialDrawingJson) { mutableStateOf(effectiveInitialDrawingJson) }
     var isSaving by remember { mutableStateOf(false) }
@@ -276,6 +299,8 @@ fun DrawingScreen(
         canvasHeight,
         drawingTitle,
         drawingCaption,
+        textAnnotations,
+        stickers,
         backgroundMode,
         backgroundColor,
         gradientDirection,
@@ -283,7 +308,7 @@ fun DrawingScreen(
         gradientEndColor,
         backgroundAlpha,
     ) {
-        if (strokes.isEmpty()) {
+        if (strokes.isEmpty() && textAnnotations.isEmpty() && stickers.isEmpty()) {
             null
         } else {
             DrawingDocument(
@@ -300,6 +325,8 @@ fun DrawingScreen(
                 strokes = strokes,
                 title = drawingTitle,
                 caption = drawingCaption,
+                texts = textAnnotations,
+                stickers = stickers,
             )
         }
     }
@@ -310,8 +337,12 @@ fun DrawingScreen(
     val currentDrawingJsonBytes = currentDrawingEncoding?.second ?: 0
 
     // Keep the in-progress drawing in local storage so rotation/recreation does not discard strokes.
-    LaunchedEffect(currentDrawingJson) {
-        if (currentDrawingJson != null) DrawingDraftStorage.save(currentDrawingJson)
+    LaunchedEffect(currentDrawingJson, currentDrawing) {
+        when {
+            currentDrawingJson != null -> DrawingDraftStorage.save(currentDrawingJson)
+            currentDrawing == null -> DrawingDraftStorage.clear()
+            // Keep the previous valid draft while the current in-memory drawing exceeds the JSON cap.
+        }
     }
     val currentDrawingError = currentDrawingEncoding?.first?.exceptionOrNull()?.message
     val currentDrawingPointCount = remember(strokes) {
@@ -342,6 +373,9 @@ fun DrawingScreen(
                         }
                         val convertedDrawing = converted.document
                         sourceGrayImage = converted.sourceImage
+                        contourStrokes = convertedDrawing.strokes
+                        tracingStrokes = emptyList()
+                        photoMode = "CONTOURS"
                         appliedPhotoQualitySettings = settingsForImport
                         diagnosticEdgeMap = converted.edgeMap
                         photoQualityError = null
@@ -386,6 +420,10 @@ fun DrawingScreen(
     )
 
     LaunchedEffect(sourceGrayImage, photoQualitySettings) {
+        if (photoMode != "CONTOURS") {
+            isReprocessingPhoto = false
+            return@LaunchedEffect
+        }
         val source = sourceGrayImage ?: return@LaunchedEffect
         val targetSettings = photoQualitySettings
         if (targetSettings == appliedPhotoQualitySettings) {
@@ -405,10 +443,11 @@ fun DrawingScreen(
             if (sourceGrayImage === source && photoQualitySettings == targetSettings) {
                 val document = converted.document
                 diagnosticEdgeMap = converted.edgeMap
+                contourStrokes = document.strokes
                 canvasWidth = document.canvas.width
                 canvasHeight = document.canvas.height
                 canvasAspectInitialized = true
-                strokes = document.strokes
+                if (photoMode == "CONTOURS") strokes = document.strokes
                 activePoints = emptyList()
                 redoStrokes = emptyList()
                 appliedPhotoQualitySettings = targetSettings
@@ -489,8 +528,11 @@ fun DrawingScreen(
                         canvasAspectInitialized = true
                     }
                 }
-                .pointerInput(lineToolEnabled, canvasSize.width, canvasSize.height, canvasWidth, canvasHeight) {
-                    if (lineToolEnabled) {
+                .pointerInput(
+                    lineToolEnabled, pendingTextPlacement, pendingStickerCode, stickerScale,
+                    canvasSize.width, canvasSize.height, canvasWidth, canvasHeight, pendingLinePoints,
+                ) {
+                    if (lineToolEnabled || pendingTextPlacement != null || pendingStickerCode != null) {
                         detectTapGestures { tap ->
                             val viewportScale = min(
                                 size.width.toFloat() / canvasWidth.toFloat(),
@@ -507,15 +549,34 @@ fun DrawingScreen(
                                     ((tap.x - viewportLeft) / viewportWidth).coerceIn(0f, 1f).toDouble(),
                                     ((tap.y - viewportTop) / viewportHeight).coerceIn(0f, 1f).toDouble(),
                                 )
-                                pendingLinePoints = when (pendingLinePoints.size) {
-                                    0 -> listOf(point)
-                                    1 -> pendingLinePoints + point
-                                    else -> listOf(pendingLinePoints.first(), point)
-                                }
-                                statusMessage = if (pendingLinePoints.size < 2) {
-                                    "Поставьте вторую точку линии"
-                                } else {
-                                    "Передвиньте вторую точку касанием, затем нажмите ✓"
+                                when {
+                                    pendingTextPlacement != null -> {
+                                        textAnnotations = textAnnotations + pendingTextPlacement!!.copy(x = point[0], y = point[1])
+                                        pendingTextPlacement = null
+                                        statusMessage = "Текст размещён"
+                                    }
+                                    pendingStickerCode != null -> {
+                                        stickers = stickers + DrawingSticker(
+                                            code = pendingStickerCode!!,
+                                            x = point[0],
+                                            y = point[1],
+                                            scale = stickerScale,
+                                        )
+                                        pendingStickerCode = null
+                                        statusMessage = "Смайлик размещён"
+                                    }
+                                    lineToolEnabled -> {
+                                        pendingLinePoints = when (pendingLinePoints.size) {
+                                            0 -> listOf(point)
+                                            1 -> pendingLinePoints + listOf(point)
+                                            else -> listOf(pendingLinePoints.first(), point)
+                                        }
+                                        statusMessage = if (pendingLinePoints.size < 2) {
+                                            "Поставьте вторую точку линии"
+                                        } else {
+                                            "Перетаскивайте любую точку линии; ✓ фиксирует линию"
+                                        }
+                                    }
                                 }
                                 statusIsError = false
                             }
@@ -551,10 +612,26 @@ fun DrawingScreen(
                         ((y - viewportTop) / viewportHeight).coerceIn(0f, 1f).toDouble(),
                     )
 
+                    var draggingEndpoint: Int? = null
                     detectDragGestures(
                         onDragStart = { offset ->
                             statusMessage = null
-                            isDrawingGestureActive = !lineToolEnabled && isInsideViewport(offset.x, offset.y)
+                            draggingEndpoint = if (lineToolEnabled && pendingLinePoints.size == 2) {
+                                pendingLinePoints.indices
+                                    .map { index ->
+                                        val point = pendingLinePoints[index]
+                                        val px = viewportLeft + (point[0] * viewportWidth).toFloat()
+                                        val py = viewportTop + (point[1] * viewportHeight).toFloat()
+                                        val dx = offset.x - px
+                                        val dy = offset.y - py
+                                        index to (dx * dx + dy * dy)
+                                    }
+                                    .minByOrNull { it.second }
+                                    ?.takeIf { it.second <= 44f * 44f }
+                                    ?.first
+                            } else null
+                            isDrawingGestureActive = !lineToolEnabled && draggingEndpoint == null &&
+                                isInsideViewport(offset.x, offset.y)
                             activePoints = if (isDrawingGestureActive) {
                                 listOf(normalizedPoint(offset.x, offset.y))
                             } else {
@@ -562,7 +639,13 @@ fun DrawingScreen(
                             }
                         },
                         onDrag = { change, _ ->
-                            if (isDrawingGestureActive) {
+                            if (draggingEndpoint != null && lineToolEnabled) {
+                                change.consume()
+                                val normalized = normalizedPoint(change.position.x, change.position.y)
+                                pendingLinePoints = pendingLinePoints.mapIndexed { index, point ->
+                                    if (index == draggingEndpoint) normalized else point
+                                }
+                            } else if (isDrawingGestureActive) {
                                 change.consume()
                                 activePoints = activePoints + listOf(
                                     normalizedPoint(change.position.x, change.position.y),
@@ -570,6 +653,11 @@ fun DrawingScreen(
                             }
                         },
                         onDragEnd = {
+                            if (draggingEndpoint != null) {
+                                statusMessage = "Точка линии перемещена. Нажмите ✓ для фиксации"
+                                statusIsError = false
+                                draggingEndpoint = null
+                            }
                             if (isDrawingGestureActive && activePoints.isNotEmpty()) {
                                 if (eraserEnabled) {
                                     val eraseRadius = (brushWidth.toDouble() / min(canvasWidth, canvasHeight).coerceAtLeast(1)) * 1.8
@@ -597,8 +685,7 @@ fun DrawingScreen(
                                 }
                                 // Quality controls regenerate the whole photo-derived vector.
                                 // Close them before a manual stroke can be added or overwritten.
-                                sourceGrayImage = null
-                                showPhotoQualitySettings = false
+                                                                showPhotoQualitySettings = false
                             }
                             isDrawingGestureActive = false
                             activePoints = emptyList()
@@ -610,18 +697,23 @@ fun DrawingScreen(
                     )
                 },
         ) {
-            drawDrawingBackground(
-                DrawingCanvas(
-                    width = canvasWidth,
-                    height = canvasHeight,
-                    backgroundColor = backgroundColor,
-                    backgroundMode = backgroundMode,
-                    gradientDirection = gradientDirection,
-                    gradientStartColor = gradientStartColor,
-                    gradientEndColor = gradientEndColor,
-                    backgroundAlpha = backgroundAlpha,
-                ),
-            )
+            if (photoMode == "TRACE" && sourceGrayImage != null) {
+                drawTracingImage(sourceGrayImage!!, alpha = 0.58f)
+                drawRect(Color.White.copy(alpha = 0.22f))
+            } else {
+                drawDrawingBackground(
+                    DrawingCanvas(
+                        width = canvasWidth,
+                        height = canvasHeight,
+                        backgroundColor = backgroundColor,
+                        backgroundMode = backgroundMode,
+                        gradientDirection = gradientDirection,
+                        gradientStartColor = gradientStartColor,
+                        gradientEndColor = gradientEndColor,
+                        backgroundAlpha = backgroundAlpha,
+                    ),
+                )
+            }
             val visibleStrokes = buildList {
                 addAll(strokes)
                 if (pendingLinePoints.isNotEmpty()) {
@@ -649,9 +741,43 @@ fun DrawingScreen(
                 canvasWidth = canvasWidth,
                 canvasHeight = canvasHeight,
             )
+            if (lineToolEnabled && pendingLinePoints.isNotEmpty()) {
+                val previewScale = min(
+                    size.width / canvasWidth.toFloat(),
+                    size.height / canvasHeight.toFloat(),
+                ).coerceAtLeast(0.0001f)
+                val previewWidth = canvasWidth * previewScale
+                val previewHeight = canvasHeight * previewScale
+                val previewLeft = (size.width - previewWidth) / 2f
+                val previewTop = (size.height - previewHeight) / 2f
+                pendingLinePoints.forEachIndexed { index, point ->
+                    val center = Offset(
+                        x = previewLeft + point[0].toFloat() * previewWidth,
+                        y = previewTop + point[1].toFloat() * previewHeight,
+                    )
+                    drawCircle(
+                        color = Color.White,
+                        radius = 12.dp.toPx(),
+                        center = center,
+                    )
+                    drawCircle(
+                        color = if (index == 0) Color(0xFF188038) else Color(0xFF1A73E8),
+                        radius = 10.dp.toPx(),
+                        center = center,
+                        style = Stroke(width = 2.dp.toPx()),
+                    )
+                }
+            }
         }
 
-        if (strokes.isEmpty() && activePoints.isEmpty()) {
+        currentDrawing?.let { document ->
+            DrawingAnnotationsOverlay(
+                drawing = document,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
+        if (strokes.isEmpty() && textAnnotations.isEmpty() && stickers.isEmpty() && activePoints.isEmpty() && photoMode != "TRACE") {
             Text(
                 text = stringResource(Res.string.start_drawing_here),
                 modifier = Modifier.align(Alignment.Center),
@@ -684,7 +810,7 @@ fun DrawingScreen(
                     )
                 }
 
-                if (sourceGrayImage != null) {
+                if (sourceGrayImage != null && photoMode == "CONTOURS") {
                     RoundToolButton(
                         enabled = !isProcessingImage && !isReprocessingPhoto,
                         onClick = { showPhotoQualitySettings = !showPhotoQualitySettings },
@@ -712,7 +838,7 @@ fun DrawingScreen(
                     Text("Линия", color = Color(0xFF202124), fontSize = 9.sp)
                 }
 
-                if (diagnosticEdgeMap != null) {
+                if (diagnosticEdgeMap != null && photoMode == "CONTOURS") {
                     RoundToolButton(
                         onClick = { showEdgeMapPreview = true },
                     ) {
@@ -726,8 +852,7 @@ fun DrawingScreen(
                         if (strokes.isNotEmpty()) {
                             redoStrokes = redoStrokes + strokes.last()
                             strokes = strokes.dropLast(1)
-                            sourceGrayImage = null
-                            showPhotoQualitySettings = false
+                                                        showPhotoQualitySettings = false
                             statusMessage = null
                         }
                     },
@@ -745,8 +870,7 @@ fun DrawingScreen(
                         if (redoStrokes.isNotEmpty()) {
                             strokes = strokes + redoStrokes.last()
                             redoStrokes = redoStrokes.dropLast(1)
-                            sourceGrayImage = null
-                            showPhotoQualitySettings = false
+                                                        showPhotoQualitySettings = false
                             statusMessage = null
                         }
                     },
@@ -797,11 +921,44 @@ fun DrawingScreen(
             }
         }
 
+        if (sourceGrayImage != null) {
+            Row(
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 62.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RoundToolButton(
+                    background = if (photoMode == "TRACE") Color(0xFFFFF0C2) else Color.White,
+                    onClick = {
+                        if (photoMode != "TRACE") {
+                            contourStrokes = strokes
+                            photoMode = "TRACE"
+                            strokes = tracingStrokes
+                            showPhotoQualitySettings = false
+                            statusMessage = "Калька: рисуйте поверх полупрозрачной фотографии"
+                        }
+                    },
+                ) { Text("Калька", color = Color(0xFF202124), fontSize = 10.sp) }
+                RoundToolButton(
+                    background = if (photoMode == "CONTOURS") Color(0xFFFFF0C2) else Color.White,
+                    onClick = {
+                        if (photoMode != "CONTOURS") {
+                            tracingStrokes = strokes
+                            photoMode = "CONTOURS"
+                            strokes = contourStrokes
+                            showPhotoQualitySettings = false
+                            statusMessage = "Контуры восстановлены"
+                        }
+                    },
+                ) { Text("Контуры", color = Color(0xFF202124), fontSize = 9.sp) }
+            }
+        }
+
         statusMessage?.let { message ->
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = 66.dp, start = 18.dp, end = 18.dp)
+                    .padding(top = if (sourceGrayImage != null) 114.dp else 66.dp, start = 18.dp, end = 18.dp)
                     .shadow(3.dp, RoundedCornerShape(16.dp))
                     .clip(RoundedCornerShape(16.dp))
                     .background(Color.White.copy(alpha = 0.96f))
@@ -848,7 +1005,7 @@ fun DrawingScreen(
             }
         }
 
-        if (showPhotoQualitySettings && sourceGrayImage != null) {
+        if (showPhotoQualitySettings && sourceGrayImage != null && photoMode == "CONTOURS") {
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -1006,9 +1163,31 @@ fun DrawingScreen(
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally),
+            horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.Bottom,
         ) {
+            RoundToolButton(
+                onClick = {
+                    activePopup = null
+                    editorText = ""
+                    editorTextSize = 64f
+                    editorTextRotation = 0f
+                    editorTextBold = false
+                    editorTextItalic = false
+                    editorTextUnderline = false
+                    showTextDialog = true
+                },
+            ) { Text("T", color = Color(0xFF202124), fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
+
+            RoundToolButton(
+                onClick = {
+                    activePopup = null
+                    stickerCode = ":smile:"
+                    stickerScale = 1f
+                    showStickerDialog = true
+                },
+            ) { Text("😊", fontSize = 22.sp) }
+
             RoundToolButton(
                 onClick = {
                     activePopup = null
@@ -1035,43 +1214,69 @@ fun DrawingScreen(
                     enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom),
                     exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom),
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
-                            .shadow(5.dp, RoundedCornerShape(28.dp))
-                            .clip(RoundedCornerShape(28.dp))
+                            .width(270.dp)
+                            .shadow(5.dp, RoundedCornerShape(20.dp))
+                            .clip(RoundedCornerShape(20.dp))
                             .background(Color.White)
-                            .border(1.dp, Color(0xFFE8EAED), RoundedCornerShape(28.dp))
-                            .padding(horizontal = 9.dp, vertical = 5.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            .border(1.dp, Color(0xFFE8EAED), RoundedCornerShape(20.dp))
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        BrushWidths.forEachIndexed { index, width ->
-                            val selected = brushWidth == width
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .clickable {
-                                        brushWidth = width
-                                        activePopup = null
-                                        statusMessage = null
-                                    },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                if (selected) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(BrushDotSizes[index] + 8.dp)
-                                            .border(2.dp, Color(0xFF1A73E8), CircleShape),
-                                    )
-                                }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            BrushWidths.forEachIndexed { index, width ->
+                                val selected = abs(brushWidth - width) < 0.1f
                                 Box(
                                     modifier = Modifier
-                                        .size(BrushDotSizes[index])
+                                        .size(27.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF202124)),
-                                )
+                                        .clickable {
+                                            brushWidth = width
+                                            eraserEnabled = false
+                                            statusMessage = null
+                                        },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    if (selected) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(BrushDotSizes[index] + 4.dp)
+                                                .border(2.dp, Color(0xFF1A73E8), CircleShape),
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(BrushDotSizes[index].coerceAtMost(20.dp))
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF202124)),
+                                    )
+                                }
                             }
+                        }
+                        Text(
+                            "Толщина кисти: ${brushWidth.roundToInt()}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color(0xFF202124),
+                        )
+                        Slider(
+                            value = brushWidth,
+                            onValueChange = {
+                                brushWidth = it
+                                eraserEnabled = false
+                                statusMessage = null
+                            },
+                            valueRange = BrushWidths.first()..BrushWidths.last(),
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text("Тонкая", style = MaterialTheme.typography.labelSmall, color = Color(0xFF5F6368))
+                            Text("Толстая", style = MaterialTheme.typography.labelSmall, color = Color(0xFF5F6368))
                         }
                     }
                 }
@@ -1128,6 +1333,126 @@ fun DrawingScreen(
                 )
             }
         }
+    }
+
+    if (showTextDialog) {
+        AlertDialog(
+            onDismissRequest = { showTextDialog = false },
+            title = { Text("Добавить текст") },
+            containerColor = Color.White,
+            titleContentColor = Color(0xFF202124),
+            textContentColor = Color(0xFF202124),
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(max = 500.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedTextField(
+                        value = editorText,
+                        onValueChange = { editorText = it.take(240) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Текст") },
+                        supportingText = { Text("${editorText.length}/240") },
+                    )
+                    Text("Размер шрифта: ${editorTextSize.roundToInt()}", color = Color(0xFF202124))
+                    Slider(value = editorTextSize, onValueChange = { editorTextSize = it }, valueRange = 20f..120f)
+                    Text("Угол: ${editorTextRotation.roundToInt()}°", color = Color(0xFF202124))
+                    Slider(value = editorTextRotation, onValueChange = { editorTextRotation = it }, valueRange = -180f..180f)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Жирный", modifier = Modifier.weight(1f), color = Color(0xFF202124))
+                        Switch(checked = editorTextBold, onCheckedChange = { editorTextBold = it })
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Курсив", modifier = Modifier.weight(1f), color = Color(0xFF202124))
+                        Switch(checked = editorTextItalic, onCheckedChange = { editorTextItalic = it })
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Подчёркнутый", modifier = Modifier.weight(1f), color = Color(0xFF202124))
+                        Switch(checked = editorTextUnderline, onCheckedChange = { editorTextUnderline = it })
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showTextDialog = false
+                        if (editorText.isNotBlank()) {
+                            pendingTextPlacement = DrawingText(
+                                text = editorText,
+                                x = 0.5,
+                                y = 0.5,
+                                color = selectedColor,
+                                fontSize = editorTextSize,
+                                rotationDegrees = editorTextRotation,
+                                bold = editorTextBold,
+                                italic = editorTextItalic,
+                                underline = editorTextUnderline,
+                                alpha = brushAlpha,
+                            )
+                            lineToolEnabled = false
+                            pendingStickerCode = null
+                            statusMessage = "Коснитесь холста, чтобы разместить текст"
+                            statusIsError = false
+                        } else {
+                            statusMessage = "Введите текст"
+                            statusIsError = true
+                        }
+                    },
+                    enabled = editorText.isNotBlank(),
+                ) { Text("Разместить", color = Color(0xFF202124)) }
+            },
+            dismissButton = { TextButton(onClick = { showTextDialog = false }) { Text("Отмена") } },
+        )
+    }
+
+    if (showStickerDialog) {
+        AlertDialog(
+            onDismissRequest = { showStickerDialog = false },
+            title = { Text("Добавить смайлик") },
+            containerColor = Color.White,
+            titleContentColor = Color(0xFF202124),
+            textContentColor = Color(0xFF202124),
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    listOf(
+                        ":smile:" to "😊",
+                        ":heart:" to "❤️",
+                        ":wink:" to "😉",
+                        ":laugh:" to "😂",
+                        ":sad:" to "🙁",
+                        ":cool:" to "😎",
+                    ).chunked(3).forEach { options ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            options.forEach { (code, emoji) ->
+                                Box(
+                                    modifier = Modifier
+                                        .size(54.dp)
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (stickerCode == code) Color(0xFFFFF0C2) else Color(0xFFF5F5F5))
+                                        .clickable { stickerCode = code },
+                                    contentAlignment = Alignment.Center,
+                                ) { Text(emoji, fontSize = 27.sp) }
+                            }
+                        }
+                    }
+                    Text("Масштаб: ${(stickerScale * 100f).roundToInt()}%", color = Color(0xFF202124))
+                    Slider(value = stickerScale, onValueChange = { stickerScale = it }, valueRange = 0.25f..4f)
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showStickerDialog = false
+                        pendingStickerCode = stickerCode
+                        pendingTextPlacement = null
+                        lineToolEnabled = false
+                        statusMessage = "Коснитесь холста, чтобы разместить смайлик"
+                        statusIsError = false
+                    },
+                ) { Text("Разместить", color = Color(0xFF202124)) }
+            },
+            dismissButton = { TextButton(onClick = { showStickerDialog = false }) { Text("Отмена") } },
+        )
     }
 
     if (showLineColorDialog) {
@@ -1830,5 +2155,31 @@ private fun PhotoQualitySlider(
             valueRange = valueRange,
             steps = steps,
         )
+    }
+}
+
+
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTracingImage(
+    image: GrayImage,
+    alpha: Float,
+) {
+    val imageScale = min(size.width / image.width.toFloat(), size.height / image.height.toFloat())
+    if (!imageScale.isFinite() || imageScale <= 0f) return
+    val drawnWidth = image.width * imageScale
+    val drawnHeight = image.height * imageScale
+    val left = (size.width - drawnWidth) / 2f
+    val top = (size.height - drawnHeight) / 2f
+    val sampleX = (image.width + 179) / 180
+    val sampleY = (image.height + 179) / 180
+    for (y in 0 until image.height step sampleY) {
+        val cellHeight = min(sampleY, image.height - y) * imageScale
+        for (x in 0 until image.width step sampleX) {
+            val value = image.pixels[y * image.width + x].coerceIn(0, 255) / 255f
+            drawRect(
+                color = Color(value, value, value, alpha.coerceIn(0f, 1f)),
+                topLeft = Offset(left + x * imageScale, top + y * imageScale),
+                size = Size(min(sampleX, image.width - x) * imageScale, cellHeight),
+            )
+        }
     }
 }

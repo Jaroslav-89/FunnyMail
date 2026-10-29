@@ -20,6 +20,8 @@ dependencies {
     implementation(project(":shared"))
 
     implementation(libs.androidx.activity.compose)
+    // Activity Result APIs require FragmentActivity/Fragment 1.3.0 or newer.
+    implementation(libs.androidx.fragment)
     implementation(libs.androidx.core.ktx)
     implementation(platform(libs.firebase.android.bom))
     implementation(libs.firebase.android.messaging)

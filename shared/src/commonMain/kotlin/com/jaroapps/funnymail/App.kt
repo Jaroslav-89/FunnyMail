@@ -114,13 +114,17 @@ private fun FunnyMailContent(
     val selectDrawingHintText = stringResource(Res.string.select_drawing_hint)
     var selectedChat by remember { mutableStateOf<Chat?>(null) }
     var selectedChatId by rememberSaveable { mutableStateOf<String?>(null) }
-    var viewingDrawing by remember { mutableStateOf<DrawingDocument?>(null) }
+    var viewingDrawingJson by rememberSaveable { mutableStateOf<String?>(null) }
+    val drawingCodec = remember { DrawingCodec() }
+    val viewingDrawing = remember(viewingDrawingJson) {
+        viewingDrawingJson?.let { drawingCodec.decode(it).getOrNull() }
+    }
     var chatFeedReturnIndex by rememberSaveable { mutableStateOf(0) }
     var chatFeedReturnOffset by rememberSaveable { mutableStateOf(0) }
     var editingDrawingId by rememberSaveable { mutableStateOf<Long?>(null) }
-    var editingDrawingJson by remember { mutableStateOf<String?>(null) }
-    var drawingReturnDestination by remember { mutableStateOf(AppDestination.ChatDetail) }
-    var drawingViewerReturnDestination by remember { mutableStateOf(AppDestination.ChatDetail) }
+    var editingDrawingJson by rememberSaveable { mutableStateOf<String?>(null) }
+    var drawingReturnDestination by rememberSaveable { mutableStateOf(AppDestination.ChatDetail) }
+    var drawingViewerReturnDestination by rememberSaveable { mutableStateOf(AppDestination.ChatDetail) }
     val localDrawingRepository = koinInject<LocalDrawingRepository>()
     val authRepository = koinInject<AuthRepository>()
     val signedInUser by authRepository.currentUser.collectAsState(initial = null)
@@ -196,7 +200,7 @@ private fun FunnyMailContent(
             AppDestination.Drawing -> closeDrawing()
             AppDestination.Letters -> destination = AppDestination.ChatDetail
             AppDestination.DrawingViewer -> {
-                viewingDrawing = null
+                viewingDrawingJson = null
                 destination = drawingViewerReturnDestination
             }
         }
@@ -225,8 +229,9 @@ private fun FunnyMailContent(
     }
 
     val sendDrawingToChat: (String, (String?) -> Unit) -> Unit = { json, reportResult ->
-        val chatId = selectedChat?.id
-        if (chatId == null) {
+        // Keep using the saveable chat id if Activity recreation cleared the in-memory Chat.
+        val chatId = selectedChat?.id ?: selectedChatId
+        if (chatId.isNullOrBlank()) {
             reportResult(sendDrawingOpenChatFirstText)
         } else {
             coroutineScope.launch {
@@ -377,7 +382,7 @@ private fun FunnyMailContent(
                         onSendDrawing = sendDrawingToChat,
                         darkThemeEnabled = darkThemeEnabled,
                         onViewDrawing = { drawing ->
-                            viewingDrawing = drawing
+                            viewingDrawingJson = drawingCodec.encode(drawing).getOrNull()
                             drawingViewerReturnDestination = AppDestination.Letters
                             destination = AppDestination.DrawingViewer
                         },
@@ -407,7 +412,7 @@ private fun FunnyMailContent(
                                     destination = AppDestination.Letters
                                 },
                                 onViewDrawing = { drawing, index, offset ->
-                                    viewingDrawing = drawing
+                                    viewingDrawingJson = drawingCodec.encode(drawing).getOrNull()
                                     chatFeedReturnIndex = index
                                     chatFeedReturnOffset = offset
                                     drawingViewerReturnDestination = AppDestination.ChatDetail
@@ -450,7 +455,7 @@ private fun FunnyMailContent(
                                 title = drawingUnavailableText,
                                 description = selectDrawingHintText,
                                 onBack = {
-                                    viewingDrawing = null
+                                    viewingDrawingJson = null
                                     destination = drawingViewerReturnDestination
                                 },
                             )
@@ -458,7 +463,7 @@ private fun FunnyMailContent(
                             DrawingViewerScreen(
                                 drawing = drawing,
                                 onBack = {
-                                    viewingDrawing = null
+                                    viewingDrawingJson = null
                                     destination = drawingViewerReturnDestination
                                 },
                             )

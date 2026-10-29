@@ -107,6 +107,40 @@ class DrawingCodec(
         require(drawing.canvas.backgroundAlpha.isFinite() && drawing.canvas.backgroundAlpha in 0f..1f) {
             "Некорректная прозрачность фона."
         }
+        require(drawing.texts.size <= MAX_ANNOTATIONS) { "Слишком много текстовых элементов." }
+        drawing.texts.forEach { annotation ->
+            require(annotation.text.isNotBlank() && annotation.text.length <= MAX_TEXT_LENGTH) {
+                "Текст должен содержать от 1 до $MAX_TEXT_LENGTH символов."
+            }
+            require(HEX_COLOR.matches(annotation.color)) { "Некорректный цвет текста." }
+            require(annotation.x.isFinite() && annotation.x in 0.0..1.0 &&
+                annotation.y.isFinite() && annotation.y in 0.0..1.0) {
+                "Координаты текста должны находиться в диапазоне от 0 до 1."
+            }
+            require(annotation.fontSize.isFinite() && annotation.fontSize in MIN_TEXT_SIZE..MAX_TEXT_SIZE) {
+                "Некорректный размер шрифта."
+            }
+            require(annotation.rotationDegrees.isFinite() && annotation.rotationDegrees in -360f..360f) {
+                "Некорректный угол текста."
+            }
+            require(annotation.alpha.isFinite() && annotation.alpha in 0f..1f) {
+                "Некорректная прозрачность текста."
+            }
+        }
+        require(drawing.stickers.size <= MAX_ANNOTATIONS) { "Слишком много смайликов." }
+        drawing.stickers.forEach { sticker ->
+            require(sticker.code in STICKER_CODES) { "Неизвестный код смайлика." }
+            require(sticker.x.isFinite() && sticker.x in 0.0..1.0 &&
+                sticker.y.isFinite() && sticker.y in 0.0..1.0) {
+                "Координаты смайлика должны находиться в диапазоне от 0 до 1."
+            }
+            require(sticker.scale.isFinite() && sticker.scale in MIN_STICKER_SCALE..MAX_STICKER_SCALE) {
+                "Некорректный масштаб смайлика."
+            }
+            require(sticker.rotationDegrees.isFinite() && sticker.rotationDegrees in -360f..360f) {
+                "Некорректный угол смайлика."
+            }
+        }
         require(drawing.strokes.size <= maxStrokes) {
             "Слишком много штрихов."
         }
@@ -141,6 +175,13 @@ class DrawingCodec(
         const val MAX_CANVAS_DIMENSION = 4_096
         const val MAX_TITLE_LENGTH = 20
         const val MAX_CAPTION_LENGTH = 80
+        const val MAX_TEXT_LENGTH = 240
+        const val MAX_ANNOTATIONS = 100
+        const val MIN_TEXT_SIZE = 8f
+        const val MAX_TEXT_SIZE = 256f
+        const val MIN_STICKER_SCALE = 0.25f
+        const val MAX_STICKER_SCALE = 4f
+        val STICKER_CODES = setOf(":smile:", ":heart:", ":wink:", ":laugh:", ":sad:", ":cool:")
         const val MIN_STROKE_WIDTH = 0.1f
         const val MAX_STROKE_WIDTH = 100f
         val HEX_COLOR = Regex("^#[0-9A-Fa-f]{6}$")

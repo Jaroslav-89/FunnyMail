@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
+import android.content.ClipData
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
@@ -170,3 +172,26 @@ private fun decodeAnalysisBitmap(imageBytes: ByteArray, maxDimension: Int): Bitm
     } else oriented
 }
 
+
+
+@Composable
+actual fun rememberDrawingShareLauncher(): (svg: String, title: String) -> Unit {
+    val context = LocalContext.current
+    return remember(context) {
+        { svg, title ->
+            runCatching {
+                val file = File(context.cacheDir, "drawing-" + kotlin.random.Random.nextLong() + ".svg")
+                file.writeText(svg, Charsets.UTF_8)
+                val uri = FileProvider.getUriForFile(context, context.packageName + ".fileprovider", file)
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "image/svg+xml"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, title)
+                    clipData = ClipData.newUri(context.contentResolver, title, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(Intent.createChooser(intent, title))
+            }
+        }
+    }
+}

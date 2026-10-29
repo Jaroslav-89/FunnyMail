@@ -54,6 +54,7 @@ import com.jaroapps.funnymail.core.ui.TrashCanIcon
 import com.jaroapps.funnymail.features.drawing.domain.DrawingCodec
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingStrokes
 import com.jaroapps.funnymail.features.drawing.presentation.drawDrawingBackground
+import com.jaroapps.funnymail.features.drawing.presentation.DrawingAnnotationsOverlay
 import com.jaroapps.funnymail.features.drawing.domain.model.DrawingDocument
 import com.jaroapps.funnymail.features.drawing.domain.model.SavedDrawing
 import com.jaroapps.funnymail.features.drawing.domain.repository.LocalDrawingRepository
@@ -322,19 +323,22 @@ fun DrawingPreview(
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(18.dp)
-    Canvas(
+    Box(
         modifier = modifier
             .clip(shape)
             .background(Color.White)
             .border(1.dp, MaterialTheme.colorScheme.outlineVariant, shape),
     ) {
-        drawDrawingBackground(drawing.canvas)
-        drawDrawingStrokes(
-            strokes = drawing.strokes,
-            canvasWidth = drawing.canvas.width,
-            canvasHeight = drawing.canvas.height,
-            contentInsetFraction = 0.06f,
-        )
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawDrawingBackground(drawing.canvas)
+            drawDrawingStrokes(
+                strokes = drawing.strokes,
+                canvasWidth = drawing.canvas.width,
+                canvasHeight = drawing.canvas.height,
+                contentInsetFraction = 0.06f,
+            )
+        }
+        DrawingAnnotationsOverlay(drawing = drawing, contentInsetFraction = 0.06f)
     }
 }
 

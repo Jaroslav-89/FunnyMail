@@ -13,8 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -38,6 +38,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.jaroapps.funnymail.core.ui.AccountPersonIcon
@@ -152,6 +154,7 @@ fun ChatEditScreen(
     val memberRemoveFailedMessage = stringResource(Res.string.member_remove_failed)
     val leaveChatFailedMessage = stringResource(Res.string.leave_chat_failed)
     val deleteChatFailedMessage = stringResource(Res.string.delete_chat_failed)
+    val clipboard = LocalClipboardManager.current
     var memberProfiles by remember { mutableStateOf<Map<String, UserProfile>>(emptyMap()) }
     LaunchedEffect(chat.memberIds) {
         val profiles = mutableMapOf<String, UserProfile>()
@@ -411,6 +414,12 @@ fun ChatEditScreen(
                         enabled = !busy && (maxLettersText.isBlank() || parsedLimit in 1..500) &&
                                 normalizedLimit != chat.maxLettersCount,
                     ) { Text(if (busy) stringResource(Res.string.saving) else stringResource(Res.string.save_drawing_limit)) }
+                    Text(
+                        "Лимит JSON одного рисунка — 250 КиБ. Размер проверяется при сохранении и отправке.",
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 } else {
                     observedMaxLettersCount?.let { limit ->
                         Surface(
@@ -732,12 +741,15 @@ fun ChatEditScreen(
                             stringResource(Res.string.invite_code),
                             style = MaterialTheme.typography.titleSmall
                         )
-                        SelectionContainer {
-                            Text(
-                                currentInvite.code, style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                        Text(
+                            currentInvite.code,
+                            modifier = Modifier.combinedClickable(
+                                onClick = {},
+                                onLongClick = { clipboard.setText(AnnotatedString(currentInvite.code)) },
+                            ),
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                         Text(
                             stringResource(Res.string.invite_code_expires),
                             style = MaterialTheme.typography.bodySmall,
